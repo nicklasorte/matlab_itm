@@ -1,4 +1,4 @@
-function [A_db, info, wbits, elev_deg] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, confidence, ...
+function [A_db, info, wbits, elev_deg, mode_code] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, confidence, ...
     location, climate, N_0, polarization, epsilon, sigma, mdvar, want_info, z)
 %ITM_P2P_CORE ITM v1.4 point-to-point computation without argument parsing.
 %   Called by itm_p2p_rev1 (after its arguments block) and, once per link,
@@ -15,6 +15,10 @@ function [A_db, info, wbits, elev_deg] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz
 %   elev_deg ([TX, RX], degrees) is the elevation angle of the path at
 %   each terminal: toward the other antenna on a line-of-sight path, or
 %   toward the terrain horizon, on ITM's effective earth (radius 1/gamma_e).
+%   mode_code is the propagation mode in the ITM 1.2.2 encoding (ITMDLL.cpp
+%   point_to_pointMDH, also used by SEADLib ITMp2pAryRels): 0 line of
+%   sight, 4 single horizon, 8 double horizon, plus 1 when diffraction
+%   dominates and 2 when troposcatter dominates (5, 6, 9, 10).
 
 info = [];
 pfl = pfl(:);
@@ -48,6 +52,14 @@ elev_deg = rad2deg(theta_geo);
 
 A_fs_db = free_space_loss(d_m, f_mhz);
 
+% ITM 1.2.2 mode code: horizons from int(d - d_L), C truncation toward zero
+q = fix(d_m - d_hzn_m(1) - d_hzn_m(2));
+if q < 0
+    mode_code = 0;
+else
+    mode_code = 4 + 4 * (q > 0) + 1 + (propmode == 3);
+end
+
 [V_db, extreme] = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
 wbits = bitor(uint32(warnings), uint32(any(extreme(:))) * uint32(8192));
 if numel(V_db) ~= prod(out_size)
@@ -56,6 +68,10 @@ if numel(V_db) ~= prod(out_size)
     V_db = V_db + zeros(out_size);
 end
 A_db = reshape(V_db + A_fs_db, out_size);
+if ~all(isfinite(A_db), 'all')
+    error('itm:NonFiniteLoss', 'ITM returned a non-finite loss (%g dB). Check the inputs and profile.', ...
+        A_db(find(~isfinite(A_db), 1)));
+end
 
 if want_info
     extreme = extreme | false(out_size);
@@ -74,6 +90,7 @@ if want_info
         'N_s', N_s, ...
         'mode', propmode, ...
         'mode_name', mode_names(propmode), ...
+        'mode_code', mode_code, ...
         'warnings', reshape(w, out_size), ...
         'warning_messages', {itm_warning_text(wbits)});
 end

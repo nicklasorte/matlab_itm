@@ -1,4 +1,4 @@
-function [loss_db, info, elev_deg] = itm_pathloss_rev1(tx, rx, f_mhz, reliability, options)
+function [loss_db, info, elev_deg, mode_code] = itm_pathloss_rev1(tx, rx, f_mhz, reliability, options)
 %ITM_PATHLOSS_REV1 ITM point-to-point path loss between locations.
 %   loss_db = ITM_PATHLOSS_REV1(tx, rx, f_mhz, reliability) returns the ITM
 %   v1.4 basic transmission loss (dB) from tx to rx for each reliability
@@ -35,6 +35,12 @@ function [loss_db, info, elev_deg] = itm_pathloss_rev1(tx, rx, f_mhz, reliabilit
 %     sigma         Ground conductivity, S/m (0.02)
 %     mdvar         Mode of variability (13); see itm_p2p_rev1
 %     climate       Override the radio climate code(s) (1-7), scalar or N
+%     climate_rule  "midpoint" (default): the P.617 climate at the path
+%                   midpoint, or the lower terminal climate when the
+%                   midpoint is over sea (WInnForum wf_itm.py).
+%                   "endpoints": the lower of the two terminal climates,
+%                   where sea counts as 7 so a land terminal wins (the rule
+%                   of ITMP2P_mechanism_rev4 with SEADLib).
 %     N_0           Override the sea-level refractivity (N-units), scalar or N
 %     pfl           Supply terrain profile(s) instead of reading tiles: a
 %                   PFL vector, or an N-by-1 cell array of them
@@ -65,6 +71,14 @@ function [loss_db, info, elev_deg] = itm_pathloss_rev1(tx, rx, f_mhz, reliabilit
 %   also in info.elevation_deg. The azimuth from TX to RX is in
 %   info.profile.azimuth_deg.
 %
+%   [loss_db, ~, ~, mode_code] = ITM_PATHLOSS_REV1(...) returns the
+%   propagation mode of each link (N-by-1) in the ITM 1.2.2 / SEADLib
+%   encoding: 0 line of sight, 5 single-horizon diffraction, 6
+%   single-horizon troposcatter, 9 double-horizon diffraction, 10
+%   double-horizon troposcatter (4 or 8 for single or double horizon, plus
+%   1 or 2). info.mode holds the v1.4 mode (1 LOS, 2 diffraction, 3
+%   troposcatter).
+%
 %   Example:
 %     tx = [38.8895, -77.0353, 30];             % lat, lon, height (m)
 %     rx = [39.0458, -76.6413, 10];
@@ -88,6 +102,7 @@ arguments
     options.sigma (1,1) double {mustBeReal, mustBeFinite} = 0.02
     options.mdvar (1,1) double {mustBeReal, mustBeFinite} = 13
     options.climate double {mustBeReal} = []
+    options.climate_rule (1,1) string {mustBeMember(options.climate_rule, ["midpoint", "endpoints"])} = "midpoint"
     options.N_0 double {mustBeReal} = []
     options.pfl = []
     options.spacing_m (1,1) double {mustBeReal, mustBePositive, mustBeFinite} = 30
@@ -145,7 +160,11 @@ else
 end
 
 % Radio climate (ITU-R P.617) and refractivity (ITU-R P.452), vectorized
-if isempty(options.climate)
+if isempty(options.climate) && options.climate_rule == "endpoints"
+    % Sea is code 7, the largest, so min() picks a land terminal over sea
+    climate = min(itm_radio_climate_rev1(tx(:, 1), tx(:, 2)), itm_radio_climate_rev1(rx(:, 1), rx(:, 2)));
+    climate_source = "ITU-R P.617 (lower terminal climate)";
+elseif isempty(options.climate)
     climate = itm_radio_climate_rev1(lat_mid, lon_mid);
     sea = climate == 7;
     if any(sea)
@@ -173,12 +192,13 @@ loss = zeros(n, k_out);
 iinfo = cell(n, 1);
 wbits = zeros(n, 1, 'uint32');
 elev_deg = zeros(n, 2);
+mode_code = zeros(n, 1);
 d_km = zeros(n, 1);
 % itm_p2p_core skips the per-call arguments block (inputs validated above)
 want_info = nargout > 1;
 for k = 1:n
     try
-        [Lk, iinfo{k}, wbits(k), elev_deg(k, :)] = itm_p2p_core(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
+        [Lk, iinfo{k}, wbits(k), elev_deg(k, :), mode_code(k)] = itm_p2p_core(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
             options.confidence, 50, climate(k), N_0(k), pol, options.epsilon, options.sigma, ...
             options.mdvar, want_info, z);
     catch err
