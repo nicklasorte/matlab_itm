@@ -91,6 +91,47 @@ Note: `info.theta_hzn_rad` is ITM's internal horizon angle. On paths well
 within line of sight, ITM replaces it with a smooth-earth estimate, so it's
 not the geometric angle. Use `elevation_deg`.
 
+### Replace the SEADLib mechanism
+
+If you call ITM through `ITMP2P_mechanism_rev4_embed_height` (SEADLib.dll)
+in [general_terrestrial_pathloss](https://github.com/nicklasorte/general_terrestrial_pathloss),
+`itm_p2p_mechanism_rev1` takes the same inputs, without the app handle and
+the parallel flag, and returns the same outputs:
+
+```matlab
+% Before: [dBloss, prop_mode] = ITMP2P_mechanism_rev4_embed_height(app, bs, sim_pt, reliability, confidence, FreqMHz, Tpol, parallel_flag);
+[dBloss, prop_mode, elev_deg] = itm_p2p_mechanism_rev1(bs, sim_pt, reliability, confidence, FreqMHz, Tpol);
+```
+
+It needs no .NET assembly, no `C:\USGS` terrain folder, and no
+`TropoClim.mat` or `data_N050.mat`. It uses the same defaults (ε 25,
+σ 0.02 S/m, mdvar 13), the same climate rule (the lower of the two terminal
+climates), N₀ at the path midpoint, and the same `prop_mode` codes (0 line
+of sight, 5 and 6 single horizon, 9 and 10 double horizon, from ITM 1.2.2).
+On the Salt Lake City test link in `test_itm_utah_rev1.m`, SEADLib returns
+122.49 dB and line of sight; this returns 122.51 dB and line of sight.
+
+What's different, by design:
+
+- **Failures are loud.** SEADLib errors became 1000 dB, climate errors
+  became climate 5, refractivity errors became 301 N-units, and infinite
+  losses became 1 or 999 dB, all silently. Here a failure raises an error
+  that names the link. With `OnError="nan"`, a failed link gets `NaN`, and
+  the fourth output says why.
+- **ITM v1.4**, NTIA's current release, instead of the ITM 1.2.2 inside
+  SEADLib, and USGS 3DEP 1" terrain at 30 m spacing instead of the
+  `C:\USGS` tiles. Expect small differences. Only one SEADLib result has
+  been compared so far (0.02 dB apart); terrain differences can matter more
+  on paths that graze a ridge.
+
+### Propagation mode
+
+The fourth output of `itm_pathloss_rev1` is the propagation mode of each
+link in the ITM 1.2.2 codes that SEADLib returns: 0 line of sight, 5
+single-horizon diffraction, 6 single-horizon troposcatter, 9 double-horizon
+diffraction, 10 double-horizon troposcatter. `info.mode` holds the ITM v1.4
+mode (1 line of sight, 2 diffraction, 3 troposcatter).
+
 ### Run it without MATLAB
 
 Compile the self-test app or the command-line tool and run it on any
@@ -129,6 +170,7 @@ example `Link 2: ITM error 1001: RX terminal height must be 0.5 to 3000 m.`
 | Function | Purpose |
 | --- | --- |
 | `itm_pathloss_rev1(tx, rx, f_mhz, reliability)` | Path loss between locations, with everything automatic. Accepts N links. Also returns elevation angles. |
+| `itm_p2p_mechanism_rev1(bs, sim_pt, reliability, confidence, FreqMHz, Tpol)` | Drop-in replacement for the SEADLib `ITMP2P_mechanism_rev4_embed_height`. |
 | `itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability)` | ITM core for a terrain profile you supply. Equivalent to NTIA `ITM_P2P_CR` (and `ITM_P2P_TLS` with the `location` option). |
 | `itm_terrain_profile_rev1(lat1, lon1, lat2, lon2)` | ITM PFL profile(s) along the WGS84 geodesic. |
 | `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached DEM tiles. |
@@ -273,6 +315,7 @@ To redraw both figures from the data files: `python3 docs/make_maps.py`.
 | Mode of variability | 13 (broadcast, no location variability) | `mdvar` |
 | Profile spacing | 30 m (native DEM resolution) | `spacing_m` |
 | Profile point cap | None (WInnForum uses 1501) | `max_points` |
+| Radio climate rule | Midpoint, or the lower terminal climate if the midpoint is over sea (WInnForum) | `climate_rule="endpoints"`: the lower terminal climate (SEADLib mechanism) |
 
 Reliability and confidence are percentages (0 to 100, exclusive), as in the
 NTIA code. The WInnForum Python wrapper uses fractions (0 to 1).
@@ -446,6 +489,7 @@ app with MATLAB Compiler and take 1 to 2 minutes.
 | `test_itm_p2p_rev1.m` | NTIA's published example and reliability-by-confidence table; NTIA `p2p.csv` cases; 740 randomized cases against the NTIA C++ (loss to 10⁻⁹ dB; modes, warnings, and intermediate values); vector vs scalar calls; output shapes; monotonic loss vs reliability; free-space check; every error identifier; warning flags. |
 | `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; maps folder override; setup; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; 3DEP profile; Copernicus fallback, GLO-90, and ocean; uncovered-land error; reuse of the itu_p2001 cache; batched profiles; end-to-end loss; two workers downloading into one folder. |
 | `test_limits_rev1.m` | Paths shorter than 1 km and longer than 2000 km fail; the error names the length, or the links in a batch; `validity="warn"` and `"off"`; frequency, height, and reliability limits; paths across the North Pole and near the South Pole, with and without terrain. |
+| `test_mechanism_rev1.m` | The SEADLib drop-in matches `itm_pathloss_rev1` with the endpoint climate rule; mode codes; one-link shape; loud and `NaN` failure modes. |
 | `test_robustness_rev1.m` | `parfor` equals serial; two processes writing the decoded-tile cache; a truncated cache file is detected and rebuilt; the antimeridian (Fiji); high latitude (Tromsø); points on tile edges and corners; a link's loss doesn't depend on the batch. |
 | `test_app_rev1.m` | The deployable self-test, its progress callback, and the app's button and status box. |
 | `test_deploy_rev1.m` | Compiles the app, then runs the executable with `--selftest`, offline and with downloads into an empty cache. |
