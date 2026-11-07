@@ -145,7 +145,7 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             rx = [39.0458, -76.6413];
             [pfl, info] = itm_terrain_profile_rev1(tx(1), tx(2), rx(1), rx(2));
             d = distance(tx(1), tx(2), rx(1), rx(2), wgs84Ellipsoid('meter'));
-            tc.verifyEqual(pfl(1) * pfl(2), d, 'RelTol', 1e-12);
+            tc.verifyEqual(pfl(1) * pfl(2), d, 'RelTol', 1e-9);     % sub-millimeter
             tc.verifyLessThanOrEqual(pfl(2), 30);
             tc.verifyEqual(numel(pfl), pfl(1) + 3);
             tc.verifyTrue(all(info.source_code == 1), 'Whole path is inside 3DEP');
@@ -177,7 +177,7 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.verifySize(P, [2 1]);
             for k = 1:2
                 tc.verifyEqual(P{k}, itm_terrain_profile_rev1(lat1(k), lon1(k), 39.0458, -76.6413));
-                tc.verifyEqual(I(k).distance_m, P{k}(1) * P{k}(2), 'RelTol', 1e-12);
+                tc.verifyEqual(I(k).distance_m, P{k}(1) * P{k}(2), 'RelTol', 1e-9);
             end
         end
 

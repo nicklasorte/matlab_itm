@@ -23,7 +23,7 @@ function app = itm_app_rev1(mode)
 arguments (Repeating)
     mode (1,1) string
 end
-modes = [mode{:}];
+modes = string(mode);          % empty string array when called with no arguments
 if any(modes == "--selftest")
     app = headless(~any(modes == "--offline"));
     return
