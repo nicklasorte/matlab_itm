@@ -119,7 +119,7 @@ else
         error('itm:SizeMismatch', 'pfl must be one profile or a cell array of %d profiles.', n);
     end
     ellipsoid = itm_wgs84();
-    [d_m, az] = distance(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2), ellipsoid);
+    [d_m, az] = itm_geodesic_inverse(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2));
     [lat_mid, lon_mid] = reckon(tx(:, 1), tx(:, 2), d_m / 2, az, ellipsoid);
     pinfo = struct('distance_m', num2cell(d_m), 'source_code', [], 'tiles', strings(0, 1));
 end

@@ -42,7 +42,7 @@ lat1 = expand(lat1_deg, n_paths); lon1 = expand(lon1_deg, n_paths);
 lat2 = expand(lat2_deg, n_paths); lon2 = expand(lon2_deg, n_paths);
 
 ellipsoid = itm_wgs84();
-[d_m, az] = distance(lat1, lon1, lat2, lon2, ellipsoid);
+[d_m, az] = itm_geodesic_inverse(lat1, lon1, lat2, lon2);   % same result alone or in a batch
 if any(d_m < 1)
     k = find(d_m < 1, 1);
     error('itm:terrain:ZeroDistance', ...

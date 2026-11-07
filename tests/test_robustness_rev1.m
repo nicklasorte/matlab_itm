@@ -52,9 +52,9 @@ classdef test_robustness_rev1 < matlab.unittest.TestCase
             parfor k = 1:n
                 par(k, :) = itm_pathloss_rev1(txs(k, :), rx, 2700, rel);
             end
-            tc.verifyEqual(par, serial, 'AbsTol', 1e-12, 'parfor single-link calls');
+            tc.verifyEqual(par, serial, 'parfor single-link calls');
             f = parfeval(pool, @itm_pathloss_rev1, 1, txs, rx, 2700, rel);
-            tc.verifyEqual(fetchOutputs(f), serial, 'AbsTol', 1e-12, 'batch call on a worker');
+            tc.verifyEqual(fetchOutputs(f), serial, 'batch call on a worker');
         end
 
         function concurrent_decoded_cache_writes(tc)
@@ -84,6 +84,25 @@ classdef test_robustness_rev1 < matlab.unittest.TestCase
     end
 
     methods (Test, TestTags = {'Network'})
+        function link_result_independent_of_batch(tc)
+            % A link must give the same loss alone or in any batch.
+            % distance() takes a different path for scalars; ITM is
+            % discontinuous, so that once changed one link by 0.09 dB.
+            tc.need_network();
+            rs = RandStream('mrg32k3a', 'Seed', 21);
+            n = 12;
+            txs = [38.6 + 0.8 * rand(rs, n, 1), -77.3 + 0.8 * rand(rs, n, 1), 10 + 40 * rand(rs, n, 1)];
+            rx = [39.0458, -76.6413, 10];
+            rel = [1 10 50 90 99];
+            batch = itm_pathloss_rev1(txs, rx, 2700, rel);
+            for k = 1:n
+                tc.verifyEqual(itm_pathloss_rev1(txs(k, :), rx, 2700, rel), batch(k, :), ...
+                    sprintf('link %d alone vs in a batch of %d', k, n));
+            end
+            sub = itm_pathloss_rev1(txs(3:7, :), rx, 2700, rel);
+            tc.verifyEqual(sub, batch(3:7, :), 'links 3-7 as their own batch');
+        end
+
         function truncated_cache_is_detected_and_rewritten(tc)
             % fread pads a short last column with zeros, so a cache cut off
             % mid-column could pass a size check; the byte count must catch
