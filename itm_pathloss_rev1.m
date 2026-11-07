@@ -120,7 +120,11 @@ else
     end
     ellipsoid = itm_wgs84();
     [d_m, az] = itm_geodesic_inverse(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2));
-    [lat_mid, lon_mid] = reckon(tx(:, 1), tx(:, 2), d_m / 2, az, ellipsoid);
+    lat_mid = zeros(n, 1);
+    lon_mid = zeros(n, 1);
+    for k = 1:n            % per path, so a link's midpoint doesn't depend on the batch
+        [lat_mid(k), lon_mid(k)] = reckon(tx(k, 1), tx(k, 2), d_m(k) / 2, az(k), ellipsoid);
+    end
     pinfo = struct('distance_m', num2cell(d_m), 'source_code', [], 'tiles', strings(0, 1));
 end
 
