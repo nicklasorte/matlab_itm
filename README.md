@@ -10,11 +10,41 @@ The core is a line-by-line port of the C++ reference implementation at
 code to within 4 × 10⁻¹³ dB on 740 test cases, with identical propagation
 modes, warning flags, and intermediate values.
 
-## Quick start
+## Get started
+
+### What you need
+
+- MATLAB R2025b (the release this is tested on) with Mapping Toolbox.
+- Internet access the first time you compute a path, to download terrain
+  tiles. After that, paths in the same area run from a local cache.
+- Access to this repository. It's private because it contains ITU digital
+  maps that ITU doesn't allow anyone to redistribute; ask the owner to add you.
+
+### Download and check the install
+
+1. Get the code, either way:
+   - With git: `git clone https://github.com/nicklasorte/matlab_itm.git`
+   - Without git: on the repository page, click **Code** > **Download ZIP**,
+     then unzip it.
+1. In MATLAB, go to the folder and add it to the path:
+
+   ```matlab
+   cd matlab_itm
+   addpath(pwd)
+   savepath          % optional: keep it on the path in later sessions
+   ```
+
+1. Run the self-test. It takes about 5 seconds and should end with `PASSED`:
+
+   ```matlab
+   itm_app_rev1("--selftest")              % add "--offline" to skip downloads
+   ```
+
+   For a window with a button instead, run `itm_app_rev1`.
+
+### Compute a path
 
 ```matlab
-addpath('matlab_itm')
-
 tx = [38.8895, -77.0353, 30];        % [lat (deg), lon (deg), height above ground (m)]
 rx = [39.0458, -76.6413, 10];
 reliability = [1 10 50 90 99];       % time percentages
@@ -23,9 +53,9 @@ loss_db = itm_pathloss_rev1(tx, rx, 2700, reliability)
 % loss_db = 178.61  181.90  184.56  186.89  188.79
 ```
 
-That's all you need to pass. The function finds the terrain profile, the
-radio climate, and the surface refractivity for the path, and evaluates
-every reliability from one geometry pass.
+That's all you pass. The function finds the terrain profile, the radio
+climate, and the surface refractivity for the path, and evaluates every
+reliability from one geometry pass.
 
 Many transmitters to one receiver, in one call:
 
@@ -40,11 +70,65 @@ A reliability-by-confidence table:
 T = itm_pathloss_rev1(tx, rx, 2700, [10; 50; 90], confidence=[10 50 90]);   % 3-by-3
 ```
 
+### Elevation angles at the transmitter and receiver
+
+The third output is the elevation angle of the path at each end, in
+degrees, positive up, one row per link:
+
+```matlab
+[loss_db, info, elev_deg] = itm_pathloss_rev1(tx, rx, 2700, 50);
+elev_deg            % [TX, RX] in degrees
+info.profile.azimuth_deg    % azimuth from TX to RX, degrees from north
+```
+
+On a line-of-sight path the angle points at the other antenna; otherwise
+it points at the terrain horizon (the obstacle that sets the radio
+horizon). Both use ITM's effective earth, so they include standard
+refraction. This is the angle to use for antenna gain toward the path.
+`itm_p2p_rev1` returns the same values in `info.elevation_deg`.
+
+Note: `info.theta_hzn_rad` is ITM's internal horizon angle. On paths well
+within line of sight, ITM replaces it with a smooth-earth estimate, so it's
+not the geometric angle. Use `elevation_deg`.
+
+### Run it without MATLAB
+
+Compile the self-test app or the command-line tool and run it on any
+computer with the free MATLAB Runtime. See
+[Compile for MATLAB Runtime](#compile-for-matlab-runtime).
+
+## Limits: the model fails loudly
+
+Inputs outside ITM's range stop the calculation with an error that says
+what's wrong and how to proceed. Nothing outside the range returns a number
+silently.
+
+| Input | Range | Outside the range |
+| --- | --- | --- |
+| Path length | 1 to 2000 km | Error `itm:validity:Distance` (names the links in a batch) |
+| Frequency | 20 to 20000 MHz | Error `itm:InvalidFrequency` |
+| Terminal height above ground | 0.5 to 3000 m | Error `itm:InvalidTxHeight`, `itm:InvalidRxHeight` |
+| Reliability, confidence | Between 0 and 100 %, exclusive | Error `itm:InvalidReliability`, `itm:InvalidConfidence` |
+| Sea-level refractivity N₀ | 250 to 400 N-units | Error `itm:InvalidRefractivity` |
+| Terrain | Every land point needs a terrain tile | Error `itm:terrain:NoCoverage` |
+
+Inside the range, inputs near a limit raise one MATLAB warning per call,
+`itm:validity:Caution`, that names the condition and the links: frequency
+outside 40 to 10000 MHz, terminal heights outside 1 to 1000 m, paths over
+1000 km, and percentages far in a tail (below about 0.1 % or above 99.9 %).
+NTIA's horizon-geometry flags are common on real terrain, so they're kept in
+`info.warnings` without a MATLAB warning.
+
+To compute outside the range anyway, pass `validity="warn"` (errors for
+distance become warnings) or `validity="off"` (no checks beyond NTIA's hard
+limits, the C++ behavior). In a batch, an error names the failing link, for
+example `Link 2: ITM error 1001: RX terminal height must be 0.5 to 3000 m.`
+
 ## Functions
 
 | Function | Purpose |
 | --- | --- |
-| `itm_pathloss_rev1(tx, rx, f_mhz, reliability)` | Path loss between locations, with everything automatic. Accepts N links. |
+| `itm_pathloss_rev1(tx, rx, f_mhz, reliability)` | Path loss between locations, with everything automatic. Accepts N links. Also returns elevation angles. |
 | `itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability)` | ITM core for a terrain profile you supply. Equivalent to NTIA `ITM_P2P_CR` (and `ITM_P2P_TLS` with the `location` option). |
 | `itm_terrain_profile_rev1(lat1, lon1, lat2, lon2)` | ITM PFL profile(s) along the WGS84 geodesic. |
 | `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached DEM tiles. |
@@ -210,9 +294,12 @@ NTIA code. The WInnForum Python wrapper uses fractions (0 to 1).
 - **One remaining loop.** The terrain-irregularity resampling keeps a loop of
   at most 245 steps: each step's rounding depends on the previous position,
   so it can't be expressed as an array operation without changing results.
-- **Geodesics.** One `distance` call and one `reckon` call cover every point
-  of every link (the same points as `track2`, to 2 × 10⁻¹² degrees). The
-  WGS84 ellipsoid object is built once.
+- **Geodesics.** One `distance` call and one `reckon` call per link cover
+  every profile point and the midpoint (the same points as `track2`, to
+  2 × 10⁻¹² degrees). One call per link, not one for all links, because
+  MATLAB's geodesic routines iterate until every element of the array
+  converges, so a shared call would make a link's result depend on the other
+  links in the batch. The WGS84 ellipsoid object is built once.
 - **Interpolation.** One `griddedInterpolant` per tile, queried in intrinsic
   coordinates: the same values as `geointerp` to single-precision rounding
   (rarely 1 ulp, about 10⁻⁵ m, apart) and about 25 times faster.
@@ -275,7 +362,8 @@ port (`656996a`): on the same five links (3DEP, 110 km multi-tile, the
 coastal sea-rule path, Mount Washington, and the Alps on Copernicus) at
 seven reliabilities from 0.1 to 99.9 %, the largest difference is
 9 × 10⁻⁹ dB, from interpolation rounding and 10⁻¹² degree geodesic
-differences. The 740 NTIA C++ cases still match to 4 × 10⁻¹³ dB.
+differences. The 740 NTIA C++ cases still match to 4 × 10⁻¹³ dB. A link
+gives the same loss alone or in any batch, bit for bit.
 
 ## Compile for MATLAB Runtime
 
@@ -284,6 +372,19 @@ build_itm_app_rev1()                       % self-test app: build/app/itm_app
 build_itm_app_rev1(installer=true)         % plus an installer that fetches the Runtime
 build_itm_app_rev1(entry="cli")            % command-line path-loss tool
 ```
+
+To run the app on another computer:
+
+1. Build it on the same operating system as the target computer
+   (`build_itm_app_rev1(installer=true)` makes an installer).
+1. On the target, install the free
+   [MATLAB Runtime](https://www.mathworks.com/products/compiler/matlab-runtime.html)
+   for R2025b, or run the installer, which downloads it.
+1. Copy the build folder (or the installer) to the target and run the app:
+   - Windows: `itm_app.exe --selftest`
+   - macOS or Linux: `./run_itm_app.sh <runtime_folder> --selftest`, where
+     `<runtime_folder>` is where the Runtime is installed, such as
+     `/Applications/MATLAB/MATLAB_Runtime/R2025b`.
 
 The app opens a window with a **Run self-test** button. It runs the same
 checks as the test suite and shows PASSED or FAILED, with a row per check.
@@ -330,22 +431,27 @@ Mapping Toolbox. To compile these functions into your own app, add the
 ```matlab
 runtests('tests')                                         % all
 
-% Skip the tests that download tiles
+% Skip the tests that download tiles, need a parallel pool, or compile
 import matlab.unittest.selectors.HasTag
 suite = testsuite('tests');
-run(suite.selectIf(~HasTag('Network')))
+run(suite.selectIf(~HasTag('Network') & ~HasTag('Parallel') & ~HasTag('Compile')))
 ```
 
-The concurrent-download test needs a parallel pool (`parpool(2)`); without
-one, it's reported as incomplete rather than failed.
+Tests tagged `Parallel` need a pool (`parpool(2)`); without one, they're
+reported as incomplete rather than failed. Tests tagged `Compile` build the
+app with MATLAB Compiler and take 1 to 2 minutes.
 
 | Test file | What it checks |
 | --- | --- |
 | `test_itm_p2p_rev1.m` | NTIA's published example and reliability-by-confidence table; NTIA `p2p.csv` cases; 740 randomized cases against the NTIA C++ (loss to 10⁻⁹ dB; modes, warnings, and intermediate values); vector vs scalar calls; output shapes; monotonic loss vs reliability; free-space check; every error identifier; warning flags. |
 | `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; maps folder override; setup; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; 3DEP profile; Copernicus fallback, GLO-90, and ocean; uncovered-land error; reuse of the itu_p2001 cache; batched profiles; end-to-end loss; two workers downloading into one folder. |
+| `test_limits_rev1.m` | Paths shorter than 1 km and longer than 2000 km fail; the error names the length, or the links in a batch; `validity="warn"` and `"off"`; frequency, height, and reliability limits; paths across the North Pole and near the South Pole, with and without terrain. |
+| `test_robustness_rev1.m` | `parfor` equals serial; two processes writing the decoded-tile cache; a truncated cache file is detected and rebuilt; the antimeridian (Fiji); high latitude (Tromsø); points on tile edges and corners; a link's loss doesn't depend on the batch. |
 | `test_app_rev1.m` | The deployable self-test, its progress callback, and the app's button and status box. |
+| `test_deploy_rev1.m` | Compiles the app, then runs the executable with `--selftest`, offline and with downloads into an empty cache. |
 
-`tests/benchmark_itm_rev1.m` times the workloads a compiled app runs.
+`tests/benchmark_itm_rev1.m` times the workloads a compiled app runs, and
+`tests/profile_one_link_rev1.m` times each stage of one link.
 
 The randomized cases come from the NTIA C++ itself. To regenerate them,
 see [tests/reference/generator/README.md](tests/reference/generator/README.md).
@@ -353,9 +459,10 @@ see [tests/reference/generator/README.md](tests/reference/generator/README.md).
 ## Errors and warnings
 
 Errors use identifiers such as `itm:InvalidReliability` and quote the NTIA
-error code (for example 1007). ITM warnings don't stop the run:
-`info.warnings` holds the NTIA bitmask for every output element, and
-`info.warning_messages` lists them in words.
+error code (for example 1007). See [Limits](#limits-the-model-fails-loudly)
+for what raises an error and what raises a warning. Whatever the `validity`
+setting, `info.warnings` holds the NTIA bitmask for every output element,
+and `info.warning_messages` lists the flags in words.
 
 ## Relationship to itu_p2001
 
