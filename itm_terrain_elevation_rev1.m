@@ -137,10 +137,10 @@ for k = 1:size(keys, 1)
     % short of their east and south edges; the sliver is under a pixel.
     la = min(max(lat(pick), G.lat_lim(1)), G.lat_lim(2));
     lo = min(max(lon(pick), G.lon_lim(1)), G.lon_lim(2));
-    % Same result as geointerp(Z, R, la, lo, "linear"), bit for bit: the
-    % interpolant is built once per tile, and the intrinsic coordinates use
-    % the same arithmetic as geographicToIntrinsic for 3DEP (checked in the
-    % tests) at a tenth of its cost.
+    % Same result as geointerp(Z, R, la, lo, "linear") to single-precision
+    % rounding (rarely 1 ulp, about 1e-5 m, apart): the interpolant is built
+    % once per tile, and for 3DEP the intrinsic coordinates use the same
+    % arithmetic as geographicToIntrinsic at a tenth of its cost.
     [x, y] = intrinsic(G, la, lo);
     z(pick) = F(y, x);
 end
@@ -249,6 +249,7 @@ if G.fast
     G.dlat = R.CellExtentInLatitude;
     G.dlon = R.CellExtentInLongitude;
 end
+G.size = R.RasterSize;
 end
 
 function [x, y] = intrinsic(G, la, lo)
@@ -256,7 +257,13 @@ if G.fast
     x = (lo - G.lon_lim(1)) / G.dlon + 0.5;
     y = (G.lat_lim(2) - la) / G.dlat + 0.5;
 else
+    % At the raster limits the built-in can land a hair (~1e-12) outside
+    % the outer postings, where the interpolant's 'nearest' extrapolation
+    % would return a neighbor value instead of interpolating along the
+    % edge. Clamp to the postings so edge points interpolate.
     [x, y] = geographicToIntrinsic(G.R, la, lo);
+    x = min(max(x, 1), G.size(2));
+    y = min(max(y, 1), G.size(1));
 end
 end
 

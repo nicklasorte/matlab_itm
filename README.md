@@ -214,7 +214,8 @@ NTIA code. The WInnForum Python wrapper uses fractions (0 to 1).
   of every link (the same points as `track2`, to 2 × 10⁻¹² degrees). The
   WGS84 ellipsoid object is built once.
 - **Interpolation.** One `griddedInterpolant` per tile, queried in intrinsic
-  coordinates: bit-identical to `geointerp` and about 25 times faster.
+  coordinates: the same values as `geointerp` to single-precision rounding
+  (rarely 1 ulp, about 10⁻⁵ m, apart) and about 25 times faster.
 - **Per-link overhead.** `itm_pathloss_rev1` validates its inputs once, then
   calls the private core for each link without re-running the `arguments`
   block (about 0.4 ms per call).

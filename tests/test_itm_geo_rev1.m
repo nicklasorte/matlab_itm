@@ -215,7 +215,10 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
                 loc = min(max(lo, R.LongitudeLimits(1)), R.LongitudeLimits(2));
                 ref = double(geointerp(Z, R, lac, loc, 'linear'));
                 ok = ~isnan(ref);
-                tc.verifyEqual(z(ok), ref(ok), sprintf('%s differs from geointerp', cases{k, 1}));
+                % griddedInterpolant and geointerp occasionally round 1 ulp
+                % apart in single precision (about 1e-5 m at 100 m)
+                tc.verifyEqual(z(ok), ref(ok), 'RelTol', 3e-7, 'AbsTol', 1e-5, ...
+                    sprintf('%s differs from geointerp', cases{k, 1}));
             end
         end
 
