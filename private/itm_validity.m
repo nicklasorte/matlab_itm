@@ -23,7 +23,7 @@ function itm_validity(wbits, d_km, mode)
 %   treats as hard limits always raise errors (itm:Invalid*), whatever the
 %   mode.
 
-if mode == "off" || ~any(wbits)
+if ~any(wbits) || mode == "off"      % the common case returns first
     return
 end
 wbits = uint32(wbits(:));
