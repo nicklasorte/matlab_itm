@@ -53,12 +53,14 @@ n_pts = max(min(ceil(d_m / options.spacing_m) + 1, floor(options.max_points)), 2
 % reckon solves the direct geodesic problem from the TX along the initial
 % azimuth (track2 gives the same points but solves the inverse problem
 % again for each path).
+% Indexing a scalar by a column vector gives a row, so force columns.
+col = @(v) reshape(v, [], 1);
 path_id = repelem((1:n_paths)', n_pts);
 step = d_m ./ (n_pts - 1);
 first = cumsum([1; n_pts(1:end - 1)]);
-k_in_path = (1:sum(n_pts))' - first(path_id);
-[lat_cat, lon_cat] = reckon(lat1(path_id), lon1(path_id), k_in_path .* step(path_id), ...
-    az(path_id), ellipsoid);
+k_in_path = (1:sum(n_pts))' - col(first(path_id));
+[lat_cat, lon_cat] = reckon(col(lat1(path_id)), col(lon1(path_id)), ...
+    k_in_path .* col(step(path_id)), col(az(path_id)), ellipsoid);
 % End exactly on the RX coordinates, as track2 does
 last = cumsum(n_pts);
 lat_cat(last) = lat2;
