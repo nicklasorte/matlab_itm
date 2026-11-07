@@ -1,10 +1,16 @@
-function app = itm_app_rev1()
+function app = itm_app_rev1(mode)
 %ITM_APP_REV1 Self-test app for the ITM port, for MATLAB and MATLAB Runtime.
 %   app = ITM_APP_REV1() opens a window with a Run self-test button, a
 %   status box that reads PASSED or FAILED, and a table of every check
 %   (see itm_selftest_rev1). It is the entry point that
 %   build_itm_app_rev1 compiles, so the same checks run on a computer that
 %   has only the MATLAB Runtime.
+%
+%   ITM_APP_REV1("--selftest") runs the checks without a window, prints
+%   them, and (in a compiled app) exits with status 0 when they pass and
+%   1 when they fail. Use it to verify an installation from a script:
+%     itm_app --selftest
+%   Add "--offline" to skip the checks that download terrain.
 %
 %   app is a struct of the UI handles. app.run() runs the self-test as if
 %   the button were pressed, which the test suite uses.
@@ -13,6 +19,15 @@ function app = itm_app_rev1()
 %   Designer .mlapp, so changes stay readable in git.
 %
 %   See also itm_selftest_rev1, build_itm_app_rev1.
+
+arguments (Repeating)
+    mode (1,1) string
+end
+modes = [mode{:}];
+if any(modes == "--selftest")
+    app = headless(~any(modes == "--offline"));
+    return
+end
 
 fig = uifigure('Name', 'ITM v1.4 point-to-point: self-test', 'Position', [100 100 900 560]);
 grid = uigridlayout(fig, [4 1], 'RowHeight', {'fit', 'fit', 'fit', '1x'}, 'Padding', [16 16 16 16]);
@@ -91,3 +106,16 @@ end
     end
 end
 
+function passed = headless(network)
+fprintf('ITM v1.4 point-to-point (MATLAB port): self-test\n');
+[passed, T] = itm_selftest_rev1('network', network, 'progress', ...
+    @(r) fprintf('  %-4s  %-42s  %s\n', r.status, r.name, r.detail));
+if passed
+    fprintf('PASSED: %d passed, %d skipped\n', nnz(T.status == "PASS"), nnz(T.status == "SKIP"));
+else
+    fprintf('FAILED: %d failed\n', nnz(T.status == "FAIL"));
+end
+if isdeployed
+    exit(double(~passed));
+end
+end
