@@ -47,12 +47,14 @@ T = itm_pathloss_rev1(tx, rx, 2700, [10; 50; 90], confidence=[10 50 90]);   % 3-
 | `itm_pathloss_rev1(tx, rx, f_mhz, reliability)` | Path loss between locations, with everything automatic. Accepts N links. |
 | `itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability)` | ITM core for a terrain profile you supply. Equivalent to NTIA `ITM_P2P_CR` (and `ITM_P2P_TLS` with the `location` option). |
 | `itm_terrain_profile_rev1(lat1, lon1, lat2, lon2)` | ITM PFL profile(s) along the WGS84 geodesic. |
-| `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached 1 arc-second tiles. |
+| `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached DEM tiles. |
 | `itm_radio_climate_rev1(lat, lon)` | ITU-R P.617 radio climate code (1–7). |
 | `itm_surface_refractivity_rev1(lat, lon)` | ITU-R P.452 sea-level refractivity N₀. |
 | `itm_setup_rev1(region=[lat_min lat_max lon_min lon_max])` | Cache the ITU maps and the terrain tiles for an area (offline servers, shared caches). |
-| `itm_cli_rev1(...)` | Command-line entry point for a compiled app. |
-| `build_itm_app_rev1()` | Compiles `itm_cli_rev1` with MATLAB Compiler. |
+| `itm_app_rev1()` | Self-test app: a **Run self-test** button, a PASSED/FAILED status box, and a table of checks. `itm_app_rev1("--selftest")` runs headless. |
+| `itm_selftest_rev1()` | The self-test the app runs. Deployable (no `matlab.unittest`). |
+| `itm_cli_rev1(...)` | Command-line path-loss tool for a compiled app. |
+| `build_itm_app_rev1()` | Compiles the app (or the CLI) with MATLAB Compiler, with every data file it needs. |
 
 Every function documents its inputs and name-value options; run
 `help itm_pathloss_rev1`.
@@ -82,21 +84,28 @@ flowchart LR
 ## Terrain data
 
 The terrain source has to work in a compiled app, without a MATLAB license
-or an account. Both sources here are public, keyless, and served as plain
+or an account. All sources here are public, keyless, and served as plain
 GeoTIFF files over HTTPS, so the app needs only `websave` and
-`readgeoraster`. Both functions are supported by MATLAB Compiler.
+`readgeoraster`, which MATLAB Compiler supports.
 
 | Source | Coverage | Resolution | Surface | Vertical datum | Tile size |
 | --- | --- | --- | --- | --- | --- |
 | [USGS 3DEP 1 arc-second](https://www.usgs.gov/3d-elevation-program) (default) | U.S. (CONUS, Alaska, Hawaii), Puerto Rico, U.S. Virgin Islands, Guam, border areas of Canada and Mexico | ~30 m | Bare earth | NAVD88 | ~45 MB per 1° × 1° |
 | [Copernicus GLO-30](https://registry.opendata.aws/copernicus-dem/) (fallback) | Global | ~30 m | Surface model (includes buildings and canopy) | EGM2008 | ~35 MB per 1° × 1° |
 | [Copernicus GLO-90](https://registry.opendata.aws/copernicus-dem/) (second fallback) | Global, including tiles not released in GLO-30 | ~90 m | Surface model | EGM2008 | ~5 MB per 1° × 1° |
+| USGS 3DEP 1/3 arc-second (`terrain_source="usgs3dep13"`, opt-in) | CONUS, Hawaii, territories | ~10 m | Bare earth | NAVD88 | ~370 MB per 1° × 1° |
 
 With `terrain_source="auto"` (the default), each point comes from 3DEP.
 Points where 3DEP has no tile or no data (outside the U.S., past a border,
 offshore) are filled from GLO-30, then GLO-90. Points with no data in any
-source, such as open ocean, are set to 0 m. `info.profile.source_code` records the
-source of every point.
+source are set to 0 m when they're water: no-data cells inside a tile
+(coasts), or sea on the ITU-R P.617 map. A land point that no chosen source
+covers raises `itm:terrain:NoCoverage`, so forcing `terrain_source="usgs3dep"`
+outside the U.S. fails loudly instead of reading land as sea level.
+`info.profile.source_code` records the source of every point.
+
+For 10 m terrain, pass `terrain_source="usgs3dep13", spacing_m=10`. Its
+tiles are large, so it's never part of `"auto"`.
 
 Tiles download the first time a path needs them and are reused afterward:
 
@@ -104,8 +113,16 @@ Tiles download the first time a path needs them and are reused afterward:
   `MATLAB_ITM_CACHE` environment variable, else `%LOCALAPPDATA%\matlab_itm`
   on Windows, else `~/.matlab_itm`. `MATLAB_ITM_TERRAIN_DIR` or the
   `terrain_dir` option overrides the terrain folder alone.
-- **Memory.** The eight most recently used tiles stay in memory (about
-  52 MB each), so repeated calls in one area take tens of milliseconds.
+- **Shared with itu_p2001.** Both tools use the providers' file names, so
+  a tile already in the itu_p2001 cache (`ITU_P2001_CACHE`, else
+  `~/.itu_p2001/dem/...`) is read in place, not downloaded again. Set
+  `MATLAB_ITM_SHARE_P2001_CACHE=0` to turn this off.
+- **Decoded tiles on disk.** Decoding a GeoTIFF takes about 170 ms. The
+  decoded grid is saved beside it (`.zcache`, about 52 MB per tile), so a new
+  MATLAB or app process loads a tile in about 10 ms.
+- **Memory.** Decoded tiles stay in memory up to 2 GB (about 38 one-arc-second
+  tiles); set `MATLAB_ITM_TILE_CACHE_GB` to change it. The least recently
+  used tile is dropped first.
 - **Offline servers.** Run `itm_setup_rev1(region=[...])` on a connected
   machine, copy the cache folder, set `MATLAB_ITM_CACHE` to it, and call
   with `download=false`. A missing tile then raises
@@ -193,26 +210,67 @@ NTIA code. The WInnForum Python wrapper uses fractions (0 to 1).
 - **One remaining loop.** The terrain-irregularity resampling keeps a loop of
   at most 245 steps: each step's rounding depends on the previous position,
   so it can't be expressed as an array operation without changing results.
+- **Geodesics.** One `distance` call and one `reckon` call cover every point
+  of every link (the same points as `track2`, to 2 × 10⁻¹² degrees). The
+  WGS84 ellipsoid object is built once.
+- **Interpolation.** One `griddedInterpolant` per tile, queried in intrinsic
+  coordinates: bit-identical to `geointerp` and about 25 times faster.
+- **Per-link overhead.** `itm_pathloss_rev1` validates its inputs once, then
+  calls the private core for each link without re-running the `arguments`
+  block (about 0.4 ms per call).
+
+Measured on R2025b, Apple silicon, before these optimizations
+(`tests/benchmark_itm_rev1.m`): a cold first call took 1.2 s (0.4 s parsing
+the ITU text files, 0.6 s decoding three tiles), one warm link took 33 ms,
+and 50 links × 1,000 reliabilities took 79 ms.
 
 ## Compile for MATLAB Runtime
 
 ```matlab
-build_itm_app_rev1()          % writes build/itm_cli(.exe or .app)
+build_itm_app_rev1()                       % self-test app: build/app/itm_app
+build_itm_app_rev1(installer=true)         % plus an installer that fetches the Runtime
+build_itm_app_rev1(entry="cli")            % command-line path-loss tool
 ```
 
-Then, on a machine with the R2025b MATLAB Runtime:
+The app opens a window with a **Run self-test** button. It runs the same
+checks as the test suite and shows PASSED or FAILED, with a row per check.
+To verify an installation from a script, run it headless; the exit code is
+0 on success and 1 on failure:
 
 ```text
-itm_cli 38.8895 -77.0353 30 39.0458 -76.6413 10 2700 1,10,50,90,99
+itm_app --selftest              # all checks, including terrain downloads
+itm_app --selftest --offline    # skip the checks that need the network
 ```
 
-Required products: MATLAB and Mapping Toolbox. The build packages `data/`
-and `private/`. To compile these functions into your own app, add the
-`itm_*_rev1.m` files, the `private` folder, and the `data` folder.
+The build packages everything the code opens by name at run time, which
+dependency analysis can't find: `data/` (ITU maps), `private/`, and
+`tests/reference/` (for the self-test). Required products: MATLAB and
+Mapping Toolbox. To compile these functions into your own app, add the
+`itm_*_rev1.m` files and those three folders.
 
-This was tested on macOS: the compiled app ran outside MATLAB, downloaded
-its tiles into an empty cache, and returned results identical to the MATLAB
-session.
+### Things to know before deploying
+
+- **The test suite can't be compiled.** MATLAB Compiler doesn't support
+  `matlab.unittest`, so the app runs `itm_selftest_rev1`, which repeats the
+  same verifications with plain comparisons.
+- **Same release, same platform.** The target needs the MATLAB Runtime for
+  the release used to build (R2025b). Build on Windows for Windows targets.
+  The installer option downloads the right Runtime.
+- **Writable cache.** The app writes terrain tiles to
+  `%LOCALAPPDATA%\matlab_itm` (Windows) or `~/.matlab_itm`. On a locked-down
+  machine, set `MATLAB_ITM_CACHE` to a writable folder.
+- **Network.** The app needs HTTPS access to `prd-tnm.s3.amazonaws.com`
+  (USGS) and `copernicus-dem-30m.s3.amazonaws.com` /
+  `copernicus-dem-90m.s3.amazonaws.com`. The ITU maps are inside the app.
+  Behind a proxy, check that MATLAB Runtime's web access works with
+  `itm_app --selftest`.
+- **Offline machines.** Run `itm_setup_rev1(region=[...])` on a connected
+  machine, copy the cache folder over, and set `MATLAB_ITM_CACHE` to it and
+  `MATLAB_ITM_OFFLINE=1`.
+- **First run is slower.** Each tile downloads once (about 3 s per 45 MB
+  tile) and decodes once; later runs read the decoded cache.
+- **ITU terms.** The app contains ITU digital maps, which ITU forbids
+  redistributing without permission. Keep it inside your organization.
 
 ## Tests
 
@@ -231,7 +289,10 @@ one, it's reported as incomplete rather than failed.
 | Test file | What it checks |
 | --- | --- |
 | `test_itm_p2p_rev1.m` | NTIA's published example and reliability-by-confidence table; NTIA `p2p.csv` cases; 740 randomized cases against the NTIA C++ (loss to 10⁻⁹ dB; modes, warnings, and intermediate values); vector vs scalar calls; output shapes; monotonic loss vs reliability; free-space check; every error identifier; warning flags. |
-| `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; 3DEP profile; Copernicus fallback and ocean; batched profiles; end-to-end loss; two workers downloading into one folder. |
+| `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; maps folder override; setup; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; 3DEP profile; Copernicus fallback, GLO-90, and ocean; uncovered-land error; reuse of the itu_p2001 cache; batched profiles; end-to-end loss; two workers downloading into one folder. |
+| `test_app_rev1.m` | The deployable self-test, its progress callback, and the app's button and status box. |
+
+`tests/benchmark_itm_rev1.m` times the workloads a compiled app runs.
 
 The randomized cases come from the NTIA C++ itself. To regenerate them,
 see [tests/reference/generator/README.md](tests/reference/generator/README.md).
@@ -246,11 +307,14 @@ error code (for example 1007). ITM warnings don't stop the run:
 ## Relationship to itu_p2001
 
 The ITU maps loader (download, parse, atomic cache), the setup function,
-the Copernicus tile-list check, and the GLO-90 fallback follow the
-patterns in [nicklasorte/itu_p2001](https://github.com/nicklasorte/itu_p2001)
+and the terrain handler (tile names and URLs, Copernicus tile lists, the
+GLO-90 and USGS 1/3 arc-second sources, the memory cap in GB, and the
+uncovered-land error) follow
+[nicklasorte/itu_p2001](https://github.com/nicklasorte/itu_p2001)
 (`p2001_maps_rev1`, `p2001_setup_rev1`, `p2001_dem_tile_rev1`,
-`p2001_atomic_save_rev1`). The two repositories share the cache layout
-idea but use separate folders (`~/.matlab_itm` and `~/.itu_p2001`).
+`p2001_terrain_profile_rev1`, `p2001_atomic_save_rev1`). Each tool keeps its
+own cache folder (`~/.matlab_itm`, `~/.itu_p2001`), and `matlab_itm` reads
+tiles already in the `itu_p2001` cache instead of downloading them again.
 
 ## Data credits
 
