@@ -494,6 +494,13 @@ app with MATLAB Compiler and take 1 to 2 minutes.
 | `test_app_rev1.m` | The deployable self-test, its progress callback, and the app's button and status box. |
 | `test_deploy_rev1.m` | Compiles the app, then runs the executable with `--selftest`, offline and with downloads into an empty cache. |
 
+`tests/compare_models_rev1.m` runs random links through this port, SEADLib
+ITM, TIREM (on the SEADLib profile and through `propagationModel("tirem")`),
+and MATLAB's `propagationModel("longley-rice")`. It compares loss from 0.1 to
+99.9 %, elevation angles, propagation mechanism, and time per link, and
+writes every result to an Excel workbook. Models that aren't installed are
+skipped: SEADLib needs Windows and `C:\USGS`, and TIREM needs its library.
+
 `tests/benchmark_itm_rev1.m` times the workloads a compiled app runs, and
 `tests/profile_one_link_rev1.m` times each stage of one link.
 
