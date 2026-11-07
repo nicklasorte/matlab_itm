@@ -739,10 +739,17 @@ sigma_T_plus = curve(bsp1(c), bsp2(c), xsp1(c), xsp2(c), xsp3(c), d_e) * g_plus;
 sigma_TD = C_D(c) * sigma_T_plus;
 tgtd = (sigma_T_plus - sigma_TD) * z_D(c);
 
-sigma_T = sigma_T_plus + zeros(size(z_T));
-sigma_T(z_T < 0.0) = sigma_T_minus;
+% Three-way selection without logical-index assignment (single-threaded
+% and slow on large arrays). The masks are 0 or 1 and disjoint, x*1 and
+% x*0 are exact, and adding exact zeros changes nothing, so each element
+% equals the C++ branch it falls in, bit for bit. The upper branch divides
+% by max(z_T, z_D), which equals z_T where that branch is selected and
+% avoids Inf*0 = NaN at z_T = 0 (reliability 50) elsewhere.
+lower = z_T < 0.0;
 upper = z_T > z_D(c);
-sigma_T(upper) = sigma_TD + tgtd ./ z_T(upper);
+middle = ~(lower | upper);
+sigma_T = sigma_T_minus .* lower + sigma_T_plus .* middle + ...
+    (sigma_TD + tgtd ./ max(z_T, z_D(c))) .* upper;
 Y_T = sigma_T .* z_T;
 
 Y_S_temp = sigma_S^2 + Y_T.^2 ./ (7.8 + z_S.^2) + Y_L.^2 ./ (24.0 + z_S.^2);

@@ -31,6 +31,24 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %
 %   Adapted from p2001_dem_tile_rev1 in nicklasorte/itu_p2001.
 
+% Resolved paths are remembered for the session, so repeated calls for a
+% tile skip the path building and file-system checks (about 0.1 ms each,
+% several per tile). Only settled answers (a file, or no tile) are kept.
+persistent memo
+if isempty(memo)
+    memo = containers.Map('KeyType', 'char', 'ValueType', 'any');
+end
+key = sprintf('%s|%d|%d|%s|%s|%s', source, tile_lat, tile_lon, terrain_dir, ...
+    getenv('ITU_P2001_CACHE'), getenv('MATLAB_ITM_SHARE_P2001_CACHE'));
+if isKey(memo, key)
+    file = memo(key);
+    return
+end
+file = resolve(source, tile_lat, tile_lon, terrain_dir, download);
+memo(key) = file;
+end
+
+function file = resolve(source, tile_lat, tile_lon, terrain_dir, download)
 [name, url, p2001_sub] = tile_name_url(source, tile_lat, tile_lon);
 folder = fullfile(terrain_dir, source);
 file = string(fullfile(folder, name));

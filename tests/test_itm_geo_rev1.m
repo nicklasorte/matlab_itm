@@ -105,6 +105,11 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
         end
 
         function offline_mode_fails_loudly(tc)
+            % Point the itu_p2001 cache at an empty folder too, so a tile
+            % that tool already downloaded can't satisfy the lookup
+            old = getenv('ITU_P2001_CACHE');
+            tc.addTeardown(@() setenv('ITU_P2001_CACHE', old));
+            setenv('ITU_P2001_CACHE', char(fullfile(tc.tmp_dir, 'no_p2001')));
             tc.verifyError(@() itm_terrain_elevation_rev1(38.9, -77.0, terrain_dir=tc.tmp_dir, ...
                 download=false), 'itm:terrain:TileMissing');
         end
@@ -188,6 +193,30 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.verifyEqual(info.source_code, uint8(1));
             tc.verifyTrue(startsWith(info.tiles(1), string(p2001_root)));
             tc.verifyEqual(z, itm_terrain_elevation_rev1(38.5, -76.5), 'AbsTol', 1e-9);
+        end
+
+        function elevation_matches_geointerp(tc)
+            % The cached interpolant and direct intrinsic coordinates must
+            % reproduce geointerp exactly, for cells (3DEP) and postings
+            % (Copernicus) rasters
+            tc.assume_network();
+            rs = RandStream('mrg32k3a', 'Seed', 11);
+            cases = {"usgs3dep", 38, -77; "copernicus", 51, -1};
+            for k = 1:2
+                la = cases{k, 2} + 0.999 * rand(rs, 20000, 1);
+                lo = cases{k, 3} + 0.999 * rand(rs, 20000, 1);
+                [z, info] = itm_terrain_elevation_rev1(la, lo, source=cases{k, 1});
+                [Z, R] = readgeoraster(info.tiles(1), 'OutputType', 'single');
+                gi = georasterinfo(info.tiles(1));
+                if ~isempty(gi.MissingDataIndicator)
+                    Z = standardizeMissing(Z, single(gi.MissingDataIndicator));
+                end
+                lac = min(max(la, R.LatitudeLimits(1)), R.LatitudeLimits(2));
+                loc = min(max(lo, R.LongitudeLimits(1)), R.LongitudeLimits(2));
+                ref = double(geointerp(Z, R, lac, loc, 'linear'));
+                ok = ~isnan(ref);
+                tc.verifyEqual(z(ok), ref(ok), sprintf('%s differs from geointerp', cases{k, 1}));
+            end
         end
 
         function glo90_source(tc)

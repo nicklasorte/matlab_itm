@@ -97,10 +97,32 @@ pol = parse_polarization(options.polarization);
 % any terrain download; every link reuses them.
 z = itm_percentiles(reliability, options.confidence, 50);
 
-% Path geometry and midpoints along the WGS84 geodesic (vectorized)
-ellipsoid = itm_wgs84();
-[d_m, az] = distance(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2), ellipsoid);
-[lat_mid, lon_mid] = reckon(tx(:, 1), tx(:, 2), d_m / 2, az, ellipsoid);
+% Terrain profiles and path geometry. The profile call samples every link
+% in one pass over the tiles and returns each geodesic's length and
+% midpoint from the same reckon call, so they aren't solved again here.
+if isempty(options.pfl)
+    [pfls, pinfo] = itm_terrain_profile_rev1(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2), ...
+        spacing_m=options.spacing_m, max_points=options.max_points, ...
+        source=options.terrain_source, terrain_dir=options.terrain_dir, download=options.download);
+    if n == 1
+        pfls = {pfls};
+    end
+    mid = vertcat(pinfo.midpoint_deg);
+    lat_mid = mid(:, 1);
+    lon_mid = mid(:, 2);
+else
+    pfls = options.pfl;
+    if ~iscell(pfls)
+        pfls = {pfls};
+    end
+    if numel(pfls) ~= n
+        error('itm:SizeMismatch', 'pfl must be one profile or a cell array of %d profiles.', n);
+    end
+    ellipsoid = itm_wgs84();
+    [d_m, az] = distance(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2), ellipsoid);
+    [lat_mid, lon_mid] = reckon(tx(:, 1), tx(:, 2), d_m / 2, az, ellipsoid);
+    pinfo = struct('distance_m', num2cell(d_m), 'source_code', [], 'tiles', strings(0, 1));
+end
 
 % Radio climate (ITU-R P.617) and refractivity (ITU-R P.452), vectorized
 if isempty(options.climate)
@@ -122,25 +144,6 @@ if isempty(options.N_0)
 else
     N_0 = expand(options.N_0, n, 'N_0');
     N_0_source = "user";
-end
-
-% Terrain profiles: one pass over the tiles for all links
-if isempty(options.pfl)
-    [pfls, pinfo] = itm_terrain_profile_rev1(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2), ...
-        spacing_m=options.spacing_m, max_points=options.max_points, ...
-        source=options.terrain_source, terrain_dir=options.terrain_dir, download=options.download);
-    if n == 1
-        pfls = {pfls};
-    end
-else
-    pfls = options.pfl;
-    if ~iscell(pfls)
-        pfls = {pfls};
-    end
-    if numel(pfls) ~= n
-        error('itm:SizeMismatch', 'pfl must be one profile or a cell array of %d profiles.', n);
-    end
-    pinfo = struct('distance_m', num2cell(d_m), 'source_code', [], 'tiles', strings(0, 1));
 end
 
 % ITM core per link; each call is vectorized over reliability and confidence
