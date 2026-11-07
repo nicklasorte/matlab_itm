@@ -107,7 +107,7 @@ for k = 1:height(T)
     r = T(k, :);
     A = itm_p2p_rev1(r.h_tx__meter, r.h_rx__meter, P{k}, r.f__mhz, r.time, 'confidence', r.situation, ...
         'location', r.location, 'climate', r.climate, 'N_0', r.N_0, 'polarization', r.pol, ...
-        'epsilon', r.epsilon, 'sigma', r.sigma, 'mdvar', r.mdvar);
+        'epsilon', r.epsilon, 'sigma', r.sigma, 'mdvar', r.mdvar, 'validity', 'off');
     err(k) = abs(A - r.A__db);
 end
 must(all(err <= 0.005), "Max difference %.4f dB exceeds the 0.005 dB rounding of p2p.csv.", max(err));
@@ -140,7 +140,7 @@ for g = groups'
     c = C(rows(1), :);
     Lv = itm_p2p_rev1(c(1), c(2), P{c(13) + 1}, c(5), C(rows, 10), 'confidence', c(12), ...
         'location', c(11), 'climate', c(3), 'N_0', c(4), 'polarization', c(6), ...
-        'epsilon', c(7), 'sigma', c(8), 'mdvar', c(9));
+        'epsilon', c(7), 'sigma', c(8), 'mdvar', c(9), 'validity', 'off');
     worst = max([worst; abs(Lv - E(rows, 4))]);
 end
 must(numel(groups) >= 20 && worst <= 1e-9, "Vector calls differ from C++ by %.3g dB.", worst);
@@ -228,7 +228,7 @@ end
 function [A, info] = run_case(c, P)
 [A, info] = itm_p2p_rev1(c(1), c(2), P{c(13) + 1}, c(5), c(10), 'confidence', c(12), ...
     'location', c(11), 'climate', c(3), 'N_0', c(4), 'polarization', c(6), 'epsilon', c(7), ...
-    'sigma', c(8), 'mdvar', c(9));
+    'sigma', c(8), 'mdvar', c(9), 'validity', 'off');
 end
 
 function P = read_profiles(file)

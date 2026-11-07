@@ -58,7 +58,7 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
                 A = itm_p2p_rev1(r.h_tx__meter, r.h_rx__meter, P{k}, r.f__mhz, r.time, ...
                     'confidence', r.situation, 'location', r.location, 'climate', r.climate, ...
                     'N_0', r.N_0, 'polarization', r.pol, 'epsilon', r.epsilon, 'sigma', r.sigma, ...
-                    'mdvar', r.mdvar);
+                    'mdvar', r.mdvar, 'validity', 'off');
                 tc.verifyEqual(A, r.A__db, 'AbsTol', 0.005, sprintf('p2p.csv row %d', k));
             end
         end
@@ -95,7 +95,7 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
                 rel = C(rows, 10);
                 Lv = itm_p2p_rev1(c(1), c(2), tc.profiles{c(13) + 1}, c(5), rel, ...
                     'confidence', c(12), 'location', c(11), 'climate', c(3), 'N_0', c(4), ...
-                    'polarization', c(6), 'epsilon', c(7), 'sigma', c(8), 'mdvar', c(9));
+                    'polarization', c(6), 'epsilon', c(7), 'sigma', c(8), 'mdvar', c(9), 'validity', 'off');
                 Ls = arrayfun(@(r) run_case(C(r, :), tc.profiles), rows);
                 tc.verifyEqual(Lv, Ls, 'AbsTol', 1e-12);
                 tc.verifyEqual(Lv, tc.expected(rows, 4), 'AbsTol', 1e-9);
@@ -128,11 +128,11 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             c = tc.cases(500, :);
             pfl = tc.profiles{c(13) + 1};
             for mdvar = [0 1 2 3 13 23 33]
-                L = itm_p2p_rev1(c(1), c(2), pfl, c(5), rel, climate=c(3), N_0=c(4), mdvar=mdvar);
+                L = itm_p2p_rev1(c(1), c(2), pfl, c(5), rel, climate=c(3), N_0=c(4), mdvar=mdvar, validity="off");
                 tc.verifySize(L, size(rel));
                 for k = pick
                     tc.verifyEqual(L(k), itm_p2p_rev1(c(1), c(2), pfl, c(5), rel(k), climate=c(3), ...
-                        N_0=c(4), mdvar=mdvar), 'AbsTol', 1e-12, sprintf('mdvar %d, element %d', mdvar, k));
+                        N_0=c(4), mdvar=mdvar, validity="off"), 'AbsTol', 1e-12, sprintf('mdvar %d, element %d', mdvar, k));
                 end
             end
         end
@@ -155,7 +155,7 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
                 c = tc.cases(k, :);
                 L = itm_p2p_rev1(c(1), c(2), tc.profiles{c(13) + 1}, c(5), rel, ...
                     'climate', c(3), 'N_0', c(4), 'polarization', c(6), 'epsilon', c(7), ...
-                    'sigma', c(8), 'mdvar', 13);
+                    'sigma', c(8), 'mdvar', 13, 'validity', 'off');
                 tc.verifyGreaterThanOrEqual(diff(L), -1e-9, sprintf('case %d', k));
             end
         end
@@ -204,7 +204,7 @@ end
 function [A, info] = run_case(c, profiles)
 [A, info] = itm_p2p_rev1(c(1), c(2), profiles{c(13) + 1}, c(5), c(10), 'confidence', c(12), ...
     'location', c(11), 'climate', c(3), 'N_0', c(4), 'polarization', c(6), 'epsilon', c(7), ...
-    'sigma', c(8), 'mdvar', c(9));
+    'sigma', c(8), 'mdvar', c(9), 'validity', 'off');
 end
 
 function P = read_profiles(file)

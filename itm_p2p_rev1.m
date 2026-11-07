@@ -40,13 +40,33 @@ function [A_db, info] = itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability, op
 %                  accidental, 2 mobile, 3 broadcast; add 10 to remove
 %                  location variability, add 20 to remove situation
 %                  variability
+%     validity     What to do when the path or inputs are outside the
+%                  model's stated range ("error"):
+%                    "error"  A path shorter than 1 km or longer than
+%                             2000 km raises itm:validity:Distance. Any
+%                             other NTIA warning flag (for example,
+%                             frequency outside 40-10000 MHz, or a
+%                             reliability far in a tail) raises the
+%                             MATLAB warning itm:validity:Caution.
+%                    "warn"   The distance check is a warning instead.
+%                    "off"    No checks beyond NTIA's hard limits, as in
+%                             the C++. Use it to reproduce NTIA results.
+%                  NTIA's hard limits (frequency 20-20000 MHz, heights
+%                  0.5-3000 m, N_0 250-400, and so on) always raise
+%                  errors.
 %
 %   Outputs:
 %     A_db   Basic transmission loss (dB), size of reliability .* confidence
 %     info   Struct of ITM intermediate values: A_fs_db, A_ref_db, d_km,
-%            delta_h_m, d_hzn_m, h_e_m, theta_hzn_rad, N_s, mode,
+%            delta_h_m, d_hzn_m, h_e_m, theta_hzn_rad, elevation_deg, N_s, mode,
 %            mode_name, warnings (bitmask per output element, uint32) and
 %            warning_messages (cell array of unique warnings)
+%            elevation_deg is [TX, RX]: the elevation angle (degrees,
+%            positive up) of the path at each terminal, toward the other
+%            antenna on a line-of-sight path or toward the terrain horizon
+%            otherwise, on ITM's effective earth. theta_hzn_rad is ITM's
+%            internal horizon angle, which on paths well within line of
+%            sight is a smooth-earth estimate, not the geometric angle.
 %
 %   Errors use identifiers of the form itm:<Name> and quote the C++ error
 %   code, for example itm:InvalidReliability (1007).
@@ -71,9 +91,11 @@ arguments
     options.epsilon (1,1) double {mustBeReal, mustBeFinite} = 25
     options.sigma (1,1) double {mustBeReal, mustBeFinite} = 0.02
     options.mdvar (1,1) double {mustBeReal, mustBeFinite} = 13
+    options.validity (1,1) string {mustBeMember(options.validity, ["error", "warn", "off"])} = "error"
 end
 
-[A_db, info] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, options.confidence, ...
+[A_db, info, wbits] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, options.confidence, ...
     options.location, options.climate, options.N_0, options.polarization, options.epsilon, ...
     options.sigma, options.mdvar, nargout > 1);
+itm_validity(wbits, pfl(1) * pfl(2) / 1000, options.validity);
 end

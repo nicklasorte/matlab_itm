@@ -1,4 +1,4 @@
-function [A_db, info] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, confidence, ...
+function [A_db, info, wbits, elev_deg] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, confidence, ...
     location, climate, N_0, polarization, epsilon, sigma, mdvar, want_info, z)
 %ITM_P2P_CORE ITM v1.4 point-to-point computation without argument parsing.
 %   Called by itm_p2p_rev1 (after its arguments block) and, once per link,
@@ -10,6 +10,11 @@ function [A_db, info] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, co
 %   call. z, optional, holds the percentages already validated and
 %   converted to normal deviates by itm_percentiles; itm_pathloss_rev1
 %   passes it so a reliability array is converted once, not once per link.
+%   wbits (uint32) is the union of the NTIA warning flags over all output
+%   elements; itm_validity turns it into errors or MATLAB warnings.
+%   elev_deg ([TX, RX], degrees) is the elevation angle of the path at
+%   each terminal: toward the other antenna on a line-of-sight path, or
+%   toward the terrain horizon, on ITM's effective earth (radius 1/gamma_e).
 
 info = [];
 pfl = pfl(:);
@@ -35,18 +40,16 @@ h_sys_m = h_acc(end) / (np - 2 * p10 + 1);
     polarization, epsilon, sigma);
 
 h_m = [h_tx_m, h_rx_m];
-[theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m] = quick_pfl(pfl, gamma_e, h_m);
+[theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m, theta_geo] = quick_pfl(pfl, gamma_e, h_m);
+elev_deg = rad2deg(theta_geo);
 
 [A_ref_db, warnings, propmode] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
     gamma_e, N_s, delta_h_m, h_m, d_m, warnings);
 
 A_fs_db = free_space_loss(d_m, f_mhz);
 
-if want_info
-    [V_db, extreme] = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
-else
-    V_db = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
-end
+[V_db, extreme] = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
+wbits = bitor(uint32(warnings), uint32(any(extreme(:))) * uint32(8192));
 if numel(V_db) ~= prod(out_size)
     % Scalar deviates (for example single-message mode, which ignores
     % time) give one value for every requested percentage
@@ -67,11 +70,12 @@ if want_info
         'd_hzn_m', d_hzn_m, ...
         'h_e_m', h_e_m, ...
         'theta_hzn_rad', theta_hzn, ...
+        'elevation_deg', elev_deg, ...
         'N_s', N_s, ...
         'mode', propmode, ...
         'mode_name', mode_names(propmode), ...
         'warnings', reshape(w, out_size), ...
-        'warning_messages', {warning_messages(bitor(uint32(warnings), uint32(any(extreme(:))) * uint32(8192)))});
+        'warning_messages', {itm_warning_text(wbits)});
 end
 end
 
@@ -163,27 +167,6 @@ end
 error(['itm:' id], 'ITM error %d: %s', code, msg);
 end
 
-function msgs = warning_messages(w)
-bits = 2 .^ (0:14)';     % 0x0001 ... 0x4000
-text = { ...
-    'TX terminal height is near its limits', ...
-    'RX terminal height is near its limits', ...
-    'Frequency is near its limits', ...
-    'Path distance is near its upper limit', ...
-    'Path distance is large - care must be taken with result', ...
-    'Path distance is near its lower limit', ...
-    'Path distance is small - care must be taken with result', ...
-    'TX horizon angle is large - small angle approximations could break down', ...
-    'RX horizon angle is large - small angle approximations could break down', ...
-    'TX horizon distance is less than 1/10 of the smooth earth horizon distance', ...
-    'RX horizon distance is less than 1/10 of the smooth earth horizon distance', ...
-    'TX horizon distance is greater than 3 times the smooth earth horizon distance', ...
-    'RX horizon distance is greater than 3 times the smooth earth horizon distance', ...
-    'One of the provided variabilities is located far in the tail of its distribution', ...
-    'Internally computed surface refractivity value is small - care must be taken with result'};
-msgs = text(logical(bitand(uint32(w), uint32(bits))))';
-end
-
 %% ------------------------------------------------------------------------
 %  Initialization (InitializePointToPoint.cpp)
 %  ------------------------------------------------------------------------
@@ -206,11 +189,14 @@ end
 %  Terrain processing (QuickPfl.cpp, FindHorizons.cpp, ComputeDeltaH.cpp,
 %  LinearLeastSquaresFit.cpp). pfl is 1-based here: C++ pfl[j] is pfl(j+1).
 %  ------------------------------------------------------------------------
-function [theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m] = quick_pfl(pfl, gamma_e, h_m)
+function [theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m, theta_geo] = quick_pfl(pfl, gamma_e, h_m)
+% theta_geo: the horizon angles from the profile, before the smooth-earth
+% replacement used for paths well within line of sight
 d_m = pfl(1) * pfl(2);
 np = fix(pfl(1));
 a_e = 1 / gamma_e;
 [theta_hzn, d_hzn_m] = find_horizons(pfl, a_e, h_m);
+theta_geo = theta_hzn;
 
 d_start_m = min(15.0 * h_m(1), 0.1 * d_hzn_m(1));
 d_end_m = d_m - min(15.0 * h_m(2), 0.1 * d_hzn_m(2));

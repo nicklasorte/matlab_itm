@@ -1,4 +1,4 @@
-function [loss_db, info] = itm_pathloss_rev1(tx, rx, f_mhz, reliability, options)
+function [loss_db, info, elev_deg] = itm_pathloss_rev1(tx, rx, f_mhz, reliability, options)
 %ITM_PATHLOSS_REV1 ITM point-to-point path loss between locations.
 %   loss_db = ITM_PATHLOSS_REV1(tx, rx, f_mhz, reliability) returns the ITM
 %   v1.4 basic transmission loss (dB) from tx to rx for each reliability
@@ -45,10 +45,25 @@ function [loss_db, info] = itm_pathloss_rev1(tx, rx, f_mhz, reliability, options
 %                   "copernicus90" (GLO-90)
 %     terrain_dir   Tile cache folder; see itm_terrain_elevation_rev1
 %     download      Download missing tiles (true)
+%     validity      "error" (default), "warn", or "off". With "error", a
+%                   path shorter than 1 km or longer than 2000 km raises
+%                   itm:validity:Distance, naming the links; other NTIA
+%                   warning flags raise one MATLAB warning,
+%                   itm:validity:Caution, per call. See itm_p2p_rev1.
+%
+%   Errors are loud by design: a land point with no terrain tile raises
+%   itm:terrain:NoCoverage, and NTIA's hard input limits raise itm:Invalid*.
 %
 %   info (struct array, one per link) contains the ITM intermediate
 %   values, the climate and N_0 used, the terrain profile, and the terrain
 %   sources.
+%
+%   [loss_db, ~, elev_deg] = ITM_PATHLOSS_REV1(...) returns the elevation
+%   angles, N-by-2 [TX, RX] in degrees (positive up): toward the other
+%   antenna on a line-of-sight path, or toward the terrain horizon
+%   otherwise, on ITM's effective earth (refraction included). They are
+%   also in info.elevation_deg. The azimuth from TX to RX is in
+%   info.profile.azimuth_deg.
 %
 %   Example:
 %     tx = [38.8895, -77.0353, 30];             % lat, lon, height (m)
@@ -80,6 +95,7 @@ arguments
     options.terrain_source (1,1) string {mustBeMember(options.terrain_source, ["auto", "usgs3dep", "usgs3dep13", "copernicus", "copernicus90"])} = "auto"
     options.terrain_dir (1,1) string = itm_default_terrain_dir()
     options.download (1,1) logical = true
+    options.validity (1,1) string {mustBeMember(options.validity, ["error", "warn", "off"])} = "error"
 end
 
 % Pair transmitters and receivers
@@ -155,14 +171,26 @@ out_size = z.size;
 k_out = prod(out_size);
 loss = zeros(n, k_out);
 iinfo = cell(n, 1);
+wbits = zeros(n, 1, 'uint32');
+elev_deg = zeros(n, 2);
+d_km = zeros(n, 1);
 % itm_p2p_core skips the per-call arguments block (inputs validated above)
 want_info = nargout > 1;
 for k = 1:n
-    [Lk, iinfo{k}] = itm_p2p_core(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
-        options.confidence, 50, climate(k), N_0(k), pol, options.epsilon, options.sigma, ...
-        options.mdvar, want_info, z);
+    try
+        [Lk, iinfo{k}, wbits(k), elev_deg(k, :)] = itm_p2p_core(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
+            options.confidence, 50, climate(k), N_0(k), pol, options.epsilon, options.sigma, ...
+            options.mdvar, want_info, z);
+    catch err
+        if n == 1
+            rethrow(err);
+        end
+        error(err.identifier, "Link %d: %s", k, err.message);   % name the failing link
+    end
     loss(k, :) = Lk(:).';
+    d_km(k) = pfls{k}(1) * pfls{k}(2) / 1000;
 end
+itm_validity(wbits, d_km, options.validity);
 if n == 1
     loss_db = reshape(loss, out_size);
 else
