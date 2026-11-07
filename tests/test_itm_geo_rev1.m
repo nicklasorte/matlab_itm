@@ -7,7 +7,9 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
     %   filtered (not failed) when the tile servers are unreachable.
     %
     %   Run: runtests('tests/test_itm_geo_rev1.m')
-    %   Offline only: runtests('tests/test_itm_geo_rev1.m', 'ExcludeTag', 'Network')
+    %   Offline only:
+    %     import matlab.unittest.selectors.HasTag
+    %     s = testsuite('tests/test_itm_geo_rev1.m'); run(s.selectIf(~HasTag('Network')))
 
     properties
         ref_dir

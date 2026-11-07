@@ -190,8 +190,15 @@ session.
 
 ```matlab
 runtests('tests')                                         % all
-runtests('tests', 'ExcludeTag', 'Network')                % no downloads
+
+% Skip the tests that download tiles
+import matlab.unittest.selectors.HasTag
+suite = testsuite('tests');
+run(suite.selectIf(~HasTag('Network')))
 ```
+
+The concurrent-download test needs a parallel pool (`parpool(2)`); without
+one, it's reported as incomplete rather than failed.
 
 | Test file | What it checks |
 | --- | --- |
