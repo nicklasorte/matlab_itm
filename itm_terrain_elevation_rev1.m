@@ -184,21 +184,31 @@ function [Z, R] = read_tile(file, sidecar_base)
 zfile = string(sidecar_base) + ".zcache";
 rfile = string(sidecar_base) + ".rcache.mat";
 if isfile(zfile) && isfile(rfile)
+    ok = false;
     try
         s = load(rfile, 'R', 'sz');
-        fid = fopen(zfile, 'r');
-        Z = [];
-        if fid >= 0
-            Z = fread(fid, [s.sz(1) s.sz(2)], '*single');
-            fclose(fid);
-        end
-        if isequal(size(Z), s.sz)
-            R = s.R;
-            return
+        % Check the byte count first: fread pads a short last column with
+        % zeros, so a truncated file would otherwise pass a size check.
+        d = dir(zfile);
+        if d.bytes == 4 * prod(s.sz)
+            fid = fopen(zfile, 'r');
+            if fid >= 0
+                Z = fread(fid, [s.sz(1) s.sz(2)], '*single');
+                fclose(fid);
+                ok = isequal(size(Z), s.sz);
+            end
         end
     catch
-        % unreadable or partial sidecar: decode the GeoTIFF again
+        ok = false;
     end
+    if ok
+        R = s.R;
+        return
+    end
+    % Corrupt or partial cache: remove it so it is rewritten from the
+    % GeoTIFF below (best effort; another process may have removed it).
+    delete_quietly(zfile);
+    delete_quietly(rfile);
 end
 [Z, R] = readgeoraster(file, 'OutputType', 'single');
 info = georasterinfo(file);
@@ -264,6 +274,15 @@ else
     [x, y] = geographicToIntrinsic(G.R, la, lo);
     x = min(max(x, 1), G.size(2));
     y = min(max(y, 1), G.size(1));
+end
+end
+
+function delete_quietly(f)
+try
+    if isfile(f)
+        delete(f);
+    end
+catch
 end
 end
 
