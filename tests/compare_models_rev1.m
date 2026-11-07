@@ -61,6 +61,10 @@ function R = compare_models_rev1(options)
 %     SeadlibDir   folder with SEADLib.dll and the USGS tiles ("C:\USGS")
 %     TiremDir     folder with the TIREM library ("C:\USGS\TIREM5")
 %     Models       subset of models to run (all)
+%     Prefetch     run every model on every link once, untimed, before
+%                  the timed pass, so downloads and first-use costs aren't
+%                  in the per-link times (true). The untimed pass's times
+%                  are reported as cold_ms.
 %     SaveFile     .mat file for R ("", don't save)
 %
 %   Example (Windows, with SEADLib and TIREM):
@@ -83,6 +87,7 @@ arguments
     options.TiremDir (1,1) string = "C:\USGS\TIREM5"
     options.Models (1,:) string = ["matlab_itm", "seadlib_itm", "itm_on_seadlib_profile", ...
         "seadlib_tirem", "rfprop_tirem", "matlab_lr"]
+    options.Prefetch (1,1) logical = true
     options.SaveFile (1,1) string = ""
 end
 
@@ -170,20 +175,33 @@ prof_first = strings(n, 1);
 m_now = "";
 example_info = struct();        % first info struct per model, to show its fields
 
-%% Warm-up: one untimed run per model (tile downloads, maps, JIT)
-fprintf('Warm-up on link 1 ...\n');
+%% Untimed pass: tile downloads, maps, first-use compilation
+cold = struct();
 for m = models
-    try
-        run_model(m, 1);
-    catch
+    cold.(m) = NaN(n, 1);
+end
+if options.Prefetch
+    warm_links = 1:n;
+else
+    warm_links = 1;
+end
+fprintf('Untimed pass over %d links ...\n', numel(warm_links));
+for k = warm_links
+    for m = models
+        try
+            t0 = tic;
+            run_model(m, k);
+            cold.(m)(k) = toc(t0);
+        catch
+        end
     end
 end
 for m = models
     out.(m) = blank;
 end
-seadlib_prof{1} = [];           % read link 1's profile again inside the timing
-prof_seconds(1) = 0;
-prof_first(1) = "";
+seadlib_prof(:) = {[]};         % read the profiles again inside the timing
+prof_seconds(:) = 0;
+prof_first(:) = "";
 
 %% Timed runs
 for k = 1:n
@@ -211,7 +229,7 @@ end
 %% Summaries
 R = struct('links', links, 'reliability', rel, 'models', models, 'skipped', why, 'results', out, ...
     'example_info', example_info);
-R.summary_time = summarize_time(out, models);
+R.summary_time = summarize_time(out, models, cold);
 R.summary_loss = summarize_loss(out, models, rel);
 R.summary_angles = summarize_angles(out, models);
 R.summary_mechanism = summarize_mechanism(out, models);
@@ -292,7 +310,8 @@ end
                     pm = propagationModel('longley-rice', 'AntennaPolarization', pol_name, ...
                         'GroundConductivity', 0.02, 'GroundPermittivity', 25, ...
                         'AtmosphericRefractivity', n0(k), 'ClimateZone', climate_names(climate(k)), ...
-                        'TimeVariabilityTolerance', rel(j) / 100, 'SituationVariabilityTolerance', conf / 100);
+                        'TimeVariabilityTolerance', min(max(round(rel(j) / 100, 6), 0.001), 0.999), ...
+                        'SituationVariabilityTolerance', round(conf / 100, 6));
                     if j == 1
                         [L(j), info] = pathloss(pm, rxs, txs);
                         el = mw_angles(info);
@@ -406,13 +425,14 @@ else
 end
 end
 
-function T = summarize_time(out, models)
-ms = zeros(numel(models), 4);
+function T = summarize_time(out, models, cold)
+ms = zeros(numel(models), 5);
 for i = 1:numel(models)
     s = 1e3 * out.(models(i)).seconds;
-    ms(i, :) = [median(s, 'omitnan'), prctile(s, 90), max(s), nnz(~isnan(s))];
+    ms(i, :) = [median(s, 'omitnan'), prctile(s, 90), max(s), median(1e3 * cold.(models(i)), 'omitnan'), nnz(~isnan(s))];
 end
-T = array2table(ms, 'VariableNames', {'median_ms', 'p90_ms', 'max_ms', 'links_ok'}, 'RowNames', cellstr(models));
+T = array2table(ms, 'VariableNames', {'median_ms', 'p90_ms', 'max_ms', 'cold_median_ms', 'links_ok'}, ...
+    'RowNames', cellstr(models));
 end
 
 function T = summarize_loss(out, models, rel)
