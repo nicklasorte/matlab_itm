@@ -225,6 +225,47 @@ Measured on R2025b, Apple silicon, before these optimizations
 the ITU text files, 0.6 s decoding three tiles), one warm link took 33 ms,
 and 50 links × 1,000 reliabilities took 79 ms.
 
+## Time per link
+
+Measured on R2025b, Apple silicon (MacBook Air), one 38 km link
+(Washington to Baltimore, 1,278 profile points at 30 m, 2700 MHz), tiles
+already downloaded. Run `tests/profile_one_link_rev1.m` to reproduce.
+
+| Stage | Warm (tiles in memory) | Cold (new process) |
+| --- | --- | --- |
+| Geodesic: `distance` + `reckon` for the profile points | 3.2 ms | |
+| Terrain: elevation at the profile points (3 tiles) | 2.4 ms | 70 ms (decoded tiles read from disk) |
+| Climate and N₀ lookups | 0.8 ms | 11 ms (ITU maps loaded) |
+| ITM core (`itm_p2p_rev1`) | 2.3 ms | |
+| **Full call (`itm_pathloss_rev1`)** | **8.8 to 12 ms** | 120 to 450 ms (includes MATLAB compiling the functions on first use) |
+
+The warm full call took 33 ms before the optimizations in this repository.
+About 60% of it is now terrain: the WGS84 geodesic (`distance`, `reckon`)
+is the largest single piece. The ITM core is about 25%, and the number of
+reliabilities barely matters: 1,000 reliabilities cost about the same as
+one (12.6 ms versus 12.2 ms per link in the same run).
+
+### Compared with ITU-R P.2001 (itu_p2001)
+
+Same link, frequency, and time percentage, each model with its own terrain
+handler (`tests/compare_p2001_rev1.m`, same session, back to back):
+
+| Model | Warm, 1 percentage | Warm, 1,000 percentages | Core model only | Cold |
+| --- | --- | --- | --- | --- |
+| ITM v1.4 (`matlab_itm`) | 12.2 ms | 12.6 ms | 1.9 ms | 117 ms |
+| ITU-R P.2001-6 (`itu_p2001`) | 14.6 ms | 27.1 ms | 8.5 ms | 835 ms |
+
+- **Terrain dominates both.** The two terrain handlers cost about the same
+  per link (5 to 6 ms), so a single percentage costs nearly the same in
+  either model.
+- **The models differ in the core.** P.2001 combines many more mechanisms
+  per time percentage (ducting, sporadic-E, troposcatter, rain and gas
+  fades), so its core is about 4.5 times ITM's, and its cost grows with
+  the number of percentages; ITM's barely does.
+- **Cold start.** ITM's decoded-tile cache and `.mat` maps make a new
+  process about 7 times faster to its first result. P.2001 decodes each
+  GeoTIFF on first use in every process.
+
 ## Compile for MATLAB Runtime
 
 ```matlab
