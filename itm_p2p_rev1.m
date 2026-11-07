@@ -43,11 +43,13 @@ function [A_db, info] = itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability, op
 %     validity     What to do when the path or inputs are outside the
 %                  model's stated range ("error"):
 %                    "error"  A path shorter than 1 km or longer than
-%                             2000 km raises itm:validity:Distance. Any
-%                             other NTIA warning flag (for example,
+%                             2000 km raises itm:validity:Distance. An
+%                             input near its limit (for example,
 %                             frequency outside 40-10000 MHz, or a
 %                             reliability far in a tail) raises the
 %                             MATLAB warning itm:validity:Caution.
+%                             Horizon-geometry flags stay in
+%                             info.warnings only.
 %                    "warn"   The distance check is a warning instead.
 %                    "off"    No checks beyond NTIA's hard limits, as in
 %                             the C++. Use it to reproduce NTIA results.

@@ -7,9 +7,14 @@ function itm_validity(wbits, d_km, mode)
 %   mode:
 %     "error"  (default in the public functions) A path shorter than 1 km
 %              or longer than 2000 km, the range NTIA states for ITM,
-%              raises itm:validity:Distance. Every other NTIA warning flag
-%              raises one MATLAB warning, itm:validity:Caution, that names
-%              the conditions and the links they apply to.
+%              raises itm:validity:Distance. The NTIA flags for inputs
+%              near their limits (terminal height, frequency, distance,
+%              a percentage far in a tail, low surface refractivity) raise
+%              one MATLAB warning, itm:validity:Caution, that names the
+%              conditions and the links they apply to. The horizon
+%              geometry flags (0x0080 to 0x1000) are common on real
+%              terrain, so they stay in info.warnings without a MATLAB
+%              warning.
 %     "warn"   As "error", but the distance check is a warning too.
 %     "off"    No checks; the NTIA flags are only in info.warnings. Use
 %              this to reproduce NTIA reference results.
@@ -37,6 +42,9 @@ if any(bad)
     wbits = bitand(wbits, bitcmp(dist_bits));
 end
 
+% Horizon-geometry flags (0x0080-0x1000) describe the terrain, not the
+% inputs; they set on most paths with a nearby obstacle
+wbits = bitand(wbits, bitcmp(uint32(hex2dec('1F80'))));
 if ~any(wbits)
     return
 end

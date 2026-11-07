@@ -192,7 +192,7 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
 
         function warnings_reported(tc)
             pfl = flat_profile(500, 10);             % 0.5 km: short-path warning
-            [~, info] = itm_p2p_rev1(30, 10, pfl, 2700, [0.01 50]);
+            [~, info] = itm_p2p_rev1(30, 10, pfl, 2700, [0.01 50], validity="off");
             tc.verifyTrue(all(bitand(info.warnings, uint32(hex2dec('0040'))) > 0));
             tc.verifyTrue(bitand(info.warnings(1), uint32(hex2dec('2000'))) > 0);   % extreme z
             tc.verifyFalse(bitand(info.warnings(2), uint32(hex2dec('2000'))) > 0);

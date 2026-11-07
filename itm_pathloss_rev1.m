@@ -47,8 +47,8 @@ function [loss_db, info, elev_deg] = itm_pathloss_rev1(tx, rx, f_mhz, reliabilit
 %     download      Download missing tiles (true)
 %     validity      "error" (default), "warn", or "off". With "error", a
 %                   path shorter than 1 km or longer than 2000 km raises
-%                   itm:validity:Distance, naming the links; other NTIA
-%                   warning flags raise one MATLAB warning,
+%                   itm:validity:Distance, naming the links; inputs near
+%                   their limits raise one MATLAB warning,
 %                   itm:validity:Caution, per call. See itm_p2p_rev1.
 %
 %   Errors are loud by design: a land point with no terrain tile raises

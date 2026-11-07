@@ -36,9 +36,9 @@ classdef test_limits_rev1 < matlab.unittest.TestCase
         end
 
         function edges_of_the_range_compute(tc)
-            % 1 km and 2000 km are inside the range; both still carry a
-            % caution flag, so they warn
-            L1 = tc.verifyWarning(@() itm_p2p_rev1(30, 10, flat_profile(1), 2700, 50), 'itm:validity:Caution');
+            % 1 km and 2000 km are inside the range. Above 1000 km NTIA
+            % flags the distance as near its limit, so 2000 km warns.
+            L1 = itm_p2p_rev1(30, 10, flat_profile(1), 2700, 50);
             L2 = tc.verifyWarning(@() itm_p2p_rev1(30, 10, flat_profile(2000), 2700, 50), 'itm:validity:Caution');
             tc.verifyTrue(isfinite(L1) && isfinite(L2) && L2 > L1);
         end
