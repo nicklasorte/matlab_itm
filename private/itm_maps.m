@@ -12,7 +12,8 @@ function maps = itm_maps(maps_folder)
 %     1. Maps already loaded in this MATLAB session.
 %     2. itm_maps.mat, or the two ITU .txt files, in maps_folder (if given)
 %        or in the folder named by MATLAB_ITM_MAPS_DIR.
-%     3. data/TropoClim.txt and data/N050.TXT in this repository.
+%     3. data/itm_maps.mat (or data/TropoClim.txt and data/N050.TXT) in
+%        this repository.
 %     4. The same files bundled with a compiled app (build_itm_app_rev1).
 %     5. itm_maps.mat in the cache folder (<cache>/itu_maps).
 %     6. The ITU ZIP files, downloaded with websave, unzipped, parsed, and
@@ -53,17 +54,18 @@ if strlength(maps_folder) > 0
     end
 end
 
-% 3. data folder of this repository
+% 3. data folder of this repository: itm_maps.mat loads in a few ms;
+% parsing the text files takes about 0.4 s
 repo_data = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'data');
-if isempty(raw) && all(isfile(fullfile(repo_data, ["TropoClim.txt", "N050.TXT"])))
-    raw = parse_txt(repo_data);
+if isempty(raw)
+    raw = load_folder(repo_data, mat_name);
 end
 
 % 4. bundled with a compiled app (data folder may be relocated in the CTF)
 if isempty(raw) && isdeployed
-    hits = dir(fullfile(ctfroot, '**', 'N050.TXT'));
-    if ~isempty(hits) && isfile(fullfile(hits(1).folder, 'TropoClim.txt'))
-        raw = parse_txt(hits(1).folder);
+    hits = [dir(fullfile(ctfroot, '**', char(mat_name))); dir(fullfile(ctfroot, '**', 'N050.TXT'))];
+    if ~isempty(hits)
+        raw = load_folder(hits(1).folder, mat_name);
     end
 end
 
@@ -87,6 +89,16 @@ check_size(raw, 'N050', [121 241]);
 maps = struct('TropoClim', raw.TropoClim, 'N050', raw.N050);
 cached = maps;
 cached_key = maps_folder;
+end
+
+function raw = load_folder(folder, mat_name)
+% itm_maps.mat if present, else the ITU text files, else []
+raw = [];
+if isfile(fullfile(folder, mat_name))
+    raw = load(fullfile(folder, mat_name));
+elseif all(isfile(fullfile(folder, ["TropoClim.txt", "N050.TXT"])))
+    raw = parse_txt(folder);
+end
 end
 
 function raw = parse_txt(folder)

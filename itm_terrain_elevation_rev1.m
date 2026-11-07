@@ -87,28 +87,68 @@ for k = 1:size(keys, 1)
     if file == ""
         continue
     end
-    [Z, R] = tile_cache(file, options.max_tiles);
+    [F, R] = tile_cache(file, options.max_tiles);
     pick = which_tile == k;
     % Clamp into the raster limits: Copernicus tiles stop one posting
-    % short of their east edge, and the sliver is under one pixel wide.
+    % short of their east and south edges; the sliver is under a pixel.
     la = min(max(lat(pick), R.LatitudeLimits(1)), R.LatitudeLimits(2));
     lo = min(max(lon(pick), R.LongitudeLimits(1)), R.LongitudeLimits(2));
-    z(pick) = geointerp(Z, R, la, lo, 'linear');
+    % Same result as geointerp(Z, R, la, lo, "linear"), bit for bit, but
+    % the interpolant is built once per tile instead of on every call.
+    [x, y] = geographicToIntrinsic(R, la, lo);
+    z(pick) = F(y, x);
 end
 end
 
-function [Z, R] = tile_cache(file, max_tiles)
-% Least-recently-used in-memory cache of decoded tiles
-persistent names rasters refs stamps
+function [F, R] = tile_cache(file, max_tiles)
+% Least-recently-used in-memory cache of tile interpolants. Decoding a
+% GeoTIFF (LZW) takes about 170 ms; the decoded grid is also kept on disk
+% next to the tile (<tile>.zcache and <tile>.rcache.mat), which a new
+% MATLAB or app process reads in about 10 ms.
+persistent names interps refs stamps
 if isempty(names)
-    names = strings(0, 1); rasters = {}; refs = {}; stamps = zeros(0, 1);
+    names = strings(0, 1); interps = {}; refs = {}; stamps = zeros(0, 1);
 end
 hit = find(names == file, 1);
 if ~isempty(hit)
     stamps(hit) = now_counter();
-    Z = rasters{hit};
+    F = interps{hit};
     R = refs{hit};
     return
+end
+[Z, R] = read_tile(file);
+% 'nearest' extrapolation matches geointerp in the half-pixel border of a
+% cells raster; points are clamped to the raster limits before lookup.
+F = griddedInterpolant(Z, 'linear', 'nearest');
+if numel(names) >= max_tiles
+    [~, old] = min(stamps);
+    names(old) = []; interps(old) = []; refs(old) = []; stamps(old) = [];
+end
+names(end + 1, 1) = file;
+interps{end + 1, 1} = F;
+refs{end + 1, 1} = R;
+stamps(end + 1, 1) = now_counter();
+end
+
+function [Z, R] = read_tile(file)
+zfile = file + ".zcache";
+rfile = file + ".rcache.mat";
+if isfile(zfile) && isfile(rfile)
+    try
+        s = load(rfile, 'R', 'sz');
+        fid = fopen(zfile, 'r');
+        Z = [];
+        if fid >= 0
+            Z = fread(fid, [s.sz(1) s.sz(2)], '*single');
+            fclose(fid);
+        end
+        if isequal(size(Z), s.sz)
+            R = s.R;
+            return
+        end
+    catch
+        % unreadable or partial sidecar: decode the GeoTIFF again
+    end
 end
 [Z, R] = readgeoraster(file, 'OutputType', 'single');
 info = georasterinfo(file);
@@ -116,14 +156,28 @@ if ~isempty(info.MissingDataIndicator)
     Z = standardizeMissing(Z, single(info.MissingDataIndicator));
 end
 Z(Z < -1000) = NaN;            % guard against unflagged fill values
-if numel(names) >= max_tiles
-    [~, old] = min(stamps);
-    names(old) = []; rasters(old) = []; refs(old) = []; stamps(old) = [];
+write_sidecars(Z, R, zfile, rfile);
 end
-names(end + 1, 1) = file;
-rasters{end + 1, 1} = Z;
-refs{end + 1, 1} = R;
-stamps(end + 1, 1) = now_counter();
+
+function write_sidecars(Z, R, zfile, rfile)
+% Best effort: a read-only cache folder just means decoding every time.
+% The grid file is written first and the small .mat last, and each is
+% renamed into place atomically, so readers never see a partial pair.
+try
+    if ~isfile(zfile)
+        [~, token] = fileparts(tempname);
+        tmp = zfile + "." + token + ".part";
+        fid = fopen(tmp, 'w');
+        if fid < 0
+            return
+        end
+        fwrite(fid, Z, 'single');
+        fclose(fid);
+        itm_publish_file(tmp, zfile);
+    end
+    itm_atomic_save(rfile, struct('R', R, 'sz', size(Z)));
+catch
+end
 end
 
 function c = now_counter()

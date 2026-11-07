@@ -40,8 +40,8 @@ n_paths = max([numel(lat1_deg), numel(lon1_deg), numel(lat2_deg), numel(lon2_deg
 lat1 = expand(lat1_deg, n_paths); lon1 = expand(lon1_deg, n_paths);
 lat2 = expand(lat2_deg, n_paths); lon2 = expand(lon2_deg, n_paths);
 
-ellipsoid = wgs84Ellipsoid('meter');
-d_m = distance(lat1, lon1, lat2, lon2, ellipsoid);
+ellipsoid = itm_wgs84();
+[d_m, az] = distance(lat1, lon1, lat2, lon2, ellipsoid);
 if any(d_m < 1)
     k = find(d_m < 1, 1);
     error('itm:terrain:ZeroDistance', ...
@@ -49,15 +49,22 @@ if any(d_m < 1)
 end
 n_pts = max(min(ceil(d_m / options.spacing_m) + 1, floor(options.max_points)), 2);
 
-% Geodesic sample points for every path, concatenated for one tile pass.
-% track2 with an ellipsoid returns points equally spaced along the geodesic.
-lat_all = cell(n_paths, 1);
-lon_all = cell(n_paths, 1);
-for k = 1:n_paths        % track2 takes one point count per call
-    [lat_all{k}, lon_all{k}] = track2(lat1(k), lon1(k), lat2(k), lon2(k), ellipsoid, 'degrees', n_pts(k));
-end
-lat_cat = vertcat(lat_all{:});
-lon_cat = vertcat(lon_all{:});
+% Equally spaced points along each geodesic, for every path in one call:
+% reckon solves the direct geodesic problem from the TX along the initial
+% azimuth (track2 gives the same points but solves the inverse problem
+% again for each path).
+path_id = repelem((1:n_paths)', n_pts);
+step = d_m ./ (n_pts - 1);
+first = cumsum([1; n_pts(1:end - 1)]);
+k_in_path = (1:sum(n_pts))' - first(path_id);
+[lat_cat, lon_cat] = reckon(lat1(path_id), lon1(path_id), k_in_path .* step(path_id), ...
+    az(path_id), ellipsoid);
+% End exactly on the RX coordinates, as track2 does
+last = cumsum(n_pts);
+lat_cat(last) = lat2;
+lon_cat(last) = lon2;
+lat_all = mat2cell(lat_cat, n_pts, 1);
+lon_all = mat2cell(lon_cat, n_pts, 1);
 [z_cat, zinfo] = itm_terrain_elevation_rev1(lat_cat, lon_cat, source=options.source, ...
     terrain_dir=options.terrain_dir, download=options.download, max_tiles=options.max_tiles);
 

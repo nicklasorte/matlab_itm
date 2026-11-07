@@ -94,7 +94,7 @@ end
 pol = parse_polarization(options.polarization);
 
 % Path geometry and midpoints along the WGS84 geodesic (vectorized)
-ellipsoid = wgs84Ellipsoid('meter');
+ellipsoid = itm_wgs84();
 [d_m, az] = distance(tx(:, 1), tx(:, 2), rx(:, 1), rx(:, 2), ellipsoid);
 [lat_mid, lon_mid] = reckon(tx(:, 1), tx(:, 2), d_m / 2, az, ellipsoid);
 
@@ -145,10 +145,12 @@ out_size = size(probe);
 k_out = prod(out_size);
 loss = zeros(n, k_out);
 iinfo = cell(n, 1);
+% itm_p2p_core skips the per-call arguments block (inputs validated above)
+want_info = nargout > 1;
 for k = 1:n
-    [Lk, iinfo{k}] = itm_p2p_rev1(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
-        confidence=options.confidence, climate=climate(k), N_0=N_0(k), polarization=pol, ...
-        epsilon=options.epsilon, sigma=options.sigma, mdvar=options.mdvar);
+    [Lk, iinfo{k}] = itm_p2p_core(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
+        options.confidence, 50, climate(k), N_0(k), pol, options.epsilon, options.sigma, ...
+        options.mdvar, want_info);
     loss(k, :) = Lk(:).';
 end
 if n == 1
