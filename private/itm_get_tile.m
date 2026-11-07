@@ -2,32 +2,47 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %ITM_GET_TILE Local path to a 1 x 1 degree terrain tile, downloading it once.
 %   file = ITM_GET_TILE(source, tile_lat, tile_lon, terrain_dir, download)
 %   returns the cached GeoTIFF for the tile whose south-west corner is
-%   (tile_lat, tile_lon), or "" when the provider has no tile there (for
-%   example open ocean). A missing tile is remembered with a zero-byte
-%   <name>.404 marker so later runs skip the request.
+%   (tile_lat, tile_lon), or "" when the provider has no tile there (open
+%   ocean, or outside the source's coverage).
 %
-%   Downloads go to a uniquely named temporary file in the same folder and
-%   are renamed into place with an atomic move (first writer wins), so
-%   several processes or compiled servers can share one terrain folder.
-%
-%   Sources (public, no account or key):
-%     usgs3dep      USGS 3DEP 1 arc-second DEM (bare earth, U.S. and territories)
-%     copernicus    Copernicus GLO-30 DEM (global, 1 arc-second, surface model)
-%     copernicus90  Copernicus GLO-90 DEM (global, 3 arc-second), for tiles
+%   Sources (public HTTPS buckets, no account or key):
+%     usgs3dep      USGS 3DEP 1 arc-second (~30 m), bare earth, NAVD88. U.S.
+%                   and territories. ~45 MB per tile.
+%     usgs3dep13    USGS 3DEP 1/3 arc-second (~10 m), bare earth, NAVD88.
+%                   CONUS, Hawaii, territories. ~370 MB per tile.
+%     copernicus    Copernicus GLO-30 (1 arc-second), surface model, global
+%     copernicus90  Copernicus GLO-90 (3 arc-second), global, fills tiles
 %                   not released in GLO-30
-%   For Copernicus, the bucket's tileList.txt is cached once and a tile
-%   absent from it is treated as ocean without a request, so a network
-%   or proxy error is never mistaken for open water. (From
-%   p2001_dem_tile_rev1 in nicklasorte/itu_p2001.)
+%
+%   Lookup order for a tile:
+%     1. terrain_dir/<source>/<file> (this tool's cache)
+%     2. The itu_p2001 cache (ITU_P2001_CACHE, else ~/.itu_p2001 or
+%        %LOCALAPPDATA%\itu_p2001), dem/<usgs1|usgs13|cop30|cop90>/<file>.
+%        Both tools use the providers' file names, so a tile downloaded by
+%        either is reused by the other and not stored twice. Set
+%        MATLAB_ITM_SHARE_P2001_CACHE=0 to skip this.
+%     3. A <file>.404 marker here or a <file>.missing marker there: no tile.
+%     4. For Copernicus, the bucket's tileList.txt (cached once): absent
+%        means ocean, without a request, so a network or proxy error is
+%        never mistaken for open water.
+%     5. Download with websave to a temporary file, validated as a raster,
+%        then renamed into place atomically (first writer wins), so several
+%        processes can share one cache folder.
+%
+%   Adapted from p2001_dem_tile_rev1 in nicklasorte/itu_p2001.
 
-[name, url] = tile_name_url(source, tile_lat, tile_lon);
+[name, url, p2001_sub] = tile_name_url(source, tile_lat, tile_lon);
 folder = fullfile(terrain_dir, source);
 file = string(fullfile(folder, name));
-marker = file + ".404";
 if isfile(file)
     return
 end
-if isfile(marker)
+shared = shared_p2001_path(p2001_sub, name);
+if shared ~= "" && isfile(shared)
+    file = shared;
+    return
+end
+if isfile(file + ".404") || (shared ~= "" && isfile(shared + ".missing"))
     file = "";
     return
 end
@@ -41,25 +56,18 @@ if ~download
         'Run itm_setup_rev1 for this area or allow downloads. Source URL: %s'], ...
         name, folder, url);
 end
-if ~isfolder(folder)
-    [ok, msg] = mkdir(folder);
-    if ~ok && ~isfolder(folder)
-        error('itm:terrain:CacheNotWritable', 'Cannot create terrain folder %s: %s', folder, msg);
-    end
-end
+ensure_folder(folder);
 
-tmp = file + "." + string(java_free_token()) + ".part";
-opts = weboptions('Timeout', 300);
+tmp = file + "." + unique_token() + ".part";
 max_tries = 3;
 for attempt = 1:max_tries
     try
-        websave(tmp, url, opts);
+        websave(tmp, url, weboptions('Timeout', 300));
         break
     catch ME
         delete_quietly(tmp);
         if strcmp(ME.identifier, 'MATLAB:webservices:HTTP404StatusCodeError')
-            % No tile here
-            fclose(fopen(marker, 'w'));
+            fclose(fopen(file + ".404", 'w'));      % no tile here
             file = "";
             return
         end
@@ -77,25 +85,31 @@ catch ME
     delete_quietly(tmp);
     error('itm:terrain:BadTile', 'Downloaded tile %s is not a readable GeoTIFF: %s', url, ME.message);
 end
-publish_atomically(tmp, file);
+itm_publish_file(tmp, file);
 end
 
-function [name, url] = tile_name_url(source, tile_lat, tile_lon)
+function [name, url, p2001_sub] = tile_name_url(source, tile_lat, tile_lon)
 switch source
-    case 'usgs3dep'
-        % USGS names tiles by their north-west corner, for example
-        % n39w077 covers 38-39 N, 77-76 W.
+    case {'usgs3dep', 'usgs3dep13'}
+        % USGS names tiles by their north-west corner: n39w077 covers
+        % 38-39 N, 77-76 W.
+        if strcmp(source, 'usgs3dep13')
+            res = '13'; p2001_sub = 'usgs13';
+        else
+            res = '1'; p2001_sub = 'usgs1';
+        end
         north = tile_lat + 1;
         ns = 'n'; if north < 0, ns = 's'; end
         ew = 'w'; if tile_lon >= 0, ew = 'e'; end
         tag = sprintf('%s%02d%s%03d', ns, abs(north), ew, abs(tile_lon));
-        name = sprintf('USGS_1_%s.tif', tag);
-        url = sprintf('https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/%s/%s', tag, name);
+        name = sprintf('USGS_%s_%s.tif', res, tag);
+        url = sprintf('https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/%s/TIFF/current/%s/%s', ...
+            res, tag, name);
     case {'copernicus', 'copernicus90'}
         % Copernicus names tiles by their south-west corner
         ns = 'N'; if tile_lat < 0, ns = 'S'; end
         ew = 'E'; if tile_lon < 0, ew = 'W'; end
-        [res, bucket] = copernicus_bucket(source);
+        [res, bucket, p2001_sub] = copernicus_bucket(source);
         stem = sprintf('Copernicus_DSM_COG_%s_%s%02d_00_%s%03d_00_DEM', res, ns, abs(tile_lat), ew, abs(tile_lon));
         name = [stem '.tif'];
         url = sprintf('https://%s.s3.amazonaws.com/%s/%s', bucket, stem, name);
@@ -104,12 +118,33 @@ switch source
 end
 end
 
-function [res, bucket] = copernicus_bucket(source)
+function [res, bucket, p2001_sub] = copernicus_bucket(source)
 if strcmp(source, 'copernicus90')
-    res = '30'; bucket = 'copernicus-dem-90m';
+    res = '30'; bucket = 'copernicus-dem-90m'; p2001_sub = 'cop90';
 else
-    res = '10'; bucket = 'copernicus-dem-30m';
+    res = '10'; bucket = 'copernicus-dem-30m'; p2001_sub = 'cop30';
 end
+end
+
+function p = shared_p2001_path(sub, name)
+% Tile path in the itu_p2001 cache, or "" when sharing is off
+p = "";
+if getenv('MATLAB_ITM_SHARE_P2001_CACHE') == "0"
+    return
+end
+root = getenv('ITU_P2001_CACHE');
+if isempty(root)
+    if ispc
+        base = getenv('LOCALAPPDATA'); leaf = 'itu_p2001';
+    else
+        base = getenv('HOME'); leaf = '.itu_p2001';
+    end
+    if isempty(base)
+        return
+    end
+    root = fullfile(base, leaf);
+end
+p = string(fullfile(root, 'dem', sub, name));
 end
 
 function tf = in_tile_list(source, name, terrain_dir, download)
@@ -121,18 +156,21 @@ end
 if ~isfield(lists, source)
     folder = fullfile(terrain_dir, source);
     list_file = string(fullfile(folder, 'tileList.txt'));
+    [~, ~, sub] = copernicus_bucket(source);
+    shared = shared_p2001_path(sub, 'tileList.txt');
+    if ~isfile(list_file) && shared ~= "" && isfile(shared)
+        list_file = shared;
+    end
     if ~isfile(list_file)
         if ~download
             error('itm:terrain:TileMissing', ...
                 '%s is not cached and download is off. Run itm_setup_rev1 first.', list_file);
         end
-        if ~isfolder(folder)
-            mkdir(folder);
-        end
+        ensure_folder(folder);
         [~, bucket] = copernicus_bucket(source);
-        tmp = list_file + "." + string(java_free_token()) + ".part";
+        tmp = list_file + "." + unique_token() + ".part";
         websave(tmp, sprintf('https://%s.s3.amazonaws.com/tileList.txt', bucket), weboptions('Timeout', 120));
-        publish_atomically(tmp, list_file);
+        itm_publish_file(tmp, list_file);
     end
     lists.(source) = strip(readlines(list_file, 'EmptyLineRule', 'skip'));
 end
@@ -140,37 +178,20 @@ end
 tf = any(lists.(source) == string(stem));
 end
 
-function publish_atomically(tmp, file)
-if isfile(file)                       % another process finished first
-    delete_quietly(tmp);
-    return
-end
-if usejava('jvm')
-    try
-        src = java.nio.file.Paths.get(char(tmp), javaArray('java.lang.String', 0));
-        dst = java.nio.file.Paths.get(char(file), javaArray('java.lang.String', 0));
-        opt = javaArray('java.nio.file.CopyOption', 1);
-        opt(1) = java.nio.file.StandardCopyOption.ATOMIC_MOVE;
-        java.nio.file.Files.move(src, dst, opt);
-    catch
-        % FileAlreadyExistsException: first writer won; keep theirs
-        delete_quietly(tmp);
-    end
-else
-    % No JVM (-nojvm): movefile is not atomic, but the file was complete
-    % and validated before the move.
-    if ~isfile(file)
-        movefile(tmp, file);
-    else
-        delete_quietly(tmp);
+function ensure_folder(folder)
+if ~isfolder(folder)
+    [ok, msg] = mkdir(folder);
+    if ~ok && ~isfolder(folder)
+        error('itm:terrain:CacheNotWritable', 'Cannot create terrain folder %s: %s', folder, msg);
     end
 end
 end
 
-function t = java_free_token()
-% Unique suffix that does not depend on the global rng state, so servers
-% started with the same seed still get distinct temporary names.
+function t = unique_token()
+% Independent of the global rng, so servers started with the same seed
+% still get distinct temporary names
 [~, t] = fileparts(tempname);
+t = string(t);
 end
 
 function delete_quietly(f)

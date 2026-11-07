@@ -40,8 +40,9 @@ function [loss_db, info] = itm_pathloss_rev1(tx, rx, f_mhz, reliability, options
 %                   PFL vector, or an N-by-1 cell array of them
 %     spacing_m     Profile point spacing (30)
 %     max_points    Profile point cap (Inf; WInnForum uses 1501)
-%     terrain_source "auto" (default), "usgs3dep", "copernicus" (GLO-30),
-%                   or "copernicus90" (GLO-90)
+%     terrain_source "auto" (default), "usgs3dep" (1"), "usgs3dep13" (1/3",
+%                   pair with spacing_m=10), "copernicus" (GLO-30), or
+%                   "copernicus90" (GLO-90)
 %     terrain_dir   Tile cache folder; see itm_terrain_elevation_rev1
 %     download      Download missing tiles (true)
 %
@@ -76,7 +77,7 @@ arguments
     options.pfl = []
     options.spacing_m (1,1) double {mustBeReal, mustBePositive, mustBeFinite} = 30
     options.max_points (1,1) double {mustBeReal} = Inf
-    options.terrain_source (1,1) string {mustBeMember(options.terrain_source, ["auto", "usgs3dep", "copernicus", "copernicus90"])} = "auto"
+    options.terrain_source (1,1) string {mustBeMember(options.terrain_source, ["auto", "usgs3dep", "usgs3dep13", "copernicus", "copernicus90"])} = "auto"
     options.terrain_dir (1,1) string = itm_default_terrain_dir()
     options.download (1,1) logical = true
 end

@@ -19,7 +19,8 @@ function summary = itm_setup_rev1(options)
 %     cache_dir  Cache root for this MATLAB session (sets MATLAB_ITM_CACHE).
 %                Default: ~/.matlab_itm (Windows: %LOCALAPPDATA%\matlab_itm)
 %     region     [lat_min lat_max lon_min lon_max] in degrees; default none
-%     source     "auto" (default), "usgs3dep", "copernicus", or "copernicus90"
+%     source     "auto" (default), "usgs3dep", "usgs3dep13" (~370 MB per tile),
+%                "copernicus", or "copernicus90"
 %
 %   summary is a table with one row per tile and the file cached from
 %   each source ("" where the provider has no tile).
@@ -32,7 +33,7 @@ function summary = itm_setup_rev1(options)
 arguments
     options.cache_dir (1,1) string = ""
     options.region double {mustBeReal, mustBeFinite} = []
-    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "copernicus", "copernicus90"])} = "auto"
+    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "usgs3dep13", "copernicus", "copernicus90"])} = "auto"
 end
 
 if strlength(options.cache_dir) > 0
@@ -44,8 +45,8 @@ fprintf('ITU maps ready. Terrain cache: %s\n', terrain_dir);
 
 r = options.region;
 if isempty(r)
-    summary = table('Size', [0 5], 'VariableTypes', ["double", "double", "string", "string", "string"], ...
-        'VariableNames', ["south_lat", "west_lon", "usgs3dep_file", "copernicus_file", "copernicus90_file"]);
+    summary = table('Size', [0 6], 'VariableTypes', ["double", "double", "string", "string", "string", "string"], ...
+        'VariableNames', ["south_lat", "west_lon", "usgs3dep_file", "copernicus_file", "copernicus90_file", "usgs3dep13_file"]);
     return
 end
 if numel(r) ~= 4 || r(1) >= r(2) || r(3) >= r(4) || r(1) < -90 || r(2) > 90
@@ -55,8 +56,8 @@ lats = floor(r(1)):min(ceil(r(2)) - 1, 89);
 lons = unique(mod((floor(r(3)):ceil(r(4)) - 1) + 180, 360) - 180);
 [LA, LO] = ndgrid(lats, lons);
 n = numel(LA);
-files = strings(n, 3);
-names = ["usgs3dep", "copernicus", "copernicus90"];
+files = strings(n, 4);
+names = ["usgs3dep", "copernicus", "copernicus90", "usgs3dep13"];
 for k = 1:n
     get = @(s) itm_get_tile(char(names(s)), LA(k), LO(k), char(terrain_dir), true);
     if options.source ~= "auto"
@@ -74,8 +75,8 @@ for k = 1:n
     fprintf('Tile %d of %d (%d, %d): %s\n', k, n, LA(k), LO(k), ...
         strjoin(names(files(k, :) ~= ""), ' + '));
 end
-summary = table(LA(:), LO(:), files(:, 1), files(:, 2), files(:, 3), 'VariableNames', ...
-    ["south_lat", "west_lon", "usgs3dep_file", "copernicus_file", "copernicus90_file"]);
+summary = table(LA(:), LO(:), files(:, 1), files(:, 2), files(:, 3), files(:, 4), 'VariableNames', ...
+    ["south_lat", "west_lon", "usgs3dep_file", "copernicus_file", "copernicus90_file", "usgs3dep13_file"]);
 end
 
 function tf = tile_has_gaps(file)

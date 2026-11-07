@@ -14,7 +14,7 @@ function [pfl, info] = itm_terrain_profile_rev1(lat1_deg, lon1_deg, lat2_deg, lo
 %     spacing_m    Target point spacing (30 m, the native DEM resolution)
 %     max_points   Cap on profile points per path (Inf). Use 1501 to match
 %                  the WInnForum CBRS reference model for long paths.
-%     source, terrain_dir, download, max_tiles
+%     source, terrain_dir, download, cache_gb
 %                  Passed to itm_terrain_elevation_rev1
 %
 %   info (struct array, one per path) returns the path length, sample
@@ -29,10 +29,10 @@ arguments
     lon2_deg double {mustBeVector, mustBeReal, mustBeFinite}
     options.spacing_m (1,1) double {mustBeReal, mustBePositive, mustBeFinite} = 30
     options.max_points (1,1) double {mustBeReal, mustBeGreaterThanOrEqual(options.max_points, 2)} = Inf
-    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "copernicus", "copernicus90"])} = "auto"
+    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "usgs3dep13", "copernicus", "copernicus90"])} = "auto"
     options.terrain_dir (1,1) string = itm_default_terrain_dir()
     options.download (1,1) logical = true
-    options.max_tiles (1,1) double {mustBeInteger, mustBePositive} = 8
+    options.cache_gb double {mustBePositive} = []
 end
 
 % Expand scalars so every input has one element per path
@@ -67,8 +67,11 @@ lat_cat(last) = lat2;
 lon_cat(last) = lon2;
 lat_all = mat2cell(lat_cat, n_pts, 1);
 lon_all = mat2cell(lon_cat, n_pts, 1);
-[z_cat, zinfo] = itm_terrain_elevation_rev1(lat_cat, lon_cat, source=options.source, ...
-    terrain_dir=options.terrain_dir, download=options.download, max_tiles=options.max_tiles);
+elev_args = {'source', options.source, 'terrain_dir', options.terrain_dir, 'download', options.download};
+if ~isempty(options.cache_gb)
+    elev_args = [elev_args, {'cache_gb', options.cache_gb}];
+end
+[z_cat, zinfo] = itm_terrain_elevation_rev1(lat_cat, lon_cat, elev_args{:});
 
 % Split back into per-path PFL vectors
 z_all = mat2cell(z_cat, n_pts, 1);

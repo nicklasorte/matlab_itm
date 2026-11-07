@@ -162,6 +162,34 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.verifyEqual(z(2), 0);
         end
 
+        function forced_source_errors_on_uncovered_land(tc)
+            % 3DEP only, in London: land with no 3DEP tile must not read as 0 m
+            tc.assume_network();
+            tc.verifyError(@() itm_terrain_elevation_rev1(51.50, -0.12, source="usgs3dep"), ...
+                'itm:terrain:NoCoverage');
+            % Open ocean with a forced source is water, not an error
+            z = itm_terrain_elevation_rev1(36.5, -30.5, source="usgs3dep");
+            tc.verifyEqual(z, 0);
+        end
+
+        function reuses_itu_p2001_cache(tc)
+            % A tile present only in an itu_p2001-style cache is used in place
+            tc.assume_network();
+            src = itm_terrain_profile_rev1(38.8895, -77.0353, 39.0458, -76.6413);  %#ok<NASGU> ensure cached
+            own = fullfile(itm_default_terrain_dir_for_test(), 'usgs3dep', 'USGS_1_n39w077.tif');
+            p2001_root = fullfile(tc.tmp_dir, 'p2001');
+            mkdir(fullfile(p2001_root, 'dem', 'usgs1'));
+            copyfile(own, fullfile(p2001_root, 'dem', 'usgs1'));
+            old = getenv('ITU_P2001_CACHE');
+            tc.addTeardown(@() setenv('ITU_P2001_CACHE', old));
+            setenv('ITU_P2001_CACHE', p2001_root);
+            empty_dir = fullfile(tc.tmp_dir, 'own');
+            [z, info] = itm_terrain_elevation_rev1(38.5, -76.5, terrain_dir=empty_dir, download=false);
+            tc.verifyEqual(info.source_code, uint8(1));
+            tc.verifyTrue(startsWith(info.tiles(1), string(p2001_root)));
+            tc.verifyEqual(z, itm_terrain_elevation_rev1(38.5, -76.5), 'AbsTol', 1e-9);
+        end
+
         function glo90_source(tc)
             tc.assume_network();
             [z, info] = itm_terrain_elevation_rev1(51.50, -0.12, source="copernicus90");
@@ -225,4 +253,15 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.assumeTrue(ok, 'USGS 3DEP tile server unreachable');
         end
     end
+end
+
+function d = itm_default_terrain_dir_for_test()
+d = getenv('MATLAB_ITM_TERRAIN_DIR');
+if isempty(d)
+    c = getenv('MATLAB_ITM_CACHE');
+    if isempty(c)
+        if ispc, c = fullfile(getenv('LOCALAPPDATA'), 'matlab_itm'); else, c = fullfile(getenv('HOME'), '.matlab_itm'); end
+    end
+    d = fullfile(c, 'terrain');
+end
 end
