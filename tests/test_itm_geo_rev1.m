@@ -261,6 +261,9 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.assumeNotEmpty(pool, 'No parallel pool; start one with parpool(2) to run this test.');
             here = fileparts(fileparts(mfilename('fullpath')));
             parfevalOnAll(pool, @addpath, 0, here);
+            % Download here even if the itu_p2001 cache already has the tile
+            parfevalOnAll(pool, @setenv, 0, 'MATLAB_ITM_SHARE_P2001_CACHE', '0');
+            tc.addTeardown(@() parfevalOnAll(pool, @setenv, 0, 'MATLAB_ITM_SHARE_P2001_CACHE', ''));
             d = tc.tmp_dir;
             f(1) = parfeval(pool, @itm_terrain_elevation_rev1, 2, 38.5, -76.5, terrain_dir=d);
             f(2) = parfeval(pool, @itm_terrain_elevation_rev1, 2, 38.5, -76.5, terrain_dir=d);
