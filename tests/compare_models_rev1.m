@@ -23,6 +23,11 @@ function R = compare_models_rev1(options)
 %                      library; MATLAB terrain)
 %     matlab_lr        propagationModel("longley-rice") + pathloss, one call
 %                      per time percentage (MATLAB terrain)
+%     itm_on_matlab_terrain
+%                      itm_p2p_rev1 on a profile from MATLAB's terrain
+%                      (elevation with Map="gmted2010", 90 m steps), so a
+%                      difference from matlab_lr is the model or sampling,
+%                      and a difference from matlab_itm is the terrain
 %
 %   All models use the same inputs: epsilon 25, sigma 0.02 S/m, vertical
 %   polarization unless Tpol says otherwise, confidence 50 %, and the radio
@@ -65,6 +70,11 @@ function R = compare_models_rev1(options)
 %                  the timed pass, so downloads and first-use costs aren't
 %                  in the per-link times (true). The untimed pass's times
 %                  are reported as cold_ms.
+%     ExcelFile    Excel workbook for every result ("compare_models_results.xlsx"
+%                  in the current folder; "" to skip). Sheets: Summary_Time,
+%                  Summary_Loss, Summary_Angles, Summary_Mechanism, Links,
+%                  Angles, Mechanism, Time_ms, Errors, and one Loss_<model>
+%                  sheet per model (links by time percentage).
 %     SaveFile     .mat file for R ("", don't save)
 %
 %   Example (Windows, with SEADLib and TIREM):
@@ -86,8 +96,9 @@ arguments
     options.SeadlibDir (1,1) string = "C:\USGS"
     options.TiremDir (1,1) string = "C:\USGS\TIREM5"
     options.Models (1,:) string = ["matlab_itm", "seadlib_itm", "itm_on_seadlib_profile", ...
-        "seadlib_tirem", "rfprop_tirem", "matlab_lr"]
+        "seadlib_tirem", "rfprop_tirem", "matlab_lr", "itm_on_matlab_terrain"]
     options.Prefetch (1,1) logical = true
+    options.ExcelFile (1,1) string = "compare_models_results.xlsx"
     options.SaveFile (1,1) string = ""
 end
 
@@ -156,9 +167,11 @@ if any(isfield(avail, ["seadlib_tirem", "rfprop_tirem"]))
         end
     end
 end
-if isfield(avail, "matlab_lr") && ~exist('propagationModel', 'file')
-    avail.matlab_lr = false;
-    why.matlab_lr = "needs Antenna Toolbox or Communications Toolbox";
+for m = ["matlab_lr", "itm_on_matlab_terrain"]
+    if isfield(avail, m) && ~exist('propagationModel', 'file')
+        avail.(m) = false;
+        why.(m) = "needs Antenna Toolbox or Communications Toolbox";
+    end
 end
 models = options.Models(arrayfun(@(m) avail.(m), options.Models));
 
@@ -252,6 +265,10 @@ for m = models
         fprintf('%s failed on %d links; first: %s\n', m, nerr, out.(m).error(find(strlength(out.(m).error) > 0, 1)));
     end
 end
+if strlength(options.ExcelFile) > 0
+    write_excel(options.ExcelFile, R);
+    fprintf('Wrote %s\n', options.ExcelFile);
+end
 if strlength(options.SaveFile) > 0
     save(options.SaveFile, 'R');
     fprintf('Saved %s\n', options.SaveFile);
@@ -303,6 +320,12 @@ end
                 [~, mech_raw] = tirem_info(info);
                 keep_info(m, info);
 
+            case "itm_on_matlab_terrain"
+                [L, info] = itm_p2p_rev1(tx(k, 3), rx(k, 3), matlab_terrain_profile(k), f_mhz, rel, ...
+                    confidence=conf, climate=climate(k), N_0=n0(k), polarization=options.Tpol, validity="warn");
+                el = info.elevation_deg;
+                mech_raw = string(info.mode_code);
+
             case "matlab_lr"
                 [txs, rxs] = sites(k);
                 L = NaN(1, n_rel);
@@ -321,6 +344,16 @@ end
                     end
                 end
         end
+    end
+
+    function pfl = matlab_terrain_profile(k)
+        % MATLAB's terrain (GMTED2010) at 90 m steps along the WGS84 geodesic
+        e = wgs84Ellipsoid('meter');
+        d_m = distance(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), e);
+        npt = max(ceil(d_m / 90) + 1, 11);
+        [la, lo] = track2(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), e, 'degrees', npt);
+        z = elevation(rxsite('Latitude', la, 'Longitude', lo), 'Map', 'gmted2010');
+        pfl = [npt - 1; d_m / (npt - 1); z(:)];
     end
 
     function z = seadlib_profile(k)
@@ -476,4 +509,37 @@ for i = 1:numel(rows)
 end
 T = array2table(v, 'VariableNames', {'same_class_as_matlab_itm', 'LOS', 'Diffraction', 'Troposcatter', 'links'}, ...
     'RowNames', cellstr(rows));
+end
+
+function write_excel(file, R)
+% Every result in one workbook; an existing file is replaced
+if isfile(file)
+    delete(file);
+end
+models = R.models;
+out = R.results;
+writetable(R.summary_time, file, 'Sheet', 'Summary_Time', 'WriteRowNames', true);
+writetable(R.summary_loss, file, 'Sheet', 'Summary_Loss', 'WriteRowNames', true);
+writetable(R.summary_angles, file, 'Sheet', 'Summary_Angles', 'WriteRowNames', true);
+writetable(R.summary_mechanism, file, 'Sheet', 'Summary_Mechanism', 'WriteRowNames', true);
+writetable(R.links, file, 'Sheet', 'Links');
+A = R.links(:, {'link', 'length_km'});
+M = A; Tm = A; E = A;
+for m = models
+    A.(m + "_tx_elev_deg") = out.(m).elev_deg(:, 1);
+    A.(m + "_rx_elev_deg") = out.(m).elev_deg(:, 2);
+    M.(m + "_class") = out.(m).mech;
+    M.(m + "_raw") = out.(m).mech_raw;
+    Tm.(m + "_ms") = 1e3 * out.(m).seconds;
+    E.(m) = out.(m).error;
+end
+writetable(A, file, 'Sheet', 'Angles');
+writetable(M, file, 'Sheet', 'Mechanism');
+writetable(Tm, file, 'Sheet', 'Time_ms');
+writetable(E, file, 'Sheet', 'Errors');
+names = matlab.lang.makeValidName("p_" + compose("%g", R.reliability));
+for m = models
+    T = [R.links(:, {'link', 'length_km'}), array2table(out.(m).loss_db, 'VariableNames', cellstr(names))];
+    writetable(T, file, 'Sheet', char(strip(extractBefore("Loss_" + m + blanks(31), 32))));   % Excel caps names at 31
+end
 end
