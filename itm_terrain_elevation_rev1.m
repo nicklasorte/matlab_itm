@@ -11,28 +11,30 @@ function [z_m, info] = itm_terrain_elevation_rev1(lat_deg, lon_deg, options)
 %                   Guam, and parts of Canada and Mexico near the border.
 %     "copernicus"  Copernicus GLO-30 (~30 m) DEM, EGM2008, global. It is a
 %                   surface model: it includes buildings and tree canopy.
-%     "auto"        (default) 3DEP first; points with no 3DEP data are
-%                   filled from Copernicus.
+%     "copernicus90" Copernicus GLO-90 (~90 m), global; fills tiles not
+%                   released in GLO-30.
+%     "auto"        (default) 3DEP first, then GLO-30, then GLO-90 for any
+%                   point the previous source has no data for.
 %   Points with no data in any source (open ocean) are set to 0 m.
 %
 %   Name-value options:
-%     source       "auto" (default), "usgs3dep", or "copernicus"
+%     source       "auto" (default), "usgs3dep", "copernicus", or "copernicus90"
 %     terrain_dir  Tile cache folder. Default: env MATLAB_ITM_TERRAIN_DIR,
 %                  else %LOCALAPPDATA%\matlab_itm\terrain (Windows) or
 %                  ~/.matlab_itm/terrain
 %     download     Download missing tiles (true). Set false on offline
-%                  servers after itm_download_tiles_rev1.
+%                  servers after itm_setup_rev1.
 %     max_tiles    Tiles kept in memory, about 52 MB each (8)
 %
-%   info returns per-point source codes (0 none/ocean, 1 3DEP,
-%   2 Copernicus) and the tile files used.
+%   info returns per-point source codes (0 none/ocean, 1 3DEP, 2 GLO-30,
+%   3 GLO-90) and the tile files used.
 %
-%   See also itm_terrain_profile_rev1, itm_download_tiles_rev1.
+%   See also itm_terrain_profile_rev1, itm_setup_rev1.
 
 arguments
     lat_deg double {mustBeReal, mustBeFinite, mustBeInRange(lat_deg, -90, 90)}
     lon_deg double {mustBeReal, mustBeFinite}
-    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "copernicus"])} = "auto"
+    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "copernicus", "copernicus90"])} = "auto"
     options.terrain_dir (1,1) string = itm_default_terrain_dir()
     options.download (1,1) logical = true
     options.max_tiles (1,1) double {mustBeInteger, mustBePositive} = 8
@@ -49,12 +51,11 @@ z = nan(numel(lat), 1);
 src = zeros(numel(lat), 1, 'uint8');
 files = strings(0, 1);
 
-if options.source == "copernicus"
-    order = "copernicus";
-elseif options.source == "usgs3dep"
-    order = "usgs3dep";
+all_sources = ["usgs3dep", "copernicus", "copernicus90"];
+if options.source == "auto"
+    order = all_sources;
 else
-    order = ["usgs3dep", "copernicus"];
+    order = options.source;
 end
 
 for s = 1:numel(order)
@@ -63,14 +64,14 @@ for s = 1:numel(order)
         break
     end
     [z(todo), used] = sample_source(char(order(s)), lat(todo), lon(todo), options);
-    src(todo & ~isnan(z)) = find(["usgs3dep", "copernicus"] == order(s));
+    src(todo & ~isnan(z)) = find(all_sources == order(s));
     files = [files; used]; %#ok<AGROW> few tiles per call
 end
 
 z(isnan(z)) = 0;               % no source has data: open water
 z_m = reshape(z, sz);
 info = struct('source_code', reshape(src, sz), ...
-    'source_names', {{'none (0 m)', 'USGS 3DEP 1 arc-second', 'Copernicus GLO-30'}}, ...
+    'source_names', {{'none (0 m)', 'USGS 3DEP 1 arc-second', 'Copernicus GLO-30', 'Copernicus GLO-90'}}, ...
     'tiles', unique(files(files ~= "")));
 end
 

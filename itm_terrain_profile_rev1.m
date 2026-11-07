@@ -29,7 +29,7 @@ arguments
     lon2_deg double {mustBeVector, mustBeReal, mustBeFinite}
     options.spacing_m (1,1) double {mustBeReal, mustBePositive, mustBeFinite} = 30
     options.max_points (1,1) double {mustBeReal, mustBeGreaterThanOrEqual(options.max_points, 2)} = Inf
-    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "copernicus"])} = "auto"
+    options.source (1,1) string {mustBeMember(options.source, ["auto", "usgs3dep", "copernicus", "copernicus90"])} = "auto"
     options.terrain_dir (1,1) string = itm_default_terrain_dir()
     options.download (1,1) logical = true
     options.max_tiles (1,1) double {mustBeInteger, mustBePositive} = 8

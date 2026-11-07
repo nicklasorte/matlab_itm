@@ -109,6 +109,29 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
                 download=false), 'itm:terrain:TileMissing');
         end
 
+        function maps_folder_override(tc)
+            % MATLAB_ITM_MAPS_DIR takes the ITU text files from another folder
+            here = fileparts(fileparts(mfilename('fullpath')));
+            copyfile(fullfile(here, 'data', 'TropoClim.txt'), tc.tmp_dir);
+            copyfile(fullfile(here, 'data', 'N050.TXT'), tc.tmp_dir);
+            old = getenv('MATLAB_ITM_MAPS_DIR');
+            tc.addTeardown(@() setenv('MATLAB_ITM_MAPS_DIR', old));
+            setenv('MATLAB_ITM_MAPS_DIR', tc.tmp_dir);
+            tc.verifyEqual(itm_radio_climate_rev1(38.9, -77.0), 6);
+            tc.verifyEqual(itm_surface_refractivity_rev1(90, 0), 317.248, 'AbsTol', 1e-9);
+            setenv('MATLAB_ITM_MAPS_DIR', fullfile(tc.tmp_dir, 'missing'));
+            tc.verifyError(@() itm_radio_climate_rev1(38.9, -77.0), 'itm:maps:NotInFolder');
+        end
+
+        function setup_without_region(tc)
+            old = getenv('MATLAB_ITM_CACHE');
+            tc.addTeardown(@() setenv('MATLAB_ITM_CACHE', old));
+            T = itm_setup_rev1(cache_dir=tc.tmp_dir);
+            tc.verifyEqual(height(T), 0);
+            tc.verifyEqual(string(getenv('MATLAB_ITM_CACHE')), tc.tmp_dir);
+            tc.verifyError(@() itm_setup_rev1(region=[40 39 -77 -76]), 'itm:setup:Region');
+        end
+
         function zero_length_path_errors(tc)
             tc.verifyError(@() itm_terrain_profile_rev1(38.9, -77, 38.9, -77, ...
                 terrain_dir=tc.tmp_dir, download=false), 'itm:terrain:ZeroDistance');
@@ -137,6 +160,14 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.verifyGreaterThan(z(1), -5);
             tc.verifyLessThan(z(1), 60);
             tc.verifyEqual(z(2), 0);
+        end
+
+        function glo90_source(tc)
+            tc.assume_network();
+            [z, info] = itm_terrain_elevation_rev1(51.50, -0.12, source="copernicus90");
+            tc.verifyEqual(info.source_code, uint8(3));
+            tc.verifyGreaterThan(z, -5);
+            tc.verifyLessThan(z, 60);
         end
 
         function batched_profiles_equal_single(tc)

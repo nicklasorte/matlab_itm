@@ -14,13 +14,8 @@ arguments
     lon_deg double {mustBeReal, mustBeFinite}
 end
 
-persistent grid
-if isempty(grid)
-    grid = readmatrix(itm_data_path('N050.TXT'), 'FileType', 'text');
-    if ~isequal(size(grid), [121 241])
-        error('itm:DataFileCorrupt', 'N050.TXT must be 121 x 241; read %d x %d.', size(grid));
-    end
-end
+maps = itm_maps();          % repo data, app bundle, cache, or ITU download
+grid = maps.N050;
 
 % Grid: rows 90 N to 90 S, columns 0 to 360 E, 1.5 degree spacing.
 % Explicit bilinear form copied from refractivity.py; interp2 would also

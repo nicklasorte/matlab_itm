@@ -50,7 +50,7 @@ T = itm_pathloss_rev1(tx, rx, 2700, [10; 50; 90], confidence=[10 50 90]);   % 3-
 | `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached 1 arc-second tiles. |
 | `itm_radio_climate_rev1(lat, lon)` | ITU-R P.617 radio climate code (1–7). |
 | `itm_surface_refractivity_rev1(lat, lon)` | ITU-R P.452 sea-level refractivity N₀. |
-| `itm_download_tiles_rev1(lat_lim, lon_lim)` | Pre-fill the terrain cache for an area (offline servers). |
+| `itm_setup_rev1(region=[lat_min lat_max lon_min lon_max])` | Cache the ITU maps and the terrain tiles for an area (offline servers, shared caches). |
 | `itm_cli_rev1(...)` | Command-line entry point for a compiled app. |
 | `build_itm_app_rev1()` | Compiles `itm_cli_rev1` with MATLAB Compiler. |
 
@@ -65,8 +65,10 @@ flowchart LR
     B --> C["Profile points<br/>every 30 m"]
     B --> D["Path midpoint"]
     C --> E{"Tile in local cache?"}
-    E -- no --> F["Download once<br/>3DEP, else Copernicus"]
+    E -- no --> F["Download once<br/>3DEP, then GLO-30, then GLO-90"]
     F --> G["~/.matlab_itm/terrain"]
+    M["ITU maps<br/>data/ or cache or itu.int"] --> I
+    M --> J
     E -- yes --> G
     G --> H["readgeoraster + geointerp<br/>bilinear elevation"]
     D --> I["ITU-R P.617 TropoClim<br/>radio climate"]
@@ -88,36 +90,57 @@ GeoTIFF files over HTTPS, so the app needs only `websave` and
 | --- | --- | --- | --- | --- | --- |
 | [USGS 3DEP 1 arc-second](https://www.usgs.gov/3d-elevation-program) (default) | U.S. (CONUS, Alaska, Hawaii), Puerto Rico, U.S. Virgin Islands, Guam, border areas of Canada and Mexico | ~30 m | Bare earth | NAVD88 | ~45 MB per 1° × 1° |
 | [Copernicus GLO-30](https://registry.opendata.aws/copernicus-dem/) (fallback) | Global | ~30 m | Surface model (includes buildings and canopy) | EGM2008 | ~35 MB per 1° × 1° |
+| [Copernicus GLO-90](https://registry.opendata.aws/copernicus-dem/) (second fallback) | Global, including tiles not released in GLO-30 | ~90 m | Surface model | EGM2008 | ~5 MB per 1° × 1° |
 
 With `terrain_source="auto"` (the default), each point comes from 3DEP.
 Points where 3DEP has no tile or no data (outside the U.S., past a border,
-offshore) are filled from Copernicus. Points with no data in either source,
-such as open ocean, are set to 0 m. `info.profile.source_code` records the
+offshore) are filled from GLO-30, then GLO-90. Points with no data in any
+source, such as open ocean, are set to 0 m. `info.profile.source_code` records the
 source of every point.
 
 Tiles download the first time a path needs them and are reused afterward:
 
-- **Cache folder.** The `MATLAB_ITM_TERRAIN_DIR` environment variable, else
-  `%LOCALAPPDATA%\matlab_itm\terrain` on Windows, else
-  `~/.matlab_itm/terrain`. Override per call with `terrain_dir`.
+- **Cache folder.** `<cache>/terrain`, where `<cache>` is the
+  `MATLAB_ITM_CACHE` environment variable, else `%LOCALAPPDATA%\matlab_itm`
+  on Windows, else `~/.matlab_itm`. `MATLAB_ITM_TERRAIN_DIR` or the
+  `terrain_dir` option overrides the terrain folder alone.
 - **Memory.** The eight most recently used tiles stay in memory (about
   52 MB each), so repeated calls in one area take tens of milliseconds.
-- **Offline servers.** Run `itm_download_tiles_rev1` on a connected machine,
-  copy the folder, and call with `download=false`. A missing tile then
-  raises `itm:terrain:TileMissing` rather than failing silently.
+- **Offline servers.** Run `itm_setup_rev1(region=[...])` on a connected
+  machine, copy the cache folder, set `MATLAB_ITM_CACHE` to it, and call
+  with `download=false`. A missing tile then raises
+  `itm:terrain:TileMissing` rather than failing silently.
 - **Shared folders.** Downloads go to a temporary file and are renamed into
   place atomically (first writer wins), so several compiled servers can
   share one cache. The test suite checks this with two parallel workers.
-- **Ocean tiles.** A tile the provider doesn't have is remembered with a
-  zero-byte `.404` marker, so it isn't requested again.
+- **Ocean tiles.** Copernicus publishes a `tileList.txt` of every tile; it's
+  cached once, and a tile absent from it counts as ocean without a request.
+  So a network or proxy error is never mistaken for open water. A 3DEP tile
+  that returns HTTP 404 is remembered with a zero-byte `.404` marker.
 
 Rough download sizes: a 100 km radius around one site is about 9 tiles
 (400 MB); all of CONUS 3DEP is about 1,000 tiles (45 GB).
 
 ## Climate and refractivity
 
-Both come from ITU-R data files bundled in `data/` and packaged into
-compiled apps (see [data/SOURCES.md](data/SOURCES.md)).
+Yes, both are automatic: every call looks them up from the path's latitude
+and longitude.
+
+![How climate and refractivity are chosen](docs/climate_refractivity_us.png)
+
+Both come from ITU-R data files (see [data/SOURCES.md](data/SOURCES.md)),
+loaded in this order:
+
+1. `MATLAB_ITM_MAPS_DIR`, if set: `itm_maps.mat` or the two ITU text files.
+1. `data/TropoClim.txt` and `data/N050.TXT` in this repository.
+1. The same files packaged in a compiled app.
+1. `<cache>/itu_maps/itm_maps.mat`.
+1. A download of the ITU supplement ZIPs, parsed and cached. Set
+   `MATLAB_ITM_OFFLINE=1` to forbid it.
+
+ITU forbids reproducing or distributing its digital maps without written
+permission. Keep this repository and apps built from it inside your
+organization.
 
 - **Radio climate:** ITU-R P.617-3 radio-climatic zone map (`TropoClim.txt`,
   0.5° grid), nearest grid point, at the path midpoint. If the midpoint is
@@ -130,8 +153,13 @@ These rules and the parameter defaults below follow the WInnForum CBRS SAS
 reference model (`tropoclim.py`, `refractivity.py`, `wf_itm.py`). The
 lookups reproduce that code exactly on 309 global test points.
 
-Note: the ITU-R P.617 map puts Washington, DC, in climate 6 (maritime
-temperate over land), not 5 (continental temperate).
+Note: the ITU-R P.617 map puts Washington, DC, and most of the eastern
+U.S. south of about 40.5° N in climate 6 (maritime temperate over land),
+not 5 (continental temperate).
+
+![World climate zones and refractivity](docs/climate_refractivity_world.png)
+
+To redraw both figures from the data files: `python3 docs/make_maps.py`.
 
 ## Defaults
 
@@ -214,6 +242,23 @@ Errors use identifiers such as `itm:InvalidReliability` and quote the NTIA
 error code (for example 1007). ITM warnings don't stop the run:
 `info.warnings` holds the NTIA bitmask for every output element, and
 `info.warning_messages` lists them in words.
+
+## Relationship to itu_p2001
+
+The ITU maps loader (download, parse, atomic cache), the setup function,
+the Copernicus tile-list check, and the GLO-90 fallback follow the
+patterns in [nicklasorte/itu_p2001](https://github.com/nicklasorte/itu_p2001)
+(`p2001_maps_rev1`, `p2001_setup_rev1`, `p2001_dem_tile_rev1`,
+`p2001_atomic_save_rev1`). The two repositories share the cache layout
+idea but use separate folders (`~/.matlab_itm` and `~/.itu_p2001`).
+
+## Data credits
+
+- Rec. ITU-R P.617 and P.452 and their digital maps: © ITU.
+- USGS 3D Elevation Program: public domain.
+- Copernicus DEM: © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH
+  2014-2018, provided under COPERNICUS by the European Union and ESA; all
+  rights reserved. Free to use worldwide except in Armenia and Azerbaijan.
 
 ## References
 

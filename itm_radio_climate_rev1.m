@@ -22,13 +22,8 @@ arguments
     lon_deg double {mustBeReal, mustBeFinite}
 end
 
-persistent grid
-if isempty(grid)
-    grid = readmatrix(itm_data_path('TropoClim.txt'), 'FileType', 'text');
-    if ~isequal(size(grid), [360 720])
-        error('itm:DataFileCorrupt', 'TropoClim.txt must be 360 x 720; read %d x %d.', size(grid));
-    end
-end
+maps = itm_maps();          % repo data, app bundle, cache, or ITU download
+grid = maps.TropoClim;
 
 lon_deg = mod(lon_deg + 180, 360) - 180;          % wrap to [-180, 180)
 lat_deg = lat_deg + zeros(size(lon_deg));

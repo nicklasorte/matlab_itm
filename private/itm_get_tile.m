@@ -10,9 +10,15 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %   are renamed into place with an atomic move (first writer wins), so
 %   several processes or compiled servers can share one terrain folder.
 %
-%   Sources (both public, no account or key):
-%     usgs3dep    USGS 3DEP 1 arc-second DEM (bare earth, U.S. and territories)
-%     copernicus  Copernicus GLO-30 DEM (global, 1 arc-second, surface model)
+%   Sources (public, no account or key):
+%     usgs3dep      USGS 3DEP 1 arc-second DEM (bare earth, U.S. and territories)
+%     copernicus    Copernicus GLO-30 DEM (global, 1 arc-second, surface model)
+%     copernicus90  Copernicus GLO-90 DEM (global, 3 arc-second), for tiles
+%                   not released in GLO-30
+%   For Copernicus, the bucket's tileList.txt is cached once and a tile
+%   absent from it is treated as ocean without a request, so a network
+%   or proxy error is never mistaken for open water. (From
+%   p2001_dem_tile_rev1 in nicklasorte/itu_p2001.)
 
 [name, url] = tile_name_url(source, tile_lat, tile_lon);
 folder = fullfile(terrain_dir, source);
@@ -25,10 +31,14 @@ if isfile(marker)
     file = "";
     return
 end
+if startsWith(source, 'copernicus') && ~in_tile_list(source, name, terrain_dir, download)
+    file = "";
+    return
+end
 if ~download
     error('itm:terrain:TileMissing', ...
         ['Terrain tile %s is not in %s and download is off. ' ...
-        'Run itm_download_tiles_rev1 for this area or allow downloads. Source URL: %s'], ...
+        'Run itm_setup_rev1 for this area or allow downloads. Source URL: %s'], ...
         name, folder, url);
 end
 if ~isfolder(folder)
@@ -47,9 +57,8 @@ for attempt = 1:max_tries
         break
     catch ME
         delete_quietly(tmp);
-        if strcmp(ME.identifier, 'MATLAB:webservices:HTTP404StatusCodeError') || ...
-                (strcmp(ME.identifier, 'MATLAB:webservices:HTTP403StatusCodeError') && strcmp(source, 'copernicus'))
-            % No tile here (Copernicus S3 answers 403 for absent keys)
+        if strcmp(ME.identifier, 'MATLAB:webservices:HTTP404StatusCodeError')
+            % No tile here
             fclose(fopen(marker, 'w'));
             file = "";
             return
@@ -82,16 +91,53 @@ switch source
         tag = sprintf('%s%02d%s%03d', ns, abs(north), ew, abs(tile_lon));
         name = sprintf('USGS_1_%s.tif', tag);
         url = sprintf('https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/%s/%s', tag, name);
-    case 'copernicus'
+    case {'copernicus', 'copernicus90'}
         % Copernicus names tiles by their south-west corner
         ns = 'N'; if tile_lat < 0, ns = 'S'; end
         ew = 'E'; if tile_lon < 0, ew = 'W'; end
-        stem = sprintf('Copernicus_DSM_COG_10_%s%02d_00_%s%03d_00_DEM', ns, abs(tile_lat), ew, abs(tile_lon));
+        [res, bucket] = copernicus_bucket(source);
+        stem = sprintf('Copernicus_DSM_COG_%s_%s%02d_00_%s%03d_00_DEM', res, ns, abs(tile_lat), ew, abs(tile_lon));
         name = [stem '.tif'];
-        url = sprintf('https://copernicus-dem-30m.s3.amazonaws.com/%s/%s', stem, name);
+        url = sprintf('https://%s.s3.amazonaws.com/%s/%s', bucket, stem, name);
     otherwise
         error('itm:terrain:UnknownSource', 'Unknown terrain source "%s".', source);
 end
+end
+
+function [res, bucket] = copernicus_bucket(source)
+if strcmp(source, 'copernicus90')
+    res = '30'; bucket = 'copernicus-dem-90m';
+else
+    res = '10'; bucket = 'copernicus-dem-30m';
+end
+end
+
+function tf = in_tile_list(source, name, terrain_dir, download)
+% True when the Copernicus bucket lists this tile
+persistent lists
+if isempty(lists)
+    lists = struct();
+end
+if ~isfield(lists, source)
+    folder = fullfile(terrain_dir, source);
+    list_file = string(fullfile(folder, 'tileList.txt'));
+    if ~isfile(list_file)
+        if ~download
+            error('itm:terrain:TileMissing', ...
+                '%s is not cached and download is off. Run itm_setup_rev1 first.', list_file);
+        end
+        if ~isfolder(folder)
+            mkdir(folder);
+        end
+        [~, bucket] = copernicus_bucket(source);
+        tmp = list_file + "." + string(java_free_token()) + ".part";
+        websave(tmp, sprintf('https://%s.s3.amazonaws.com/tileList.txt', bucket), weboptions('Timeout', 120));
+        publish_atomically(tmp, list_file);
+    end
+    lists.(source) = strip(readlines(list_file, 'EmptyLineRule', 'skip'));
+end
+[~, stem] = fileparts(name);
+tf = any(lists.(source) == string(stem));
 end
 
 function publish_atomically(tmp, file)

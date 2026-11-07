@@ -3,10 +3,11 @@ function results = build_itm_app_rev1(output_dir)
 %   results = BUILD_ITM_APP_REV1(output_dir) builds itm_cli_rev1 as a
 %   standalone application that runs on the free MATLAB Runtime. The ITU
 %   data files (data/TropoClim.txt, data/N050.TXT) are packaged into the
-%   app. Terrain tiles are not packaged: the app downloads them on demand
-%   to the user's tile cache (see itm_terrain_elevation_rev1), or reads a
-%   pre-filled cache set with the MATLAB_ITM_TERRAIN_DIR environment
-%   variable.
+%   app, so it never downloads them. ITU forbids redistributing these maps:
+%   keep the app inside your organization. Terrain tiles are not packaged:
+%   the app downloads them on demand to the user's tile cache (see
+%   itm_terrain_elevation_rev1), or reads a pre-filled cache
+%   (itm_setup_rev1) named by the MATLAB_ITM_CACHE environment variable.
 %
 %   To compile your own app instead, add these files to it: every
 %   itm_*_rev1.m function, the private folder, and the data folder.
