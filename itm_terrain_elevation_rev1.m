@@ -139,8 +139,8 @@ for k = 1:size(keys, 1)
     lo = min(max(lon(pick), G.lon_lim(1)), G.lon_lim(2));
     % Same result as geointerp(Z, R, la, lo, "linear"), bit for bit: the
     % interpolant is built once per tile, and the intrinsic coordinates use
-    % the same arithmetic as geographicToIntrinsic (checked in the tests)
-    % at a tenth of its cost.
+    % the same arithmetic as geographicToIntrinsic for 3DEP (checked in the
+    % tests) at a tenth of its cost.
     [x, y] = intrinsic(G, la, lo);
     z(pick) = F(y, x);
 end
@@ -235,32 +235,28 @@ end
 end
 
 function G = geometry(R)
-% Constants for intrinsic coordinates, matching geographicToIntrinsic's
-% arithmetic for north-up rasters: cells use (lon - west) / extent + 0.5;
-% postings use (lon - west) * ((n - 1) / width) + 1.
+% Constants for intrinsic coordinates. For north-up cells rasters (USGS
+% 3DEP), (lon - west) / extent + 0.5 matches geographicToIntrinsic bit for
+% bit at a tenth of the cost. Postings rasters (Copernicus) use the
+% built-in: it derives its latitude reference internally, and no direct
+% formula tested matched it exactly (differences of 1e-11 in intrinsic y).
 G.lat_lim = R.LatitudeLimits;
 G.lon_lim = R.LongitudeLimits;
 G.R = R;
-G.cells = R.RasterInterpretation == "cells";
-G.north_up = R.ColumnsStartFrom == "north" && R.RowsStartFrom == "west";
-if G.cells
+G.fast = R.RasterInterpretation == "cells" && R.ColumnsStartFrom == "north" && ...
+    R.RowsStartFrom == "west";
+if G.fast
     G.dlat = R.CellExtentInLatitude;
     G.dlon = R.CellExtentInLongitude;
-else
-    G.klat = (R.RasterSize(1) - 1) / diff(R.LatitudeLimits);
-    G.klon = (R.RasterSize(2) - 1) / diff(R.LongitudeLimits);
 end
 end
 
 function [x, y] = intrinsic(G, la, lo)
-if ~G.north_up
-    [x, y] = geographicToIntrinsic(G.R, la, lo);
-elseif G.cells
+if G.fast
     x = (lo - G.lon_lim(1)) / G.dlon + 0.5;
     y = (G.lat_lim(2) - la) / G.dlat + 0.5;
 else
-    x = (lo - G.lon_lim(1)) * G.klon + 1;
-    y = (G.lat_lim(2) - la) * G.klat + 1;
+    [x, y] = geographicToIntrinsic(G.R, la, lo);
 end
 end
 
