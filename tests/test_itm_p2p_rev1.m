@@ -119,6 +119,35 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
                 'itm:SizeMismatch');
         end
 
+        function large_reliability_array(tc)
+            % 100,000 Monte Carlo reliabilities in one call equal the
+            % scalar calls, for every mode of variability
+            rs = RandStream('mrg32k3a', 'Seed', 11);
+            rel = 0.001 + 99.998 * rand(rs, 1e5, 1);
+            pick = randperm(rs, 1e5, 25);
+            c = tc.cases(500, :);
+            pfl = tc.profiles{c(13) + 1};
+            for mdvar = [0 1 2 3 13 23 33]
+                L = itm_p2p_rev1(c(1), c(2), pfl, c(5), rel, climate=c(3), N_0=c(4), mdvar=mdvar);
+                tc.verifySize(L, size(rel));
+                for k = pick
+                    tc.verifyEqual(L(k), itm_p2p_rev1(c(1), c(2), pfl, c(5), rel(k), climate=c(3), ...
+                        N_0=c(4), mdvar=mdvar), 'AbsTol', 1e-12, sprintf('mdvar %d, element %d', mdvar, k));
+                end
+            end
+        end
+
+        function single_message_mode_fills_output(tc)
+            % mdvar 0 ignores time: a reliability array still returns one
+            % value per element (all equal), not a scalar
+            pfl = flat_profile(20e3, 100);
+            L = itm_p2p_rev1(30, 10, pfl, 2700, [1 10 50 90 99], mdvar=0);
+            tc.verifySize(L, [1 5]);
+            tc.verifyEqual(L, repmat(L(1), 1, 5));
+            [~, info] = itm_p2p_rev1(30, 10, pfl, 2700, [1 10 50 90 99], mdvar=0);
+            tc.verifySize(info.warnings, [1 5]);
+        end
+
         function loss_increases_with_reliability(tc)
             % Higher reliability means a loss exceeded less often: larger.
             rel = [0.1 1 5 10 30 50 70 90 95 99 99.9];

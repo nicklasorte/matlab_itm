@@ -93,6 +93,9 @@ if any(abs([tx(:, 1); rx(:, 1)]) > 90)
     error('itm:InvalidLatitude', 'Latitude must be within [-90, 90] degrees.');
 end
 pol = parse_polarization(options.polarization);
+% Validate the percentages and convert them to normal deviates once, before
+% any terrain download; every link reuses them.
+z = itm_percentiles(reliability, options.confidence, 50);
 
 % Path geometry and midpoints along the WGS84 geodesic (vectorized)
 ellipsoid = itm_wgs84();
@@ -141,8 +144,7 @@ else
 end
 
 % ITM core per link; each call is vectorized over reliability and confidence
-probe = zeros(size(reliability)) + zeros(size(options.confidence));
-out_size = size(probe);
+out_size = z.size;
 k_out = prod(out_size);
 loss = zeros(n, k_out);
 iinfo = cell(n, 1);
@@ -151,7 +153,7 @@ want_info = nargout > 1;
 for k = 1:n
     [Lk, iinfo{k}] = itm_p2p_core(tx(k, 3), rx(k, 3), pfls{k}, f_mhz, reliability, ...
         options.confidence, 50, climate(k), N_0(k), pol, options.epsilon, options.sigma, ...
-        options.mdvar, want_info);
+        options.mdvar, want_info, z);
     loss(k, :) = Lk(:).';
 end
 if n == 1

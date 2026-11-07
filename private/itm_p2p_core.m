@@ -1,5 +1,5 @@
 function [A_db, info] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, confidence, ...
-    location, climate, N_0, polarization, epsilon, sigma, mdvar, want_info)
+    location, climate, N_0, polarization, epsilon, sigma, mdvar, want_info, z)
 %ITM_P2P_CORE ITM v1.4 point-to-point computation without argument parsing.
 %   Called by itm_p2p_rev1 (after its arguments block) and, once per link,
 %   by itm_pathloss_rev1, which validates its own inputs once per call.
@@ -7,7 +7,9 @@ function [A_db, info] = itm_p2p_core(h_tx_m, h_rx_m, pfl, f_mhz, reliability, co
 %   skipping it per link matters for many-link runs. Inputs are positional;
 %   see itm_p2p_rev1 for their meaning. want_info builds the info struct.
 %   The NTIA input checks (ValidateInputs.cpp) still run here on every
-%   call.
+%   call. z, optional, holds the percentages already validated and
+%   converted to normal deviates by itm_percentiles; itm_pathloss_rev1
+%   passes it so a reliability array is converted once, not once per link.
 
 info = [];
 pfl = pfl(:);
@@ -16,18 +18,12 @@ validate_profile(pfl);
 % CR mode maps reliability to time and confidence to situation
 % (ITM_P2P_CR calls ITM_P2P_TLS with time = reliability, location = 50,
 % situation = confidence).
-time = reliability;
-situation = confidence;
-try
-    probe = zeros(size(time)) + zeros(size(situation));
-    out_size = size(probe);
-catch
-    error('itm:SizeMismatch', ...
-        'reliability and confidence must have compatible sizes for implicit expansion.');
+warnings = validate_inputs(h_tx_m, h_rx_m, climate, N_0, f_mhz, polarization, ...
+    epsilon, sigma, mdvar);
+if nargin < 15 || isempty(z)
+    z = itm_percentiles(reliability, confidence, location);
 end
-
-warnings = validate_inputs(h_tx_m, h_rx_m, climate, time, location, ...
-    situation, N_0, f_mhz, polarization, epsilon, sigma, mdvar);
+out_size = z.size;
 
 % Terrain-averaged system height over the middle 80 percent of the path
 np = fix(pfl(1));
@@ -46,11 +42,20 @@ h_m = [h_tx_m, h_rx_m];
 
 A_fs_db = free_space_loss(d_m, f_mhz);
 
-[V_db, extreme] = variability(time, location, situation, h_e_m, delta_h_m, ...
-    f_mhz, d_m, A_ref_db, climate, mdvar);
+if want_info
+    [V_db, extreme] = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
+else
+    V_db = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
+end
+if numel(V_db) ~= prod(out_size)
+    % Scalar deviates (for example single-message mode, which ignores
+    % time) give one value for every requested percentage
+    V_db = V_db + zeros(out_size);
+end
 A_db = reshape(V_db + A_fs_db, out_size);
 
 if want_info
+    extreme = extreme | false(out_size);
     w = uint32(warnings) + zeros(out_size, 'uint32');
     w(extreme) = bitor(w(extreme), uint32(8192));
     mode_names = ["Line of Sight", "Diffraction", "Troposcatter"];
@@ -94,7 +99,8 @@ if numel(pfl) ~= np + 3
 end
 end
 
-function warnings = validate_inputs(h_tx, h_rx, climate, time, location, situation, N_0, f, pol, epsilon, sigma, mdvar)
+function warnings = validate_inputs(h_tx, h_rx, climate, N_0, f, pol, epsilon, sigma, mdvar)
+% Percentages (time, location, situation) are checked in itm_percentiles
 warnings = 0;
 if h_tx < 1.0 || h_tx > 1000.0
     warnings = bitor(warnings, 1);
@@ -131,15 +137,6 @@ if sigma <= 0
 end
 if mdvar < 0 || mdvar > 33 || mdvar ~= fix(mdvar) || mod(mdvar, 10) > 3
     itm_error(1014);
-end
-if any(situation(:) <= 0 | situation(:) >= 100)
-    itm_error(1006);     % CR mode: situation is the confidence
-end
-if any(time(:) <= 0 | time(:) >= 100)
-    itm_error(1007);     % CR mode: time is the reliability
-end
-if location <= 0 || location >= 100
-    itm_error(1004);
 end
 end
 
@@ -654,7 +651,10 @@ end
 %% ------------------------------------------------------------------------
 %  Variability (Variability.cpp), vectorized over time and situation
 %  ------------------------------------------------------------------------
-function [result, extreme] = variability(time, location, situation, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar)
+function [result, extreme] = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar)
+% Vectorized over the deviates in z (see itm_percentiles). Scalars stay
+% scalars and implicit expansion forms the output, which gives the same
+% values as expanding every array to the output size first.
 all_year = [ ...
     -9.67,   -0.62,    1.26,   -9.21,   -0.62,   -0.39,      3.15; ...
     12.7,     9.19,   15.5,     9.05,    9.19,    2.86,   857.9; ...
@@ -682,11 +682,9 @@ bfp3 = [0.0, 2.00, 0.0, 1.79, 2.00, 0.0, 0.0];
 a_9000 = 9000e3;
 THIRD = 1.0 / 3.0;
 
-z_T = inverse_ccdf(time / 100);
-z_S = inverse_ccdf(situation / 100);
-z_T = z_T + zeros(size(z_S));     % implicit expansion to the output size
-z_S = z_S + zeros(size(z_T));
-z_L = inverse_ccdf(location / 100) + zeros(size(z_T));
+z_T = z.T;
+z_S = z.S;
+z_L = z.L;
 
 c = climate;
 wn = f_mhz / 47.7;
@@ -721,7 +719,9 @@ switch mdvar_internal
     case 2                       % mobile
         z_L = z_T;
 end
-extreme = abs(z_T) > 3.10 | abs(z_L) > 3.10 | abs(z_S) > 3.10;
+if nargout > 1
+    extreme = abs(z_T) > 3.10 | abs(z_L) > 3.10 | abs(z_S) > 3.10;
+end
 
 if plus10
     sigma_L = 0.0;
@@ -768,17 +768,4 @@ end
 
 function v = curve(c1, c2, x1, x2, x3, d_e)
 v = (c1 + c2 / (1.0 + ((d_e - x2) / x3)^2)) * ((d_e / x1)^2) / (1.0 + ((d_e / x1)^2));
-end
-
-function Q = inverse_ccdf(q)
-% Abramowitz and Stegun 26.2.23 approximation, as in the C++
-C_0 = 2.515516; C_1 = 0.802853; C_2 = 0.010328;
-D_1 = 1.432788; D_2 = 0.189269; D_3 = 0.001308;
-upper = q > 0.5;
-x = q;
-x(upper) = 1.0 - x(upper);
-T_x = sqrt(-2.0 * log(x));
-zeta_x = ((C_2 * T_x + C_1) .* T_x + C_0) ./ (((D_3 * T_x + D_2) .* T_x + D_1) .* T_x + 1.0);
-Q = T_x - zeta_x;
-Q(upper) = -Q(upper);
 end
