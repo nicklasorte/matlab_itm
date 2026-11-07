@@ -248,23 +248,34 @@ one (12.6 ms versus 12.2 ms per link in the same run).
 ### Compared with ITU-R P.2001 (itu_p2001)
 
 Same link, frequency, and time percentage, each model with its own terrain
-handler (`tests/compare_p2001_rev1.m`, same session, back to back):
+handler (`tests/compare_p2001_rev1.m`, same session, back to back, idle
+machine). `itu_p2001` has since adopted this repository's decoded-tile
+cache and direct intrinsic coordinates (itu_p2001 commit `0a4b762`):
 
-| Model | Warm, 1 percentage | Warm, 1,000 percentages | Core model only | Cold |
+| Model | Cold (new process) | Warm, 1 percentage | Warm, 1,000 percentages | Core model only |
 | --- | --- | --- | --- | --- |
-| ITM v1.4 (`matlab_itm`) | 12.2 ms | 12.6 ms | 1.9 ms | 117 ms |
-| ITU-R P.2001-6 (`itu_p2001`) | 14.6 ms | 27.1 ms | 8.5 ms | 835 ms |
+| ITM v1.4 (`matlab_itm`) | 122 ms | 12.5 ms | 11.3 ms | 1.9 ms |
+| ITU-R P.2001-6, before the port | 832 ms | 14.6 ms | 26.6 ms | 8.0 ms |
+| ITU-R P.2001-6, after the port | 259 ms | 13.4 ms | 25.6 ms | 6.8 ms |
 
 - **Terrain dominates both.** The two terrain handlers cost about the same
-  per link (5 to 6 ms), so a single percentage costs nearly the same in
-  either model.
+  per link, so a single percentage costs nearly the same in either model.
 - **The models differ in the core.** P.2001 combines many more mechanisms
   per time percentage (ducting, sporadic-E, troposcatter, rain and gas
-  fades), so its core is about 4.5 times ITM's, and its cost grows with
-  the number of percentages; ITM's barely does.
-- **Cold start.** ITM's decoded-tile cache and `.mat` maps make a new
-  process about 7 times faster to its first result. P.2001 decodes each
-  GeoTIFF on first use in every process.
+  fades), so its core costs several times ITM's and grows with the number
+  of percentages; ITM's barely does.
+- **The port changed no result.** P.2001 losses before and after are
+  identical on five test links at seven percentages, and its ITU-R
+  validation set still matches to 7 × 10⁻¹³ dB.
+
+### Fidelity to the original release
+
+The optimized code returns the same losses as the first release of this
+port (`656996a`): on the same five links (3DEP, 110 km multi-tile, the
+coastal sea-rule path, Mount Washington, and the Alps on Copernicus) at
+seven reliabilities from 0.1 to 99.9 %, the largest difference is
+9 × 10⁻⁹ dB, from interpolation rounding and 10⁻¹² degree geodesic
+differences. The 740 NTIA C++ cases still match to 4 × 10⁻¹³ dB.
 
 ## Compile for MATLAB Runtime
 
