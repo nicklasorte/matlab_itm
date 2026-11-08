@@ -329,8 +329,9 @@ function N = its_numbers(N, T, Pt, CD, r1)
 % summaries by frequency and distance, censored results, and open versus
 % concealed pairs. Error = model minus measured basic transmission loss.
 M = ["itm", "p452", "p2001"];
-T.group = T.rcvr + "-" + T.rht;
-T.group(T.rcvr == 0) = "h3-13";
+T.group = "van" + string(T.rcvr) + "-hi";             % Virginia: receiver van and height
+T.group(T.rcvr > 0 & T.hrx_m <= 2) = "van" + string(T.rcvr(T.rcvr > 0 & T.hrx_m <= 2)) + "-lo";
+T.group(T.rcvr == 0) = "h3-13";                     % Colorado: heights 3 m to 13 m (15 m)
 use = ~(T.rcvr == 0 & T.hrx_m < 3);                % Colorado: heights of 3 m and up
 U = T(use & ~T.censored, :);
 for m = M, U.("e_" + m) = U.(m + "_50") - U.meas_lb_db; end
@@ -484,6 +485,9 @@ N("west_gap_med") = r1(median(W.apart)); N("east_gap_med") = r1(median(b.apart))
 N("west_gt20") = nnz(W.apart > 20); N("east_gt20") = nnz(b.apart > 20);
 N("west_gap_max") = r1(max(W.apart));
 N("west_p2001_p452_maxabs") = r1(max(abs(W.p2001_50 - W.p452_50)));
+hz = bitand(uint32(W.itm_warnings), uint32(128)) > 0 | bitand(uint32(W.itm_warnings), uint32(256)) > 0;
+N("west_hzn_flag") = nnz(hz);
+if any(~hz), N("west_gap_noflag") = r1(median(W.apart(~hz))); end
 win = W.delta_h_m > 150 & W.length_km < 150;
 N("west_win_n") = nnz(win); N("west_win_med") = r1(median(W.apart(win)));
 if any(~win), N("west_out_med") = r1(median(W.apart(~win))); end

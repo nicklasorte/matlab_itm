@@ -17,7 +17,9 @@ function W = western_terrain_rev1(options)
 %     western_links.csv  one row per link: region, endpoints, length,
 %                        heights, ITM delta h, ITM mode code and class at
 %                        50 %, free-space loss, and each model's loss at 1,
-%                        10, and 50 %
+%                        10, and 50 %, ITM's warning flags (union over the
+%                        percentages; 0x0080 and 0x0100 flag a horizon angle
+%                        over 200 mrad), and the steeper horizon angle (mrad)
 %   and runs diffraction_decomposition_rev1 on the same links (Tag "_west"),
 %   which writes figures/table_diffraction_terms_west.csv with ITM's
 %   smooth-earth weight w and the other diffraction terms.
@@ -57,16 +59,19 @@ for g = 1:numel(regions)
         code = r.itm.mech;
         if isKey(cls, code), c = string(cls(code)); else, c = "Other"; end
         fs = 32.45 + 20 * log10(options.Freq) + 20 * log10(prof.d_km(end));
+        fl = uint32(0);
+        for wv = unique(r.itm.info.warnings(:))', fl = bitor(fl, wv); end
+        hzn = 1e3 * max(r.itm.info.theta_hzn_rad);        % steeper horizon angle, mrad
         rows(end + 1, :) = {g, regions(g).name, tx(1), tx(2), la2, lo2, len, htx, hrx, ...
             r.itm.info.delta_h_m, code, c, nnz(prof.zone == 1) / numel(prof.zone), fs, ...
             r.itm.Lb(1), r.itm.Lb(2), r.itm.Lb(3), r.p452.Lb(1), r.p452.Lb(2), r.p452.Lb(3), ...
-            r.p2001.Lb(1), r.p2001.Lb(2), r.p2001.Lb(3)}; %#ok<AGROW>
+            r.p2001.Lb(1), r.p2001.Lb(2), r.p2001.Lb(3), double(fl), hzn}; %#ok<AGROW>
         fprintf('%s link %2d: %5.1f km, delta h %4.0f m, %s\n', regions(g).name, j, len, r.itm.info.delta_h_m, c);
     end
 end
 W = cell2table(rows, 'VariableNames', {'region_id', 'region', 'tx_lat', 'tx_lon', 'rx_lat', 'rx_lon', 'length_km', ...
     'tx_h_m', 'rx_h_m', 'delta_h_m', 'itm_mode_code', 'itm_class', 'sea_fraction', 'free_space_db', ...
-    'itm_1', 'itm_10', 'itm_50', 'p452_1', 'p452_10', 'p452_50', 'p2001_1', 'p2001_10', 'p2001_50'});
+    'itm_1', 'itm_10', 'itm_50', 'p452_1', 'p452_10', 'p452_50', 'p2001_1', 'p2001_10', 'p2001_50', 'itm_warnings', 'itm_max_horizon_mrad'});
 W.freq_mhz = repmat(options.Freq, height(W), 1);
 if ~isfolder(options.OutDir), mkdir(options.OutDir); end
 writetable(W, fullfile(options.OutDir, 'western_links.csv'));

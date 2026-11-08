@@ -1055,6 +1055,9 @@
     "90": 30,
     "95": 30
   },
+  "east_dh_med": 78,
+  "east_gap_med": 10.3,
+  "east_gt20": 25,
   "enh_itm": 21.7,
   "enh_meas": 16.6,
   "enh_p2001": 18.5,
@@ -1115,6 +1118,264 @@
   "grid_la_p452_p2001_maxabs": 10,
   "grid_la_share_gt20": 65,
   "grid_la_tag": "_150km_2p5km",
+  "its3_R1_cens": 8,
+  "its3_R1_itm": [
+    2.9,
+    1.3,
+    96
+  ],
+  "its3_R1_itm_km": 0.5,
+  "its3_R1_p2001": [
+    -4.9,
+    -4.1,
+    96
+  ],
+  "its3_R1_p2001_km": -4.3,
+  "its3_R1_p452": [
+    -5.1,
+    -4.1,
+    96
+  ],
+  "its3_R1_p452_km": -4.4,
+  "its3_R2_cens": 33,
+  "its3_R2_itm": [
+    14.3,
+    19.6,
+    56
+  ],
+  "its3_R2_itm_km": 9.3,
+  "its3_R2_p2001": [
+    -18.3,
+    -14.4,
+    56
+  ],
+  "its3_R2_p2001_km": -18.8,
+  "its3_R2_p452": [
+    -18.2,
+    -14.4,
+    56
+  ],
+  "its3_R2_p452_km": -18.7,
+  "its3_R3_cens": 0,
+  "its3_R3_itm": [
+    0.7,
+    -0.2,
+    103
+  ],
+  "its3_R3_itm_km": -0.3,
+  "its3_R3_p2001": [
+    -1.8,
+    -0.6,
+    103
+  ],
+  "its3_R3_p2001_km": -0.7,
+  "its3_R3_p452": [
+    -1.7,
+    -0.5,
+    103
+  ],
+  "its3_R3_p452_km": -0.6,
+  "its3_VA_cens": 33,
+  "its3_VA_itm": [
+    null,
+    null,
+    0
+  ],
+  "its3_VA_itm_km": -15.2,
+  "its3_VA_p2001": [
+    null,
+    null,
+    0
+  ],
+  "its3_VA_p2001_km": -17.5,
+  "its3_VA_p452": [
+    null,
+    null,
+    0
+  ],
+  "its3_VA_p452_km": -17.5,
+  "its3_cens_below_itm": 29,
+  "its3_cens_below_p2001": 63,
+  "its3_cens_below_p452": 63,
+  "its3_cens_links": 260,
+  "its3_cens_n": 682,
+  "its3_d0_cens": 0,
+  "its3_d0_itm": [
+    -1.6,
+    -6,
+    54,
+    -2.5
+  ],
+  "its3_d0_p2001": [
+    -3.1,
+    -12,
+    54,
+    -4.2
+  ],
+  "its3_d0_p452": [
+    -3.1,
+    -12,
+    54,
+    -4.2
+  ],
+  "its3_d15_cens": 14,
+  "its3_d15_itm": [
+    0.6,
+    3.4,
+    91,
+    -1.3
+  ],
+  "its3_d15_p2001": [
+    -3.3,
+    -6.3,
+    91,
+    -7.3
+  ],
+  "its3_d15_p452": [
+    -3.1,
+    -6.2,
+    91,
+    -7.2
+  ],
+  "its3_d50_cens": 37,
+  "its3_d50_itm": [
+    5.6,
+    17,
+    53,
+    0.3
+  ],
+  "its3_d50_p2001": [
+    -1.1,
+    -1.5,
+    53,
+    -3.9
+  ],
+  "its3_d50_p452": [
+    -1.1,
+    -2,
+    53,
+    -4.3
+  ],
+  "its3_d5_cens": 2,
+  "its3_d5_itm": [
+    0.4,
+    4.7,
+    57,
+    -0.9
+  ],
+  "its3_d5_p2001": [
+    -3.7,
+    -6.5,
+    57,
+    -5
+  ],
+  "its3_d5_p452": [
+    -3.7,
+    -6.5,
+    57,
+    -5
+  ],
+  "its3_itm": [
+    4.5,
+    0.4,
+    20.5
+  ],
+  "its3_n": 255,
+  "its3_nowin_itm": [
+    -0.3,
+    -0.4
+  ],
+  "its3_nowin_p2001": [
+    -2.6,
+    -6.7
+  ],
+  "its3_nowin_p452": [
+    -2.7,
+    -6.9
+  ],
+  "its3_p2001": [
+    -6.6,
+    -2.7,
+    14.2
+  ],
+  "its3_p452": [
+    -6.6,
+    -2.8,
+    14.2
+  ],
+  "its3_paths": 135,
+  "its3_r2far_below_itm": 0,
+  "its3_r2far_below_p2001": 64,
+  "its3_r2far_below_p452": 64,
+  "its3_r2far_cens": 55,
+  "its3_r2far_dh": 697,
+  "its3_r2far_itm": [
+    40.2,
+    29
+  ],
+  "its3_r2far_p2001": [
+    -7.8,
+    -17
+  ],
+  "its3_r2far_p452": [
+    -7.6,
+    -17.1
+  ],
+  "its3_r2far_rows": 517,
+  "its3_win_cens": 34,
+  "its3_win_itm": [
+    17.4,
+    21.2,
+    6.9
+  ],
+  "its3_win_itm_closer": 14,
+  "its3_win_n": 58,
+  "its3_win_p2001": [
+    -3,
+    -6,
+    -6.9
+  ],
+  "its3_win_p452": [
+    -2.8,
+    -5.8,
+    -6.6
+  ],
+  "its_d_range": [
+    0.5,
+    120.5
+  ],
+  "its_links": 895,
+  "its_pairs_3": [
+    18.9,
+    11.2,
+    23.1,
+    0.6,
+    0.5,
+    18
+  ],
+  "its_pairs_hi": [
+    23.1,
+    1,
+    0.5,
+    17
+  ],
+  "its_pairs_lo": [
+    10.1,
+    0.5,
+    0.3,
+    39
+  ],
+  "its_pairs_mid": [
+    18.5,
+    0.2,
+    0.5,
+    9
+  ],
+  "its_pairs_n": 65,
+  "its_pairs_paths": 11,
+  "its_paths": 515,
+  "its_paths_out": 4,
+  "its_rows": 16805,
   "los_maxabs": 8.3,
   "meas150_med": -2.6,
   "meas150_n": 367,
@@ -1728,6 +1989,44 @@
   "w_ge_n": 12,
   "w_lt": 44.4,
   "w_lt_n": 15,
+  "west_basin_and_range_dh": 571,
+  "west_basin_and_range_gap": 46.2,
+  "west_basin_and_range_gt20": 17,
+  "west_dh_med": 627,
+  "west_front_range_dh": 801,
+  "west_front_range_gap": 48.9,
+  "west_front_range_gt20": 19,
+  "west_gap_1": 42.5,
+  "west_gap_10": 44.2,
+  "west_gap_Diffraction": 48.8,
+  "west_gap_Troposcatter": 52,
+  "west_gap_max": 82.4,
+  "west_gap_med": 47.8,
+  "west_gt20": 53,
+  "west_n": 60,
+  "west_n_Diffraction": 39,
+  "west_n_Line of sight": 0,
+  "west_n_Troposcatter": 15,
+  "west_nd": 39,
+  "west_out_med": 10.9,
+  "west_p2001_p452_maxabs": 0.4,
+  "west_regions": [
+    "front range",
+    "basin and range",
+    "southern california"
+  ],
+  "west_southern_california_dh": 409,
+  "west_southern_california_gap": 46.1,
+  "west_southern_california_gt20": 17,
+  "west_term_bull": 54.4,
+  "west_term_fo": 14.5,
+  "west_term_k": 72.9,
+  "west_w_ge": 20.8,
+  "west_w_ge_n": 3,
+  "west_w_lt": 50.1,
+  "west_w_lt_n": 36,
+  "west_win_med": 48.9,
+  "west_win_n": 56,
   "win_gt20": 21,
   "win_med": 44.6,
   "win_n": 22,
