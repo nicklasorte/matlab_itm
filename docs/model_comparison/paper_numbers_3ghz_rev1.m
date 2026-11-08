@@ -258,6 +258,28 @@ for site = ["dc", "la"]
 end
 writetable(cell2table(rows, 'VariableNames', {'site', 'model', 'required_loss_db', 'area_km2', 'max_distance_km'}), fullfile(CD, 'grid_summary.csv'));
 
+% ---- ITU-R VHF/UHF point-to-area measurements (compare_dbsg3_area_rev1) ----
+fa = fullfile(FIG, 'table_dbsg3_area.csv');
+if isfile(fa)
+    Ar = readtable(fa, 'TextType', 'string');
+    labs = ["30-100 MHz", "100-300 MHz", "0.3-1 GHz", "1-2 GHz", "2-3 GHz", "All"];
+    rows = {};
+    for bn = labs
+        s = Ar.bin == bn | bn == "All";
+        for m = ["itm", "p452", "p2001"]
+            e = Ar.(m + "_50")(s) - Ar.meas_50(s); e = e(isfinite(e));
+            if isempty(e), continue, end
+            rows(end + 1, :) = {bn, m, numel(e), mean(e), rms(e), median(e)}; %#ok<AGROW>
+            N(sprintf('area_%s_%s', bn, m)) = [r1(mean(e)), r1(rms(e)), numel(e)];
+        end
+    end
+    writetable(cell2table(rows, 'VariableNames', {'band', 'model', 'n', 'mean_error_db', 'rms_error_db', 'median_error_db'}), ...
+        fullfile(CD, 'meas_area_error_by_band.csv'));
+    N("area_n") = height(Ar); N("area_experiments") = numel(unique(Ar.file));
+    N("area_d_range") = [r1(min(Ar.d_km)), r1(max(Ar.d_km))];
+    N("area_f_range") = [min(Ar.freq_mhz), max(Ar.freq_mhz)];
+end
+
 % ---- smooth-earth distance to threshold ----
 th = readtable(fullfile(FIG, 'table_distance_to_threshold.csv'));
 N("thr_maxdiff_land") = max(abs([th.land_itm_km - th.land_p2001_km; th.land_itm_km - th.land_p452_km]));
