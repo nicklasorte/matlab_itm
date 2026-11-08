@@ -130,17 +130,57 @@ function figure(file, caption) {
     new TextRun({ text: caption, font: FONT, size: 18 })] }));
   return out;
 }
+// Inline markdown: **bold** and `code`
+function mdRuns(text, bold = false, size = 18) {
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/).filter(Boolean).map((t) => {
+    if (t.startsWith("**")) return new TextRun({ text: t.slice(2, -2), bold: true, font: FONT, size });
+    if (t.startsWith("`")) return new TextRun({ text: t.slice(1, -1), font: "Courier New", size: size - 1 });
+    return new TextRun({ text: t, bold, font: FONT, size });
+  });
+}
+// Renders ALGORITHM_COMPARISON_PLAN.md (the tracked copy of the plan) into the body
+function planSection(file) {
+  const out = [];
+  const lines = fs.readFileSync(file, "utf8").split("\n");
+  const widths = { 8: [450, 1000, 1800, 1800, 700, 1200, 1500, 910], 6: [450, 1400, 1800, 2350, 2350, 1010], 4: [1500, 1600, 3000, 3260] };
+  let i = 0, para = [], inList = false;
+  const flush = () => { if (para.length) { out.push(new Paragraph({ children: mdRuns(para.join(" "), false, 20), spacing: { after: 120, line: 276 } })); para = []; } };
+  while (i < lines.length) {
+    const L = lines[i];
+    if (L.startsWith("# ")) { i += 1; continue; }                       // the markdown title; the paper has its own
+    if (L.startsWith("## ")) { flush(); out.push(H2(L.slice(3).replace(/^\d+\.\s*/, ""))); i += 1; continue; }
+    if (L.startsWith("|")) {
+      flush();
+      const rows = [];
+      while (i < lines.length && lines[i].startsWith("|")) { rows.push(lines[i].slice(1, -1).split("|").map((c) => c.trim())); i += 1; }
+      const header = rows[0], body = rows.slice(2);
+      const w = widths[header.length];
+      const cap = header.length === 8 ? "The equation ledger: one row per step of the loss calculation." :
+        header.length === 6 ? "Experiments that isolate one equation at a time." : "Figure plan for the equation-by-equation comparison.";
+      out.push(...table(cap, header, body, w, header.length === 8 ? 15 : 16));
+      continue;
+    }
+    if (/^- /.test(L)) { flush(); const item = [L.slice(2)]; i += 1; while (i < lines.length && /^  \S/.test(lines[i])) { item.push(lines[i].trim()); i += 1; }
+      out.push(new Paragraph({ numbering: { reference: "bullets", level: 0 }, children: mdRuns(item.join(" "), false, 20), spacing: { after: 60 } })); continue; }
+    if (/^\d+\. /.test(L)) { flush(); if (!inList) { startList(); inList = true; } const item = [L.replace(/^\d+\. /, "")]; i += 1; while (i < lines.length && /^   \S/.test(lines[i])) { item.push(lines[i].trim()); i += 1; }
+      out.push(new Paragraph({ numbering: { reference: "numbers", level: 0, instance: listNo }, children: mdRuns(item.join(" "), false, 20), spacing: { after: 60 } })); continue; }
+    if (L.trim() === "") { flush(); inList = false; i += 1; continue; }
+    para.push(L.trim()); i += 1;
+  }
+  flush();
+  return out;
+}
 let tabN = 0;
 const border = { style: BorderStyle.SINGLE, size: 4, color: "999999" };
 const borders = { top: border, bottom: border, left: border, right: border };
-function table(caption, header, rows, widths) {
+function table(caption, header, rows, widths, size = 18) {
   tabN += 1;
   const total = widths.reduce((a, b) => a + b, 0);
   const cell = (t, i, head) => new TableCell({
     borders, width: { size: widths[i], type: WidthType.DXA },
     shading: head ? { fill: "D9E2F3", type: ShadingType.CLEAR, color: "auto" } : undefined,
     margins: { top: 60, bottom: 60, left: 100, right: 100 },
-    children: [new Paragraph({ children: [new TextRun({ text: String(t), bold: !!head, font: FONT, size: 18 })] })],
+    children: [new Paragraph({ children: mdRuns(String(t), !!head, size) })],
   });
   return [
     new Paragraph({ keepNext: true, spacing: { before: 120, after: 80 }, children: [
@@ -294,6 +334,11 @@ body.push(...table("ITM and P.2001, mechanism by mechanism.",
    ["Gases, rain, fading, sporadic-E", "Implicit in empirical constants", "Explicit attachments", "Small at the median; shape the tails"],
    ["Time variability", "Climate curves of effective distance, the same for every region", "Each mechanism's own statistics, combined at each percentage", "Spreads differ by tens of decibels on some paths"]],
   [1500, 2620, 2620, 2620]));
+
+// ===== Plan: equation by equation (rendered from ALGORITHM_COMPARISON_PLAN.md)
+body.push(H1("Plan: comparing the models equation by equation"));
+body.push(P("The section above compares the two models mechanism by mechanism. The next revision will pair every equation in the two loss calculations: what each computes, from which inputs, and what one figure shows the difference. This section is that plan. It is kept as ALGORITHM_COMPARISON_PLAN.md in the repository and printed here so readers can see what is done, what is next, and in what order. Items marked done are in this revision."));
+body.push(...planSection(path.join(__dirname, "ALGORITHM_COMPARISON_PLAN.md")));
 
 // ===== Method
 body.push(H1("Inputs and method"));
@@ -459,6 +504,7 @@ body.push(P("The differences are large enough to change an analysis outcome, so 
 // ===== Look deeper
 body.push(H1("Where to look deeper"));
 startList();
+body.push(N({ b: "The equation-by-equation comparison. " }, "The plan section lists 29 items, starting with synthetic two-obstacle and rough-terrain families that would map where ITM's extended diffraction line and P.2001's delta-Bullington loss part, and a Monte Carlo combination of P.2001's sub-models."));
 body.push(N({ b: "Which diffraction prediction is right over rough terrain? " }, `The ITS mountain measurements put the truth between ITM and the ITU models, but ${n0("its3_r2far_cens")}% of those results were below the receiver's sensitivity, and the profiles come from 1950s maps. New measurements on rough paths of 15 km to 150 km near 3 GHz, with more sensitive receivers and 30 m terrain, would pin down the diffraction loss.`));
 body.push(N({ b: "Should NTIA measure from 3 GHz to 10 GHz? " }, "The databank has few usable datasets above 3 GHz. A short campaign on a few diffraction and troposcatter paths would anchor the comparison."));
 body.push(N({ b: "Do aggregate-interference results depend on ducting? " }, "The ITU models predict far less loss than ITM at small time percentages, from a mechanism ITM lacks."));
