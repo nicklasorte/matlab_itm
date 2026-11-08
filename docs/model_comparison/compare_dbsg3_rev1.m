@@ -16,7 +16,17 @@ function T = compare_dbsg3_rev1(options)
 %   datum to WGS84 (Japanese Geospatial Information Authority approximate
 %   formula) when the CSV was built.
 %
-%   Site correction. Old site coordinates can sit a few hundred meters
+%   Terrain. options.Terrain chooses the profiles:
+%     "survey"  (default) the databank's own surveyed profiles, read from
+%               the original maps (577 of the 608 datasets have one),
+%               resampled to uniform spacing; no terrain download. These
+%               profiles put each terminal at its surveyed site elevation.
+%     "dem"     30 m terrain (USGS 3DEP 1" in the U.S., Copernicus GLO-30
+%               elsewhere) along the geodesic, with the site correction
+%               below; Download=false uses only cached tiles and leaves
+%               links with a missing tile out (NaN).
+%
+%   Site correction ("dem" only). Old site coordinates can sit a few hundred meters
 %   off a hilltop site, which puts a ridge next to the antenna on a 30 m
 %   terrain model. Where the databank has a surveyed profile, each
 %   terminal moves to the 30 m terrain point within options.SearchRadius
@@ -33,18 +43,19 @@ function T = compare_dbsg3_rev1(options)
 %   The models still run on left-out datasets; the tables keep them.
 %
 %   The models run through pathloss_rev1 in nicklasorte/matlab_itu_p452,
-%   which reads each link's profile once and shares it across the three
-%   models: USGS 3DEP 1" in the U.S. and Copernicus GLO-30 elsewhere, bare
-%   earth, 30 m spacing, at most 5,000 points per path. P.452 runs for
+%   one link at a time (serially), with each link's profile shared across
+%   the three models (bare earth, at most 5,000 points per path). Each
+%   finished link is appended to progress_dbsg3_<terrain>.csv. P.452 runs for
 %   100 MHz and above, and for 1, 10, and 50 % only; P.2001 for 3 km to
 %   1,000 km paths.
 %
-%   Writes to options.OutDir: table_dbsg3_by_dataset.csv,
-%   table_dbsg3_summary.csv, table_dbsg3_quality.csv, and figures
-%   fig25 to fig31 (see the code comments for each).
+%   Writes to options.OutDir: table_dbsg3_by_dataset_<terrain>.csv,
+%   table_dbsg3_summary_<terrain>.csv, table_dbsg3_quality_<terrain>.csv,
+%   and, when Figures is true, figures fig25 to fig29 and fig31.
 %
-%   Name-value options: OutDir, P2001Dir, P452Dir, SearchRadius (500 m),
-%   ElevTol (20 m), MaxRows (Inf, for quick tests).
+%   Name-value options: OutDir, P2001Dir, P452Dir, Terrain ("survey"),
+%   Download (true), MinFreq and MaxFreq (30 and 10000 MHz), Figures
+%   (true), SearchRadius (500 m), ElevTol (20 m), MaxRows (Inf).
 
 arguments
     options.OutDir (1,1) string = fullfile(fileparts(mfilename('fullpath')), 'figures')
@@ -53,7 +64,14 @@ arguments
     options.SearchRadius (1,1) double = 500
     options.ElevTol (1,1) double = 20
     options.MaxRows (1,1) double = Inf
+    options.Terrain (1,1) string {mustBeMember(options.Terrain, ["survey", "dem"])} = "survey"
+    options.Download (1,1) logical = true
+    options.MinFreq (1,1) double = 30
+    options.MaxFreq (1,1) double = 10000
+    options.Figures (1,1) logical = true
 end
+survey = options.Terrain == "survey";
+sfx = "_" + options.Terrain;
 
 itm_root = wp_setup(options.P2001Dir, options.P452Dir);
 if ~exist('pathloss_rev1', 'file')
@@ -70,6 +88,7 @@ csv = fullfile(here, 'data', 'dbsg3', 'dbsg3_tableiii_30mhz_10ghz.csv');
 io = detectImportOptions(csv, 'Delimiter', ',');
 io = setvartype(io, {'id', 'path', 'pol', 'years', 'record', 'tx_name', 'tx_country', 'rx_name', 'rx_country', 'datum_shift'}, 'string');
 S = readtable(csv, io);
+S = S(S.freq_mhz >= options.MinFreq & S.freq_mhz <= options.MaxFreq, :);
 S = S(1:min(height(S), options.MaxRows), :);
 n = height(S);
 P = [1 10 50 90 99];
@@ -85,7 +104,7 @@ for u = 1:numel(up)
     k = find(iu == u, 1);
     tx = [S.tx_lat(k) S.tx_lon(k)]; rx = [S.rx_lat(k) S.rx_lon(k)];
     site(u).tx = tx; site(u).rx = rx;
-    if S.has_profile(k) == 1
+    if ~survey && S.has_profile(k) == 1
         [site(u).tx, site(u).shift_m(1), site(u).dz_before(1), site(u).dz_after(1)] = ...
             relocate(tx, S.tx_ground_survey_m(k), options.SearchRadius);
         [site(u).rx, site(u).shift_m(2), site(u).dz_before(2), site(u).dz_after(2)] = ...
@@ -106,11 +125,22 @@ for k = 1:n
     TX0(k, :) = [site(u).tx0 S.htx_m(k)]; RX0(k, :) = [site(u).rx0 S.hrx_m(k)];
 end
 wopts = {'validity', "off", 'surface_source', "none", 'max_points', 5000};
-[itm, p452, p2001, prof] = run_models(TXc, RXc, S.freq_mhz, S.d_km, P, wopts, true(n, 1));
+if survey
+    sprof = survey_profiles(S, up, iu, here);       % one per unique path
+    rowprof = sprof(iu);
+    ok_prof = ~arrayfun(@(q) isempty(q.d_km), rowprof);
+    [itm, p452, p2001, prof] = run_models(TXc, RXc, S.freq_mhz, S.d_km, P, wopts, ok_prof, rowprof, S.id, ...
+        fullfile(out, 'progress_dbsg3' + sfx + '.csv'));
+else
+    wopts = [wopts, {'download', options.Download}];
+    [itm, p452, p2001, prof] = run_models(TXc, RXc, S.freq_mhz, S.d_km, P, wopts, true(n, 1), [], S.id, ...
+        fullfile(out, 'progress_dbsg3' + sfx + '.csv'));
+end
 movedk = arrayfun(@(u) any(site(u).shift_m > 0), iu);
 [itm0, p452_0, p2001_0] = deal(itm, p452, p2001);
 if any(movedk)
-    [a, b, c] = run_models(TX0, RX0, S.freq_mhz, S.d_km, P, wopts, movedk);
+    [a, b, c] = run_models(TX0, RX0, S.freq_mhz, S.d_km, P, wopts, movedk, [], S.id, ...
+        fullfile(out, 'progress_dbsg3' + sfx + '_listed_sites.csv'));
     itm0(movedk, :) = a(movedk, :); p452_0(movedk, :) = b(movedk, :); p2001_0(movedk, :) = c(movedk, :);
 end
 
@@ -119,6 +149,7 @@ end
 dh = NaN(n, 1); code = NaN(n, 1); obstructed = false(n, 1); gc = NaN(n, 1);
 for k = 1:n
     pr = prof{k};
+    if isempty(pr) || isempty(pr.d_km), continue, end
     np = numel(pr.d_km) - 1;
     pfl = [np; pr.d_km(end) * 1e3 / np; pr.h_m(:)];
     [~, inf_k] = itm_p2p_rev1(S.htx_m(k), S.hrx_m(k), pfl, S.freq_mhz(k), 50, validity="off");
@@ -128,15 +159,19 @@ for k = 1:n
 end
 
 % ---- quality screen ----
+if survey                                     % listed coordinates against listed distance
+    gc = distance(S.tx_lat, S.tx_lon, S.rx_lat, S.rx_lon, wgs84Ellipsoid('km'));
+end
 bad_coords = abs(gc - S.d_km) ./ S.d_km > 0.03;
 bad_profile = S.has_profile == 1 & abs(S.profile_len_km - S.d_km) ./ S.d_km > 0.05;
 dz_after = reshape([site(iu).dz_after], 2, [])';
 bad_elev = any(abs(dz_after) > options.ElevTol, 2);
-keep = ~bad_coords & ~bad_profile & ~bad_elev & ~obstructed;
-Q = table(["coords"; "profile"; "elevation"; "obstructed"; "kept"; "total"], ...
-    [nnz(bad_coords); nnz(bad_profile); nnz(bad_elev); nnz(obstructed); nnz(keep); n], ...
+no_terrain = ~isfinite(itm(:, 3));              % no surveyed profile, or a missing tile
+keep = ~bad_coords & ~bad_profile & ~bad_elev & ~obstructed & ~no_terrain;
+Q = table(["no terrain"; "coords"; "profile"; "elevation"; "obstructed"; "kept"; "total"], ...
+    [nnz(no_terrain); nnz(bad_coords); nnz(bad_profile); nnz(bad_elev); nnz(obstructed); nnz(keep); n], ...
     'VariableNames', {'reason', 'datasets'});
-writetable(Q, fullfile(out, 'table_dbsg3_quality.csv'));
+writetable(Q, fullfile(out, 'table_dbsg3_quality' + sfx + '.csv'));
 
 % ---- frequency bins ----
 edges = [30 100 300 1000 3000 6000 10001];
@@ -158,7 +193,7 @@ for j = 1:5
     T.("p452_" + tag) = p452(:, j); T.("p2001_" + tag) = p2001(:, j);
 end
 T.itm_50_uncorrected = itm0(:, 3); T.p452_50_uncorrected = p452_0(:, 3); T.p2001_50_uncorrected = p2001_0(:, 3);
-writetable(T, fullfile(out, 'table_dbsg3_by_dataset.csv'));
+writetable(T, fullfile(out, 'table_dbsg3_by_dataset' + sfx + '.csv'));
 
 % ---- summary ----
 mods = {itm, p452, p2001}; mn = ["ITM v1.4", "P.452-18", "P.2001-6"];
@@ -186,14 +221,15 @@ Sm = cell2table(rows, 'VariableNames', {'group', 'model', 'percent', 'n', 'mean_
 % site-correction effect on the median, kept datasets whose sites moved
 moved = keep & any(shift > 0, 2);
 m0 = {itm0, p452_0, p2001_0};
-for m = 1:3
+for m = 1:3 * any(moved)
     e1 = mods{m}(moved, 3) - meas(moved, 3); e0 = m0{m}(moved, 3) - meas(moved, 3);
     ok = isfinite(e1) & isfinite(e0);
     Sm = [Sm; {"moved sites, corrected", mn(m), 50, nnz(ok), mean(e1(ok)), sqrt(mean(e1(ok).^2)), median(e1(ok)), NaN, NaN, std(e1(ok))}; ...
         {"moved sites, uncorrected", mn(m), 50, nnz(ok), mean(e0(ok)), sqrt(mean(e0(ok).^2)), median(e0(ok)), NaN, NaN, std(e0(ok))}]; %#ok<AGROW>
 end
-writetable(Sm, fullfile(out, 'table_dbsg3_summary.csv'));
+writetable(Sm, fullfile(out, 'table_dbsg3_summary' + sfx + '.csv'));
 
+if ~options.Figures, return, end
 mc = [0 0.447 0.698; 0.835 0.369 0; 0 0.620 0.451];
 bc = [0.55 0.55 0.55; 0.50 0.30 0.65; 0.80 0.47 0.65; 0.835 0.369 0; 0 0.620 0.451; 0 0.447 0.698];
 
@@ -301,30 +337,6 @@ for m = 1:3
 end
 wp_save_fig(fig, out, 'fig29_dbsg3_error_vs_delta_h');
 
-% Fig. 30: site correction
-fig = figure('Visible', 'off', 'Position', [0 0 1200 420]);
-tl = tiledlayout(fig, 1, 2, 'TileSpacing', 'compact');
-ax = nexttile(tl); hold(ax, 'on');
-pr = S.has_profile == 1;
-[~, ia] = unique(iu(pr)); idx = find(pr); idx = idx(ia);
-b0 = dzb(idx, :); b1 = dz_after(idx, :);
-ed = -300:10:300;
-histogram(ax, max(min(b0(:), 300), -300), ed, 'FaceColor', [0.7 0.7 0.7], 'DisplayName', 'Listed coordinates');
-histogram(ax, max(min(b1(:), 300), -300), ed, 'FaceColor', mc(1, :), 'FaceAlpha', 0.7, 'DisplayName', 'After correction');
-xlabel(ax, '30 m terrain minus surveyed ground elevation at a terminal (m)'); ylabel(ax, 'Terminals');
-title(ax, 'Terminal elevation, terrain model against survey'); legend(ax); grid(ax, 'on');
-ax = nexttile(tl); hold(ax, 'on');
-V = NaN(3, 2);
-for m = 1:3
-    V(m, 1) = Sm.rms_error_db(Sm.group == "moved sites, uncorrected" & Sm.model == mn(m));
-    V(m, 2) = Sm.rms_error_db(Sm.group == "moved sites, corrected" & Sm.model == mn(m));
-end
-h = bar(ax, categorical(mn, mn), V);
-h(1).FaceColor = [0.7 0.7 0.7]; h(2).FaceColor = mc(1, :);
-ylabel(ax, 'RMS error in the median (dB)'); legend(ax, {'Listed coordinates', 'Corrected sites'}, 'Location', 'northwest');
-title(ax, sprintf('Effect on the %d kept datasets whose sites moved', nnz(moved))); grid(ax, 'on');
-wp_save_fig(fig, out, 'fig30_dbsg3_site_correction');
-
 % Fig. 31: distributions on six kept datasets from 1 GHz to 10 GHz
 cand = ["LT0588", "LT1438", "LT2212", "LT2633", "LT2365", "LT2352", "LT2237", "LT1703", "LT1606", "LT2064"];
 pick = [];
@@ -355,38 +367,105 @@ wp_save_fig(fig, out, 'fig31_dbsg3_distributions');
 end
 
 %% ------------------------------------------------------------------------
-function [itm, p452, p2001, prof] = run_models(TX, RX, f, d_km, P, wopts, rows)
-% The three models on the selected rows, one wrapper call per model and
-% frequency. P.452 runs from 100 MHz, for P <= 50 %; P.2001 for 3 km to
-% 1,000 km paths (the wrapper's P.2001 range).
+function [itm, p452, p2001, prof] = run_models(TX, RX, f, d_km, P, wopts, rows, profs, ids, progress)
+% The three models on the selected rows, one link at a time (serially), in
+% the order of the table. P.452 runs from 100 MHz, for P <= 50 %; P.2001
+% for 3 km to 1,000 km paths (the wrapper's P.2001 range). profs: per-row
+% profiles to use instead of reading terrain ([] to read). A failed link
+% stays NaN. Each finished link is appended to the CSV file progress, so a
+% run that stops keeps what it has done.
 n = size(TX, 1);
 [itm, p452, p2001] = deal(NaN(n, numel(P)));
 prof = cell(n, 1);
-[uf, ~, iq] = unique(f);
 lo = P <= 50;
-for q = 1:numel(uf)
-    idx = find(iq == q & rows);
-    if isempty(idx), continue, end
-    [L, info] = pathloss_rev1(TX(idx, :), RX(idx, :), uf(q), P, model="itm", wopts{:});
-    itm(idx, :) = reshape(L, numel(idx), []);
+fid = fopen(progress, 'w');
+fprintf(fid, 'id,freq_mhz%s%s%s\n', sprintf(',itm_%02d', P), sprintf(',p452_%02d', P), sprintf(',p2001_%02d', P));
+for k = find(rows(:))'
+    if ~isempty(profs), prof{k} = profs(k); end
+    [itm(k, :), pr] = call(TX, RX, k, f(k), P, "itm", wopts, profs);
+    if isempty(profs), prof(k) = pr; end
+    if d_km(k) >= 3 && d_km(k) <= 1000
+        p2001(k, :) = call(TX, RX, k, f(k), P, "p2001", wopts, profs);
+    end
+    if f(k) >= 100
+        p452(k, lo) = call(TX, RX, k, f(k), P(lo), "p452", wopts, profs);
+    end
+    fprintf(fid, '%s,%.1f%s%s%s\n', ids(k), f(k), sprintf(',%.2f', itm(k, :)), sprintf(',%.2f', p452(k, :)), ...
+        sprintf(',%.2f', p2001(k, :)));
+    fprintf('%4d/%d %-9s %7.1f MHz %6.1f km  ITM %6.1f  P452 %6.1f  P2001 %6.1f\n', k, n, ids(k), f(k), ...
+        d_km(k), itm(k, 3), p452(k, 3), p2001(k, 3));
+end
+fclose(fid);
+end
+
+function [L, pr] = call(TX, RX, idx, f, P, model, wopts, profs)
+L = NaN(numel(idx), numel(P));
+pr = cell(numel(idx), 1);
+po = {};
+if ~isempty(profs), po = {'profile', profs(idx)}; end
+try
+    [x, info] = pathloss_rev1(TX(idx, :), RX(idx, :), f, P, model=model, wopts{:}, po{:});
+    L = reshape(x, numel(idx), []);
     if ~isempty(info.profile)
-        for j = 1:numel(idx), prof{idx(j)} = info.profile(j); end
-    else                                          % ran in blocks: ask again, one link at a time
-        for j = 1:numel(idx)
-            [~, i1] = pathloss_rev1(TX(idx(j), :), RX(idx(j), :), uf(q), 50, model="itm", wopts{:});
-            prof{idx(j)} = i1.profile;
+        for j = 1:numel(idx), pr{j} = info.profile(j); end
+        return
+    end
+catch err
+    if numel(idx) == 1
+        fprintf('  %s at %.1f MHz failed: %s\n', model, f, err.message);
+        return
+    end
+end
+for j = 1:numel(idx)                              % one link at a time
+    [L(j, :), p1] = call(TX, RX, idx(j), f, P, model, wopts, profs);
+    pr(j) = p1;
+end
+end
+
+function prof = survey_profiles(S, up, iu, here)
+% The databank's surveyed profiles, resampled to uniform spacing (at least
+% 100 m, at most 5,000 points), with P.2001 zones from its maps along the
+% geodesic, in the wrapper's profile form (zone codes 1 coastal land,
+% 2 inland, 3 sea).
+tmp = fullfile(tempdir, 'dbsg3_profiles');
+if ~isfolder(tmp)
+    z = fullfile(here, 'data', 'dbsg3', 'itu_r_sg3_dbsg3_tableiii_data.zip');
+    t1 = fullfile(tempdir, 'dbsg3_zip');
+    unzip(z, t1);
+    unzip(fullfile(t1, 'rsg3-dbsg5-tableiii-profiles.zip'), tmp);
+end
+blank = struct('d_km', [], 'h_m', [], 'g_m', [], 'zone', [], 'spacing_m', [], 'midpoint_deg', [], 'distance_km', []);
+prof = repmat(blank, numel(up), 1);
+E = wgs84Ellipsoid('km');
+for u = 1:numel(up)
+    k = find(iu == u, 1);
+    fn = fullfile(tmp, lower(up(u)) + ".pfl");
+    if ~isfile(fn), continue, end
+    txt = splitlines(string(fileread(fn)));
+    v = NaN(numel(txt), 2); c = 0;
+    for i = 1:numel(txt)
+        t = sscanf(char(txt(i)), '%f %f');
+        if numel(t) == 2 && ~contains(txt(i), ["LAT", "CNTRY", ":", "("])
+            c = c + 1; v(c, :) = t';
         end
     end
-    i2 = idx(d_km(idx) >= 3 & d_km(idx) <= 1000);
-    if ~isempty(i2)
-        L = pathloss_rev1(TX(i2, :), RX(i2, :), uf(q), P, model="p2001", wopts{:});
-        p2001(i2, :) = reshape(L, numel(i2), []);
-    end
-    if uf(q) >= 100
-        L = pathloss_rev1(TX(idx, :), RX(idx, :), uf(q), P(lo), model="p452", wopts{:});
-        p452(idx, lo) = reshape(L, numel(idx), []);
-    end
-    fprintf('%7.1f MHz: %d datasets\n', uf(q), numel(idx));
+    v = v(1:c, :);
+    [~, ia] = unique(v(:, 1), 'stable'); v = v(ia, :);
+    if size(v, 1) < 2, continue, end
+    dt = v(end, 1);
+    sp = max(0.1, dt / 5000);
+    np = max(10, round(dt / sp));
+    d = linspace(0, dt, np + 1)';
+    h = interp1(v(:, 1), v(:, 2), d, 'linear');
+    [arclen, az] = distance(S.tx_lat(k), S.tx_lon(k), S.rx_lat(k), S.rx_lon(k), E);
+    [la, lo] = reckon(S.tx_lat(k), S.tx_lon(k), d / dt * arclen, az, E);
+    z2001 = p2001_zone_lookup_rev1(la, lo);
+    zone = 2 * ones(size(d));
+    zone(z2001 == 1) = 3;
+    zone(z2001 == 3) = 1;
+    [mla, mlo] = reckon(S.tx_lat(k), S.tx_lon(k), arclen / 2, az, E);
+    prof(u) = struct('d_km', d, 'h_m', h, 'g_m', h, 'zone', zone, 'spacing_m', 1000 * dt / np, ...
+        'midpoint_deg', [mla mlo], 'distance_km', dt);
 end
 end
 
