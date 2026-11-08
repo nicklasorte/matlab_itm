@@ -583,9 +583,10 @@ for i = 1:numel(nm)
     k = find(t.p2001_mech ~= 2, 1);
     if t.p2001_mech(1) == 2 && ~isempty(k), N(key + "anom_until") = t.time_pct(k - 1); end
 end
-C = readtable(fullfile(CD, 'alg_constants.csv'), 'TextType', 'string');
-N("alg_ns") = r1(C.value(1)); N("alg_ae_itm") = round(C.value(2)); N("alg_dn50") = r1(C.value(3));
-N("alg_ae_p2001_50") = round(C.value(4)); N("alg_ae_p2001_1") = round(C.value(5));
+C = readtable(fullfile(CD, 'alg_constants.csv'), 'TextType', 'string', 'Delimiter', ',');
+cv = C{:, end};
+N("alg_ns") = r1(cv(1)); N("alg_ae_itm") = round(cv(2)); N("alg_dn50") = r1(cv(3));
+N("alg_ae_p2001_50") = round(cv(4)); N("alg_ae_p2001_1") = round(cv(5));
 M = readtable(fullfile(CD, 'alg_mechanism_links.csv'), 'TextType', 'string');
 for p = [50 1]
     m = M(M.time_pct == p, :);
