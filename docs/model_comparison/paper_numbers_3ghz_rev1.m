@@ -774,15 +774,15 @@ wid = @(s) dm(find(dm > 45 & s < 0.2, 1)) - dm(find(dm > 45 & s < 1.0, 1));
 N("part15_width") = [r1(wid(si)), r1(wid(sp))];
 N("part15_drop") = [r1(dm(find(dm > 45 & si < 1.0, 1))), r1(dm(find(dm > 45 & sp < 1.0, 1)))];
 
-T = readtable(fullfile(CD, 'part_sensitivity_terms.csv'), 'TextType', 'string');
-B = T(T.case == "baseline", :);
+T = readtable(fullfile(CD, 'part_sensitivity_terms.csv'), 'TextType', 'string', 'VariableNamingRule', 'preserve');
+B = T(T.("case") == "baseline", :);
 [tf, loc] = ismember(strcat(T.side, "_", string(T.link), "_", T.model), strcat(B.side, "_", string(B.link), "_", B.model));
 assert(all(tf));
 dl = T.loss_db - B.loss_db(loc);
-cs = unique(T.case(T.case ~= "baseline"));
+cs = unique(T.("case")(T.("case") ~= "baseline"));
 for m = ["ITM", "P.2001"]
     for c = cs'
-        k = T.model == m & T.case == c;
+        k = T.model == m & T.("case") == c;
         if ~any(k), continue, end
         key = "part28_" + lower(replace(m, ".", "")) + "_" + regexprep(lower(c), '[^a-z0-9]+', '_');
         N(key) = [round(median(abs(dl(k))), 2), round(prctile(abs(dl(k)), 90), 2), r1(max(abs(dl(k))))];
@@ -790,7 +790,7 @@ for m = ["ITM", "P.2001"]
 end
 dif = ismember(T.itm_mode_code, [4 5 8 9]);
 for c = ["rx antenna +1 m", "tx antenna +1 m", "N_0 +20"]
-    k = T.model == "ITM" & T.case == c & dif & isfinite(T.itm_a_k3_db) & isfinite(B.itm_a_k3_db(loc));
+    k = T.model == "ITM" & T.("case") == c & dif & isfinite(T.itm_a_k3_db) & isfinite(B.itm_a_k3_db(loc));
     key = "part28_itm_terms_" + regexprep(lower(c), '[^a-z0-9]+', '_');
     N(key) = [nnz(k), round(median(abs(T.itm_a_k3_db(k) - B.itm_a_k3_db(loc(k)))), 2), ...
         round(median(abs(T.itm_a_se3_db(k) - B.itm_a_se3_db(loc(k)))), 2), ...
@@ -798,7 +798,7 @@ for c = ["rx antenna +1 m", "tx antenna +1 m", "N_0 +20"]
         round(median(abs(T.itm_a_d3_db(k) - B.itm_a_d3_db(loc(k)))), 2)];
 end
 for c = ["radius -5 %", "rx antenna +1 m"]
-    k = T.model == "P.2001" & T.case == c & dif;
+    k = T.model == "P.2001" & T.("case") == c & dif;
     key = "part28_p2001_terms_" + regexprep(lower(c), '[^a-z0-9]+', '_');
     N(key) = [nnz(k), round(median(abs(T.p2001_ld_db(k) - B.p2001_ld_db(loc(k)))), 2), ...
         round(median(abs(T.p2001_ldba_db(k) - B.p2001_ldba_db(loc(k)))), 2), ...
