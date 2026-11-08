@@ -479,10 +479,104 @@ def s54_continuity():
     save(fig, "s54_continuity")
 
 
+def s55_tropo_climate():
+    """Each model's climate choice moves the troposcatter loss; P.2001's zones spread wider at the median."""
+    T = rd("td_tropo_climate.csv"); T["ex"] = T.loss_db - T.fs_db
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.4), layout="constrained", sharey=True)
+    I = T[(T.model == "ITM") & (T.time_pct == 50)]
+    Pz = T[(T.model == "P.2001 troposcatter") & (T.time_pct == 50)]
+    zmap = int(T[T.model == "P.2001 combined"].climate.iloc[0])
+    for a, D, col, pre, hi, ttl in [(axs[0], I, LB, "climate", 5, "ITM, by radio climate"),
+                                    (axs[1], Pz, DB, "zone", zmap, "P.2001 troposcatter, by Table E.1 zone")]:
+        clean(a)
+        ends = []
+        for c, q in D.groupby("climate"):
+            q = q.sort_values("d_km")
+            on = c == hi
+            a.plot(q.d_km, q.ex, color=col if on else LG2, lw=1.8 if on else 1.0, zorder=3 if on else 2)
+            ends.append((q.ex.iloc[-1], int(c)))
+        ends.sort()
+        groups = []                                   # merge labels whose lines end within 1.5 dB
+        for y, c in ends:
+            if groups and y - groups[-1][0][-1] < 1.5:
+                groups[-1][0].append(y); groups[-1][1].append(c)
+            else:
+                groups.append(([y], [c]))
+        last = -1e9
+        for ys, cs in groups:
+            y = max(np.mean(ys), last + 2.6); last = y
+            names = ["sea" if c == 0 else str(c) for c in sorted(cs)]
+            lab = (pre + ("s " if len(cs) > 1 else " ") + ", ".join(names)) if names != ["sea"] else "sea path"
+            on = hi in cs
+            a.text(705, y, lab, color=col if on else GR, fontsize=7.5, va="center", fontweight="semibold" if on else "normal")
+        a.set_xlim(70, 700); a.set_title(ttl, loc="left", fontsize=9, color=DB)
+        a.set_xlabel("Distance (km)")
+    axs[0].set_ylabel("Loss above free space (dB), 50% of time")
+    save(fig, "s55_tropo_climate")
+
+
+def s56_measured_shape():
+    """Neither model's time distribution follows the measured one path by path; the errors are similar in size."""
+    S = rd("td_measured_summary.csv")
+    q = S[(S.group == "All") & S.time_pct.notna() & (S.time_pct != 50)]
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.0), layout="constrained", width_ratios=[1.25, 1])
+    a = axs[0]; clean(a, grid="y")
+    x = np.arange(len(q)); wd = 0.36
+    a.bar(x - wd / 2, q.itm_abs_err_db, wd, color=LB)
+    a.bar(x + wd / 2, q.p2001_abs_err_db, wd, color=DB)
+    for xi, v1, v2 in zip(x, q.itm_abs_err_db, q.p2001_abs_err_db):
+        a.text(xi - wd / 2, v1 + 0.15, f"{v1:.1f}", ha="center", fontsize=7, color=GR)
+        a.text(xi + wd / 2, v2 + 0.15, f"{v2:.1f}", ha="center", fontsize=7, color=GR)
+    a.set_xticks(x, [f"{p:g}%" for p in q.time_pct])
+    a.set_ylabel("Median absolute shape error (dB)"); a.set_xlabel("Time percentage")
+    a.text(-0.4, q.itm_abs_err_db.max() + 1.0, "ITM", color=LB, fontsize=8.5, fontweight="semibold")
+    a.text(0.3, q.itm_abs_err_db.max() + 1.0, "P.2001", color=DB, fontsize=8.5, fontweight="semibold")
+    a.set_ylim(0, q.itm_abs_err_db.max() + 2)
+    a.set_title("Error in L(p) - L(50%), all paths", loc="left", fontsize=9, color=DB)
+    X = rd("td_measured_shape.csv")
+    w = X[X.time_pct == 99].set_index("id"); w0 = X[X.time_pct == 1].set_index("id")
+    sm = w.meas_db - w0.meas_db; si = w.itm_db - w0.itm_db; sp = w.p2001_db - w0.p2001_db
+    b = axs[1]; clean(b, grid=None)
+    b.scatter(sm, si, s=10, color=LB, alpha=0.55, lw=0)
+    b.scatter(sm, sp, s=10, color=DB, alpha=0.55, lw=0)
+    b.plot([0, 90], [0, 90], color=GR, lw=0.8)
+    b.set_xlim(0, 90); b.set_ylim(0, 90)
+    b.text(4, 84, "ITM", color=LB, fontsize=8.5, fontweight="semibold")
+    b.text(4, 77, "P.2001", color=DB, fontsize=8.5, fontweight="semibold")
+    b.set_xlabel("Measured L(99%) - L(1%) (dB)"); b.set_ylabel("Predicted (dB)")
+    b.text(80, 84, "equal", color=GR, fontsize=7.5, rotation=45, ha="center")
+    b.set_title("Spread, one point per path", loc="left", fontsize=9, color=DB)
+    save(fig, "s56_measured_shape")
+
+
+def s57_measured_examples():
+    """On single paths near 2 GHz the models can miss the measured distribution by many decibels."""
+    X = rd("td_measured_examples.csv").sort_values(["d_km", "id", "time_pct"])
+    ids = list(dict.fromkeys(X.id))
+    fig, axs = plt.subplots(2, 3, figsize=(W, 4.2), layout="constrained", sharex=True)
+    for a, i in zip(axs.flat, ids):
+        q = X[X.id == i]; clean(a)
+        a.plot(q.time_pct, q.meas_db, color="black", lw=0, marker="o", ms=4)
+        a.plot(q.time_pct, q.itm_db, color=LB, lw=1.5)
+        a.plot(q.time_pct, q.p2001_db, color=DB, lw=1.5)
+        a.set_xscale("log"); a.set_xticks([1, 10, 50, 99], ["1", "10", "50", "99"]); a.minorticks_off()
+        a.set_title(f"{q.freq_mhz.iloc[0]:,.0f} MHz, {q.d_km.iloc[0]:.0f} km", loc="left", fontsize=8, color=DB)
+    axs[0, 0].text(1.1, X[X.id == ids[0]].meas_db.max(), "measured", fontsize=7, va="bottom")
+    for a in axs[1]:
+        a.set_xlabel("Time percentage")
+    for a in axs[:, 0]:
+        a.set_ylabel("Basic transmission loss (dB)")
+    a = axs[0, 1]; q1 = X[X.id == ids[1]]
+    a.text(1.15, q1.itm_db.iloc[0] + 2, "ITM", color=LB, fontsize=7.5, fontweight="semibold", va="bottom")
+    a.text(1.15, q1.p2001_db.iloc[0] - 2, "P.2001", color=DB, fontsize=7.5, fontweight="semibold", va="top")
+    save(fig, "s57_measured_examples")
+
+
 ALL = [s38_architecture, s39_smooth_mechanisms, s40_itm_anatomy, s41_line_of_sight, s42_time_mechanisms,
        s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point,
        s47_smooth_earth_terms, s48_gap_waterfall, s49_empirical_terms, s50_ducting_terms, s51_monte_carlo,
-       s52_inputs, s53_swaps, s54_continuity]
+       s52_inputs, s53_swaps, s54_continuity,
+       s55_tropo_climate, s56_measured_shape, s57_measured_examples]
 
 if __name__ == "__main__":
     for fn in ALL:

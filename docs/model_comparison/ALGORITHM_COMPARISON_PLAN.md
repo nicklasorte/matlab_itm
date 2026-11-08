@@ -41,10 +41,10 @@ formulas.
 | 11 | Empirical additions | A_fo = min(15, 5 log(1 + 10⁻⁵ h_g1 h_g2 f σ_h)), σ_h from Δh(d_sML), f in MHz, h_g in metres (L489-491) | (1 − e^(−J/6))(10 + 0.02 d) (A.4, eq. A.23) | No | 120 links | Both terms against path length | done |
 | 12 | Where diffraction is evaluated | At d_3 = max(d_sML, d_L + 5X) and d_4 = d_3 + 10X, X = (a_e²/f)^(1/3); straight line to the path (L393-398) | At the path's distance | No | Smooth 120 km; rough western link; 120 links | ITM construction lines (done); ITM evaluated at the path instead of extended, against P.2001 (ablation, done) | done |
 | 13 | Line of sight | Two-ray with complex reflection coefficient and roughness, weighted with the diffraction line by 1/(1 + f Δh/max(10 km, d_sML)); two-ray values at d_0 and d_1 and the diffraction-line value at d_sML, fitted by A_o + k_1 d + k_2 ln d (L412-453, L562-581) | L_bm1 = L_bfs + L_d + A_1 + gas terms (eq. 47): free space, the diffraction loss L_d of eq. A.1 always (near zero until terrain enters the Fresnel zone), gases, and A_1, the combined clear-air and rain fade (eq. 46; Attachments B and C) | No | Smooth earth 1 km to 40 km; the 24 line-of-sight links | Both against a two-ray reference (done); fade depth against time percentage at 1 km to 40 km (next) | done; next |
-| 14 | Troposcatter | A_s = F(θd) + 10 log(k H θ⁴) − 0.1(N_s − 301) e^(−θd/40 km) + H_0, at d_L + 200 km and d_L + 400 km (L583-657) | L_bs = M + L_freq + L_dist + L_coup − Y_p, climate zone from a map at the common volume, floored at free space (Attachment E, eqs. E.16, E.17) | No | Smooth earth 70 km to 700 km; ITM's 7 radio climates and P.2001's 6 land zones plus the sea-path zone | Both against distance (done); troposcatter loss by climate, ITM climates 1 to 7 against P.2001 zones 1 to 6 and sea (Table E.1) (next) | done; next |
+| 14 | Troposcatter | A_s = F(θd) + 10 log(k H θ⁴) − 0.1(N_s − 301) e^(−θd/40 km) + H_0, at d_L + 200 km and d_L + 400 km (L583-657) | L_bs = M + L_freq + L_dist + L_coup − Y_p, climate zone from a map at the common volume, floored at free space (Attachment E, eqs. E.16, E.17) | No | Smooth earth 70 km to 700 km; ITM's 7 radio climates and P.2001's 6 land zones plus the sea-path zone | Both against distance (done); troposcatter loss by climate, ITM climates 1 to 7 against P.2001 zones 1 to 6 and sea (Table E.1) (done) | done |
 | 15 | Diffraction to scatter transition | Crossover d_x where the scatter line meets the diffraction line; scatter line joined there (L456-482) | None: the power sum lets the lower loss dominate smoothly | No | Smooth earth; 120 links | dL/dd against distance, both models, to show ITM's slope change at d_x and d_sML | next |
 | 16 | Ducting and layer reflection | None | L_ba = A_ac + A_ad + A_at: coupling (site shielding, sea), angular distance, and time term from β (Attachment D, eqs. D.1 to D.25) | Not applicable | Smooth earth at 1%; over-sea archetype; 120 links at 0.1%, 1%, 10% | P.2001's three ducting terms against distance; ITM minus P.2001 against β | done |
-| 17 | Time variability | Effective distance d_e; climate curves for time, location, and situation; A_ref + V(p) (L674-795) | Each mechanism's own statistics: a_e(p) for diffraction, β and A_at(p) for ducting, Y_p for troposcatter, Q_caf and Q_rain for fading (sec. 4, Attachments B, C, D, E) | No | Five archetypes; smooth 120 km; rough link | Loss against time percentage with P.2001 sub-models (done); the same against measured distributions from the databank (next) | done; next |
+| 17 | Time variability | Effective distance d_e; climate curves for time, location, and situation; A_ref + V(p) (L674-795) | Each mechanism's own statistics: a_e(p) for diffraction, β and A_at(p) for ducting, Y_p for troposcatter, Q_caf and Q_rain for fading (sec. 4, Attachments B, C, D, E) | No | Five archetypes; smooth 120 km; rough link | Loss against time percentage with P.2001 sub-models (done); the same against measured distributions from the databank (done) | done |
 | 18 | Gases, rain, sporadic-E | None explicit | Attachments F, C, G | Not applicable | Smooth earth at 3 GHz and 10 GHz | Size of each term against frequency, to show where they start to matter | later |
 | 19 | Polarization and ground | ε_r, σ enter Z_g for the two-ray and smooth-earth terms (L191-208) | Fixed land and sea ε_r, σ (Table 2), weighted by ω, enter K in the spherical-earth term only; polarization selects K_H or K_V (eqs. A.7, A.8) | No | Smooth earth, both polarizations, three grounds | Loss difference between polarizations, both models | later |
 
@@ -64,7 +64,7 @@ effect of a single difference can be measured.
 | 26 | Reciprocity | Both models should give the same loss with the terminals swapped; P.2001 states it (sec. 1.2) | 120 links, both directions | Largest asymmetry per model | done |
 | 27 | Continuity | Items 13 and 15 | Smooth earth and one Piedmont radial at 100 m steps (done); the other radials later | Jumps in loss and slope at d_sML, d_x, and the Bullington LoS or NLoS switch | done |
 | 28 | Input sensitivity per equation | Which inputs each equation is most sensitive to | 120 links, one input at a time (N_0 or ΔN, ε_r, σ, spacing, antenna heights ±1 m) | Tornado chart per model | done (sensitivity section, in part); next (per equation) |
-| 29 | Measured distributions | Item 17 | Databank Table III paths with several time percentages | ITM and P.2001 against the measured distribution per path | next |
+| 29 | Measured distributions | Item 17 | Databank Table III datasets with measured and predicted loss at 1, 10, 50, 90, and 99 % of time (379 kept) | ITM and P.2001 against the measured distribution per path | done |
 
 ## 3. Figure plan
 
@@ -104,8 +104,12 @@ MATLAB CSV files; Python draws only.
    the median gap by less than 0.5 dB, P.2001 is reciprocal, ITM is
    reciprocal within 0.6 dB, and neither model's formulas are discontinuous.
    Open: the cause of ITM's small asymmetry.
-4. Items 14, 17, 29 (troposcatter, variability, measured distributions): the
-   time-distribution work.
+4. Items 14, 17, 29 (troposcatter, variability, measured distributions): done
+   in revision 4. The two climate classifications move the troposcatter
+   loss by similar amounts but don't map one to one; against the databank,
+   neither model's time-variability equations predict a single path's
+   distribution shape better than the other at small percentages, and
+   P.2001 follows the deep fades somewhat better.
 5. Items 18, 19, 23 (later).
 
 ## 5. Checks
