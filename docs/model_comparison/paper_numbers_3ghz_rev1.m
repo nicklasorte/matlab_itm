@@ -23,7 +23,7 @@ arguments
     options.DataDir (1,1) string = fullfile(fileparts(mfilename('fullpath')), 'chart_data')
 end
 FIG = options.Dir; CD = options.DataDir;
-rd = @(f) readtable(fullfile(CD, f), 'TextType', 'string');
+rd = @(f) readtable(fullfile(CD, f), 'TextType', 'string', 'VariableNamingRule', 'preserve');
 N = containers.Map();
 r1 = @(x) round(x, 1);
 CLS = ["Line of sight", "Diffraction", "Troposcatter"];
@@ -139,8 +139,8 @@ for pth = unique(A.path)'
     N("arch_" + pth + "_p2001_drop") = r1(q.p2001_db(q.time_pct == 50) - q.p2001_db(q.time_pct == 0.01));
 end
 cl = rd('deep_itm_climate.csv');
-N("clim_min") = r1(min(cl.itm_1_db(cl.case == "climate"))); N("clim_max") = r1(max(cl.itm_1_db(cl.case == "climate")));
-N("n0_range") = r1(range(cl.itm_1_db(cl.case == "n0")));
+N("clim_min") = r1(min(cl.itm_1_db(cl.("case") == "climate"))); N("clim_max") = r1(max(cl.itm_1_db(cl.("case") == "climate")));
+N("n0_range") = r1(range(cl.itm_1_db(cl.("case") == "n0")));
 st = rd('deep_smooth_earth_time.csv'); st = st(st.freq_mhz == F0, :);
 for surf = ["land", "sea"]
     q = st(st.surface == surf & st.p2001_mech == 2, :);
@@ -208,13 +208,13 @@ end
 % ---- sensitivity ----
 S = rd('sensitivity_links.csv');
 S = join(S, b(:, {'link', 'itm_class'}));
-base = struct('itm', S(S.model == "itm" & S.case == "baseline", :), 'p452', S(S.model == "p452" & S.case == "baseline", :), ...
-    'p2001', S(S.model == "p2001" & S.case == "baseline", :));
+base = struct('itm', S(S.model == "itm" & S.("case") == "baseline", :), 'p452', S(S.model == "p452" & S.("case") == "baseline", :), ...
+    'p2001', S(S.model == "p2001" & S.("case") == "baseline", :));
 rows = {};
 for m = ["itm", "p452", "p2001"]
-    cases = unique(S.case(S.model == m), 'stable');
+    cases = unique(S.("case")(S.model == m), 'stable');
     for c = cases'
-        q = S(S.model == m & S.case == c, :);
+        q = S(S.model == m & S.("case") == c, :);
         [~, ia, ib] = intersect(q.link, base.(m).link); q = q(ia, :); bb = base.(m)(ib, :);
         [~, ja, jb] = intersect(q.link, base.p2001.link); q2 = q(ja, :); pp = base.p2001(jb, :);
         for cc = ["All", CLS]
@@ -227,13 +227,13 @@ end
 SS = cell2table(rows, 'VariableNames', {'model', 'case', 'itm_class', 'links', 'median_change_db', 'max_abs_change_db', 'median_gap_to_p2001_db'});
 writetable(SS, fullfile(CD, 'sensitivity_summary.csv'));
 for i = 1:height(SS)
-    N(sprintf('sens_%s_%s_%s', SS.model(i), SS.case(i), SS.itm_class(i))) = [r1(SS.median_change_db(i)), r1(SS.median_gap_to_p2001_db(i)), r1(SS.max_abs_change_db(i))];
+    N(sprintf('sens_%s_%s_%s', SS.model(i), SS.("case")(i), SS.itm_class(i))) = [r1(SS.median_change_db(i)), r1(SS.median_gap_to_p2001_db(i)), r1(SS.max_abs_change_db(i))];
 end
-sb = SS(SS.model == "itm" & SS.case == "baseline" & SS.itm_class == "Diffraction", :);
+sb = SS(SS.model == "itm" & SS.("case") == "baseline" & SS.itm_class == "Diffraction", :);
 N("sens_base_gap_dif") = r1(sb.median_gap_to_p2001_db);
-q = SS(SS.model == "itm" & SS.itm_class == "Diffraction" & SS.case ~= "baseline", :);
+q = SS(SS.model == "itm" & SS.itm_class == "Diffraction" & SS.("case") ~= "baseline", :);
 [~, i] = max(abs(q.median_gap_to_p2001_db - sb.median_gap_to_p2001_db));
-N("sens_most_case") = q.case(i); N("sens_most_gap") = r1(q.median_gap_to_p2001_db(i));
+N("sens_most_case") = q.("case")(i); N("sens_most_gap") = r1(q.median_gap_to_p2001_db(i));
 N("sens_gap_range") = [r1(min(q.median_gap_to_p2001_db)), r1(max(q.median_gap_to_p2001_db))];
 
 % ---- grid ----
