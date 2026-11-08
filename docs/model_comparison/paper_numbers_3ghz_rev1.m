@@ -784,14 +784,14 @@ for m = ["ITM", "P.2001"]
     for c = cs'
         k = T.model == m & T.("case") == c;
         if ~any(k), continue, end
-        key = "part28_" + lower(replace(m, ".", "")) + "_" + regexprep(lower(c), '[^a-z0-9]+', '_');
+        key = "part28_" + lower(replace(m, ".", "")) + "_" + regexprep(replace(replace(lower(c), "+", "plus"), "-", "minus"), '[^a-z0-9]+', '_');
         N(key) = [round(median(abs(dl(k))), 2), round(prctile(abs(dl(k)), 90), 2), r1(max(abs(dl(k))))];
     end
 end
 dif = ismember(T.itm_mode_code, [4 5 8 9]);
 for c = ["rx antenna +1 m", "tx antenna +1 m", "N_0 +20"]
     k = T.model == "ITM" & T.("case") == c & dif & isfinite(T.itm_a_k3_db) & isfinite(B.itm_a_k3_db(loc));
-    key = "part28_itm_terms_" + regexprep(lower(c), '[^a-z0-9]+', '_');
+    key = "part28_itm_terms_" + regexprep(replace(replace(lower(c), "+", "plus"), "-", "minus"), '[^a-z0-9]+', '_');
     N(key) = [nnz(k), round(median(abs(T.itm_a_k3_db(k) - B.itm_a_k3_db(loc(k)))), 2), ...
         round(median(abs(T.itm_a_se3_db(k) - B.itm_a_se3_db(loc(k)))), 2), ...
         round(median(abs(T.itm_a_fo_db(k) - B.itm_a_fo_db(loc(k)))), 2), ...
@@ -799,7 +799,7 @@ for c = ["rx antenna +1 m", "tx antenna +1 m", "N_0 +20"]
 end
 for c = ["radius -5 %", "rx antenna +1 m"]
     k = T.model == "P.2001" & T.("case") == c & dif;
-    key = "part28_p2001_terms_" + regexprep(lower(c), '[^a-z0-9]+', '_');
+    key = "part28_p2001_terms_" + regexprep(replace(replace(lower(c), "+", "plus"), "-", "minus"), '[^a-z0-9]+', '_');
     N(key) = [nnz(k), round(median(abs(T.p2001_ld_db(k) - B.p2001_ld_db(loc(k)))), 2), ...
         round(median(abs(T.p2001_ldba_db(k) - B.p2001_ldba_db(loc(k)))), 2), ...
         round(median(abs(T.p2001_lbm3_db(k) - B.p2001_lbm3_db(loc(k)))), 2)];
