@@ -39,6 +39,9 @@ Dt = readtable(fullfile(d, 'table_diffraction_terms.csv'), 'TextType', 'string')
 Ab = readtable(fullfile(d, 'table_diffraction_ablation.csv'), 'TextType', 'string', 'VariableNamingRule', 'preserve');
 Db = readtable(fullfile(d, 'table_dbsg3_by_dataset_survey.csv'), 'TextType', 'string');
 Db = Db(Db.kept == 1, :);
+In = readtable(fullfile(fileparts(d), 'data', 'dbsg3', 'dbsg3_tableiii_30mhz_10ghz.csv'), 'TextType', 'string');
+[~, ia] = ismember(Db.id, In.id);                    % site coordinates (WGS84) for the maps
+Db.tx_lat = In.tx_lat(ia); Db.tx_lon = In.tx_lon(ia); Db.rx_lat = In.rx_lat(ia); Db.rx_lon = In.rx_lon(ia);
 fl = string(arrayfun(@(f) sprintf('%g GHz', f / 1000), F, 'UniformOutput', false));
 
 %% ===== Finding 1: agreement in line of sight, split beyond the horizon =====
@@ -384,7 +387,6 @@ save_page(fig, d, 'op3d_heat_bias');
 % 3e: where each model misses: databank paths colored by |error| (plasma, dB off)
 [fig, ~, tl] = page(3, 1);
 cm = ramp(C);
-[~, ord] = sort(abs(Db.p2001_50 - Db.meas_50));          % large misses drawn last, on top
 for m = 1:3
     gx = geoaxes(tl); gx.Layout.Tile = m;
     try, geobasemap(gx, 'grayland'); catch, geobasemap(gx, 'none'); end
@@ -499,7 +501,6 @@ save_page(fig, d, 'op4d_enhancement_depth');
 for f = 1:numel(F)
     v = arrayfun(@(j) median(E7.p2001(f, :, j) - E7.itm(f, :, j)), 1:numel(P));
     plot(ax, P, v, '-', 'Color', fc(f, :), 'LineWidth', 3);
-    j50 = find(P == 50);
     text(ax, 0.0012, v(1) + 1.2 * (f - 2), fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
 end
 yline(ax, 0, '-', 'Color', C.db);
