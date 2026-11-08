@@ -11,6 +11,8 @@ function run_3ghz_rev1(options)
 %     5  grid_separation_rev1, DC and LA   single-entry 100 km grids
 %     6  uncertainty_rev1                  bootstrap intervals
 %     7  paper_numbers_3ghz_rev1           every number the text quotes
+%     8  figure_data_3ghz_rev1             the data each figure plots
+%   For the grid size and step study, run grid_convergence_rev1 separately.
 %   The ITU-R databank comparison (compare_dbsg3_rev1) is separate; its
 %   tables are inputs to steps 6 and 7.
 %
@@ -36,4 +38,5 @@ if options.Grid
 end
 uncertainty_rev1();
 paper_numbers_3ghz_rev1();
+figure_data_3ghz_rev1();
 end
