@@ -306,8 +306,117 @@ def s46_evaluation_point():
     save(fig, "s46_evaluation_point")
 
 
+def s47_smooth_earth_terms():
+    """The two smooth-earth diffraction formulas agree within a few decibels."""
+    S = rd("term_smooth_earth.csv")
+    fig, ax = new(h=2.8); clean(ax)
+    for pol, col, ls in [("vertical", DB, "-"), ("horizontal", LB, (0, (4, 2)))]:
+        q = S[S.polarization == pol]
+        ax.plot(q.d_km, q.itm_a_se_db - q.p2001_ldsph_db, color=col, lw=2.2, ls=ls)
+        ax.text(q.d_km.iloc[-1] + 4, (q.itm_a_se_db - q.p2001_ldsph_db).iloc[-1], pol.capitalize() + "\npolarization",
+                color=col, fontsize=8, va="center", fontweight="semibold")
+    ax.axhline(0, color=DB, lw=0.6)
+    ax.set_xlim(40, 340); ax.set_ylim(-1, 4)
+    ax.set_xlabel("Distance (km), smooth earth")
+    ax.set_ylabel("ITM smooth-earth term minus\nP.2001 spherical-earth loss (dB)")
+    save(fig, "s47_smooth_earth_terms")
+
+
+def s48_gap_waterfall():
+    """Where the diffraction gap comes from: the mean ITM minus P.2001, term by term."""
+    C = rd("term_gap_components.csv").set_index("component")
+    steps = [("Two horizon edges\nagainst one\nBullington edge", "edges"), ("ITM smooth-earth\nterm", "smooth"),
+             ("Clutter term against\nempirical add-on", "addon"), ("ITM line\nextension", "extension"),
+             ("Gases and\nother P.2001", "other")]
+    vals = [C.loc[k, "mean_db"] for _, k in steps]
+    total = C.loc["total", "mean_db"]
+    fig, ax = new(h=3.2); clean(ax)
+    cum = 0
+    for i, ((lab, _), v) in enumerate(zip(steps, vals)):
+        ax.bar(i, v, bottom=cum, color=PU if v >= 0 else LG2, width=0.62, edgecolor="white")
+        ax.text(i, cum + v + (0.8 if v >= 0 else -0.8), f"{v:+.0f}", ha="center", va="bottom" if v >= 0 else "top", fontsize=9,
+                color=DB, fontweight="semibold")
+        if i < len(steps) - 1:
+            ax.plot([i + 0.31, i + 0.69], [cum + v] * 2, color=GR, lw=0.8)
+        cum += v
+    ax.bar(len(steps), total, color=DB, width=0.62)
+    ax.text(len(steps), total + 0.8, f"{total:.0f} dB", ha="center", va="bottom", fontsize=9, color=DB, fontweight="semibold")
+    ax.set_xticks(range(len(steps) + 1), [l for l, _ in steps] + ["ITM minus\nP.2001"], fontsize=7.8)
+    ax.set_ylabel("Mean contribution (dB)")
+    ax.axhline(0, color=DB, lw=0.6)
+    save(fig, "s48_gap_waterfall")
+
+
+def s49_empirical_terms():
+    """Each model's empirical add-on: ITM's clutter term sits near its 15 dB cap; P.2001's grows with distance."""
+    D = rd("term_diffraction_links.csv")
+    D = D[np.isfinite(D.itm_ad_path_db)]
+    fig, ax = new(h=2.9); clean(ax)
+    ax.scatter(D.d_km, D.itm_afo_db, s=24, color=LB, edgecolor="white", lw=0.4, zorder=3)
+    ax.scatter(D.d_km, D.p2001_empirical_db, s=24, color=DB, edgecolor="white", lw=0.4, zorder=3)
+    ax.axhline(15, color=LG2, lw=0.8, ls=(0, (3, 2)))
+    ax.text(D.d_km.max(), 15.3, "ITM cap, 15 dB", color=GR, fontsize=7.5, ha="right", va="bottom")
+    ax.set_ylim(0, 18); ax.set_xlabel("Path length (km)"); ax.set_ylabel("Empirical add-on (dB)")
+    ax.text(12, 13.2, "ITM clutter term A_fo", color=LB, fontsize=8.5, fontweight="semibold")
+    ax.text(12, 8.6, "P.2001 (1 − e^(−J/6))(10 + 0.02 d)", color=DB, fontsize=8.5, fontweight="semibold")
+    save(fig, "s49_empirical_terms")
+
+
+def s50_ducting_terms():
+    """P.2001's ducting loss, term by term, against ITM at 1% of time over smooth earth."""
+    T = rd("term_ducting_smooth.csv")
+    t = T[T.time_pct == 1]
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.2), layout="constrained")
+    a = axs[0]; clean(a)
+    a.plot(t.d_km, t.aad_db, color=PU, lw=2)
+    a.plot(t.d_km, t.aat_db, color=DB, lw=2)
+    a.axhline(0, color=DB, lw=0.6)
+    a.set_xlabel("Distance (km)"); a.set_ylabel("dB")
+    a.set_title("P.2001 ducting terms at 1% of time", loc="left", fontsize=9, color=DB)
+    a.text(t.d_km.iloc[-1], t.aad_db.iloc[-1] - 3, "Angular distance A_ad", color=PU, fontsize=8, ha="right", va="top")
+    a.text(t.d_km.iloc[-1] * 0.62, t.aat_db.iloc[-8] + 12, "Time A_at", color=DB, fontsize=8, ha="right")
+    a.text(0.03, 0.95, f"Coupling A_ac: {t.aac_db.median():.0f} dB at every distance", transform=a.transAxes, fontsize=7.8,
+           color=GR, va="top")
+    b = axs[1]; clean(b)
+    b.plot(t.d_km, t.lbm1_excess_db, color=GR, lw=1.0)
+    b.plot(t.d_km, t.lbm2_excess_db, color=GR, lw=1.0, ls=(0, (4, 2)))
+    b.plot(t.d_km, t.p2001_excess_db, color=DB, lw=2.4)
+    b.plot(t.d_km, t.itm_excess_db, color=LB, lw=2.0)
+    b.set_ylim(-10, 120); b.set_xlabel("Distance (km)"); b.set_ylabel("Loss above free space (dB)")
+    b.set_title("Loss above free space at 1%", loc="left", fontsize=9, color=DB)
+    b.text(330, t.itm_excess_db[t.d_km == 350].iloc[0] + 5, "ITM", color=LB, fontsize=8.5, fontweight="semibold")
+    b.text(400, t.p2001_excess_db[t.d_km == 400].iloc[0] - 6, "P.2001", color=DB, fontsize=8.5, fontweight="semibold", va="top")
+    b.text(110, 100, "P.2001 diffraction", color=GR, fontsize=7.5)
+    b.text(560, 60, "P.2001\nducting", color=GR, fontsize=7.5, ha="center")
+    save(fig, "s50_ducting_terms")
+
+
+def s51_monte_carlo():
+    """The single-percentage blend against the Monte Carlo combination of P.2001's sub-models."""
+    M = rd("term_monte_carlo.csv")
+    M = M[(M.time_pct >= 0.01) & (M.time_pct <= 99)]
+    fig, ax = new(h=3.0); clean(ax)
+    names = list(dict.fromkeys(M.path))
+    worst = max(names, key=lambda n: (M[M.path == n].monte_carlo_db - M[M.path == n].blend_db).abs().max())
+    for n in names:
+        q = M[M.path == n]
+        d = q.monte_carlo_db - q.blend_db
+        hi = n == worst
+        ax.plot(q.time_pct, d, color=PU if hi else LG2, lw=2.2 if hi else 1.2, zorder=3 if hi else 2)
+        if hi:
+            i = d.abs().idxmax()
+            ax.text(q.time_pct[i], d[i] - 0.4, n, color=PU, fontsize=8, ha="center", va="top", fontweight="semibold")
+    ax.axhline(0, color=DB, lw=0.6)
+    xlog(ax, 0.01, 99, [0.01, 0.1, 1, 10, 50, 99])
+    ax.set_xlabel("Time percentage (%), log scale")
+    ax.set_ylabel("Monte Carlo minus\nsingle-percentage blend (dB)")
+    ax.text(0.012, 0.6, "Gray: smooth earth 50, 120, 300 km; rough western link", color=GR, fontsize=7.5)
+    save(fig, "s51_monte_carlo")
+
+
 ALL = [s38_architecture, s39_smooth_mechanisms, s40_itm_anatomy, s41_line_of_sight, s42_time_mechanisms,
-       s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point]
+       s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point,
+       s47_smooth_earth_terms, s48_gap_waterfall, s49_empirical_terms, s50_ducting_terms, s51_monte_carlo]
 
 if __name__ == "__main__":
     for fn in ALL:

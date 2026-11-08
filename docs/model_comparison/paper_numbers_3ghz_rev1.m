@@ -660,6 +660,8 @@ end
 q = S(S.polarization == "vertical", :);
 N("term_se_v150") = [r1(q.itm_a_se_db(q.d_km == 150)), r1(q.p2001_ldsph_db(q.d_km == 150))];
 D = readtable(fullfile(CD, 'term_diffraction_links.csv'), 'TextType', 'string');
+N("term_n_all") = height(D);
+D = D(isfinite(D.itm_ad_path_db), :);          % at-path terms need d beyond ITM's horizons (d > d_L)
 c = struct('edges', D.itm_wk_path_db - D.p2001_knife_db, 'smooth', D.itm_wse_path_db - D.p2001_sph_excess_db, ...
     'addon', D.itm_afo_db - D.p2001_empirical_db, 'extension', D.itm_a_ref_db - D.itm_ad_path_db, ...
     'other', D.p2001_ld_db - D.p2001_excess_db, 'total', D.itm_a_ref_db - D.p2001_excess_db);

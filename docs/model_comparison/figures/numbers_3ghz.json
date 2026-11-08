@@ -2782,11 +2782,165 @@
   "sweep_Single-horizon diffraction_10000": 0.8,
   "sweep_Single-horizon diffraction_3162": 2,
   "sweep_Single-horizon diffraction_maxabs": 2.6,
+  "term_afo": [
+    5.4,
+    13.8,
+    15
+  ],
+  "term_afo_cap": 21,
   "term_bull": 45.4,
+  "term_duct_125": [
+    6.5,
+    4,
+    10.4,
+    37.4,
+    96.6
+  ],
+  "term_duct_275": [
+    17.3,
+    14.9,
+    26.2,
+    54.2,
+    248.2
+  ],
+  "term_duct_50": [
+    1.1,
+    -3.9,
+    4.5,
+    17.2,
+    22.5
+  ],
+  "term_duct_500": [
+    33.5,
+    44.5,
+    68.5,
+    72.4,
+    477.2
+  ],
+  "term_duct_aac": [
+    138,
+    143
+  ],
+  "term_duct_links_lbm2_lt_lbm1": 17,
+  "term_duct_links_n": 120,
+  "term_emp": [
+    8.1,
+    10.6,
+    12.8
+  ],
+  "term_emp_r": 0.7,
   "term_fo": 12.9,
+  "term_gap_addon": [
+    2.3,
+    2.9
+  ],
+  "term_gap_edges": [
+    null,
+    null
+  ],
+  "term_gap_extension": [
+    null,
+    null
+  ],
+  "term_gap_other": [
+    -0.2,
+    -0.2
+  ],
+  "term_gap_smooth": [
+    null,
+    null
+  ],
+  "term_gap_total": [
+    39.5,
+    43.7
+  ],
+  "term_itm_med": [
+    null,
+    null,
+    13.8,
+    null,
+    117.2,
+    96.1
+  ],
   "term_k": 57.4,
+  "term_mc1_max": [
+    -10.9,
+    99.999
+  ],
+  "term_mc1_max_core": [
+    -0.9,
+    99
+  ],
+  "term_mc1_name": "Smooth earth, 50 km",
+  "term_mc1_p1": 0.2,
+  "term_mc1_p50": -0.3,
+  "term_mc2_max": [
+    -3.9,
+    20
+  ],
+  "term_mc2_max_core": [
+    -3.9,
+    20
+  ],
+  "term_mc2_name": "Smooth earth, 120 km",
+  "term_mc2_p1": 0,
+  "term_mc2_p50": -3,
+  "term_mc3_max": [
+    -3.4,
+    10
+  ],
+  "term_mc3_max_core": [
+    -3.4,
+    10
+  ],
+  "term_mc3_name": "Smooth earth, 300 km",
+  "term_mc3_p1": -0.3,
+  "term_mc3_p50": -2,
+  "term_mc4_max": [
+    -0.3,
+    0.004
+  ],
+  "term_mc4_max_core": [
+    0.1,
+    0.05
+  ],
+  "term_mc4_name": "rough western link (front range, 47 km)",
+  "term_mc4_p1": 0,
+  "term_mc4_p50": -0,
+  "term_mc5_max": [
+    -5.8,
+    60
+  ],
+  "term_mc5_max_core": [
+    -5.8,
+    60
+  ],
+  "term_mc5_name": "Over sea, Atlantic City to Ocean City",
+  "term_mc5_p1": 0,
+  "term_mc5_p50": -5.6,
+  "term_n": 66,
+  "term_n_east": 27,
+  "term_n_west": 39,
+  "term_p2001_med": [
+    40.8,
+    10.6,
+    0,
+    52.4
+  ],
   "term_p452_excess": 0,
   "term_se": 29.2,
+  "term_se_horizontal": [
+    0.8,
+    3.2
+  ],
+  "term_se_v150": [
+    166.8,
+    165.9
+  ],
+  "term_se_vertical": [
+    0.7,
+    1.9
+  ],
   "thr_maxdiff_land": 5,
   "time_Diffraction_0.001": 42,
   "time_Diffraction_1": 34,
