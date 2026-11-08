@@ -12,7 +12,13 @@ function diffraction_families_rev1(options)
 %   Item 20, two obstacles: a 30 km path over flat ground 500 m above sea
 %   level with two triangular ridges (base 300 m wide) centred at 10 km and
 %   20 km, each 0 m to 300 m high in 20 m steps. Shows where ITM's knife edge
-%   at each horizon and P.2001's single Bullington edge agree.
+%   at each horizon and P.2001's single Bullington edge agree. Two classical
+%   multiple-knife-edge references are computed on the same geometry, with
+%   the knife-edge loss J(nu) of Rec. ITU-R P.526 (eq. 31), heights on an
+%   effective earth of radius options.AeKm (8,500 km): Epstein-Peterson
+%   (each edge against the line joining its neighbours) and Deygout (the
+%   main edge against the terminals, then each side's edge against the main
+%   edge and its terminal).
 %     chart_data/fam_two_obstacles.csv
 %
 %   Item 21, synthetic rough terrain: profiles of filtered Gaussian noise
@@ -49,6 +55,7 @@ arguments
     options.P2001Dir (1,1) string = ""
     options.P452Dir (1,1) string = ""
     options.Items (1,:) double = [20 21 24]
+    options.AeKm (1,1) double = 8500
 end
 here = fileparts(mfilename('fullpath'));
 wp_setup(options.P2001Dir, options.P452Dir);
@@ -67,11 +74,13 @@ if ismember(20, options.Items)
         for h2 = H
             hm = h0 + ridge(dk, 10, h1) + ridge(dk, 20, h2);
             r = run2(dk, hm, htx, hrx, tx0, rx0);
-            rows(end + 1, :) = {h1, h2, r.itm, r.p2001, r.fs, r.itm_mode, r.dh, r.dl_km, r.ld, r.ldba, r.ldsph, r.ldbs}; %#ok<AGROW>
+            [ep, dg] = two_edges([0, h0 + htx], [10, h0 + h1], [20, h0 + h2], [d, h0 + hrx], f, options.AeKm);
+            rows(end + 1, :) = {h1, h2, r.itm, r.p2001, r.fs, r.itm_mode, r.dh, r.dl_km, r.ld, r.ldba, r.ldsph, r.ldbs, ep, dg}; %#ok<AGROW>
         end
     end
     writetable(cell2table(rows, 'VariableNames', {'h1_m', 'h2_m', 'itm_db', 'p2001_db', 'fs_db', 'itm_mode', ...
-        'itm_delta_h_m', 'itm_d_l_km', 'p2001_ld_db', 'p2001_ldba_db', 'p2001_ldsph_db', 'p2001_ldbs_db'}), ...
+        'itm_delta_h_m', 'itm_d_l_km', 'p2001_ld_db', 'p2001_ldba_db', 'p2001_ldsph_db', 'p2001_ldbs_db', ...
+        'epstein_peterson_db', 'deygout_db'}), ...
         fullfile(options.OutDir, 'fam_two_obstacles.csv'));
 end
 
@@ -162,6 +171,37 @@ r.dhzn_km = info.d_hzn_m / 1e3; r.dl_km = sum(info.d_hzn_m) / 1e3; r.lines = inf
 r.ld = o.Ld; r.ldba = o.Ldba; r.ldsph = o.Ldsph; r.ldbs = o.Ldbs;
 r.warn = double(max(info.warnings(:)));
 r.w = double(bitand(uint32(r.warn), uint32(384)) > 0);
+end
+
+function [ep, dg] = two_edges(T, E1, E2, R, f, ae)
+% Knife-edge loss above free space for two edges between terminals T and R.
+% Points are [distance km, height m]; heights are raised by the earth bulge
+% d(D - d)/(2 ae) relative to the chord, so straight lines can be used.
+lam = 299.792458 / f;                          % m
+D = R(1);
+b = @(p) [p(1), p(2) + 1000 * p(1) * (D - p(1)) / (2 * ae)];
+T = b(T); E1 = b(E1); E2 = b(E2); R = b(R);
+nu = @(A, P, B) nuf(A, P, B, lam);
+ep = J(nu(T, E1, E2)) + J(nu(E1, E2, R));
+n1 = nu(T, E1, R); n2 = nu(T, E2, R);
+if n1 >= n2
+    dg = J(n1) + J(nu(E1, E2, R));
+else
+    dg = J(n2) + J(nu(T, E1, E2));
+end
+end
+
+function v = nuf(A, P, B, lam)
+% Fresnel-Kirchhoff parameter of point P against the line A-B (km, m)
+d1 = 1000 * (P(1) - A(1)); d2 = 1000 * (B(1) - P(1));
+h = P(2) - (A(2) + (B(2) - A(2)) * d1 / (d1 + d2));
+v = h * sqrt(2 / lam * (1 / d1 + 1 / d2));
+end
+
+function L = J(v)
+% Rec. ITU-R P.526, eq. (31); zero for v <= -0.78
+L = 0;
+if v > -0.78, L = 6.9 + 20 * log10(sqrt((v - 0.1)^2 + 1) + v - 0.1); end
 end
 
 function z = ridge(dk, c, h)
