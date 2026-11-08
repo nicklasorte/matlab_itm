@@ -6,6 +6,7 @@ function run_3ghz_rev1(options)
 %                                          real-terrain links, resolution,
 %                                          archetypes, sweeps, radials
 %     2  diffraction_decomposition_rev1    ITM's diffraction terms, ablation
+%        western_terrain_rev1              60 western links, same rules
 %     3  export_deep_dive_data_rev1        the model results as CSV
 %     4  sensitivity_rev1                  model settings on the 60 links
 %     5  grid_separation_rev1, DC and LA   single-entry 100 km grids
@@ -13,8 +14,9 @@ function run_3ghz_rev1(options)
 %     7  paper_numbers_3ghz_rev1           every number the text quotes
 %     8  figure_data_3ghz_rev1             the data each figure plots
 %   For the grid size and step study, run grid_convergence_rev1 separately.
-%   The ITU-R databank comparison (compare_dbsg3_rev1) is separate; its
-%   tables are inputs to steps 6 and 7.
+%   The measurement comparisons (compare_dbsg3_rev1, compare_dbsg3_area_rev1,
+%   and compare_its_phase2_rev1) are separate; their tables are inputs to
+%   steps 6 and 7.
 %
 %   Options: Models (true: run steps 1 and 2; false starts at step 3 from
 %   the saved results), Grid (true), P2001Dir, P452Dir.
@@ -29,6 +31,7 @@ d = {'P2001Dir', options.P2001Dir, 'P452Dir', options.P452Dir};
 if options.Models
     make_wp_figures_rev1('Freqs', 3000, d{:});
     diffraction_decomposition_rev1(d{:});
+    western_terrain_rev1(d{:});
 end
 export_deep_dive_data_rev1();
 sensitivity_rev1(d{:});
