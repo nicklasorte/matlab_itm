@@ -11,6 +11,8 @@ function export_wp_chart_data_rev1(options)
 %     real_terrain_gap_by_time.csv  median P.2001 minus ITM and P.452 minus
 %                                ITM over the links, by frequency and time
 %                                percentage (all 30 percentages)
+%     terrain_resolution_by_link.csv  the diffraction links at 2.7 GHz on
+%                                30 m, 90 m, and 1 km smoothed profiles
 %     basemap_coastlines.csv     world coastlines (Mapping Toolbox
 %                                coastlines.mat), NaN-separated, for maps
 %     basemap_us_states.csv      U.S. state outlines (Mapping Toolbox
@@ -58,6 +60,16 @@ for f = 1:numel(F)
 end
 G = cell2table(rows, 'VariableNames', {'freq_mhz', 'time_pct', 'p2001_minus_itm_median_db', 'p452_minus_itm_median_db'});
 writetable(G, fullfile(options.OutDir, 'real_terrain_gap_by_time.csv'));
+
+% Terrain-resolution test: the diffraction links at 2.7 GHz, 50 % of time
+E3 = R.E3; rn = ["30 m", "90 m", "1 km smoothed"]; rows = {};
+for j = 1:numel(E3.links)
+    for v = 1:3
+        rows(end + 1, :) = {E3.links(j), rn(v), 2700, E3.itm(j, v), E3.p452(j, v), E3.p2001(j, v), E3.dh(j, v)}; %#ok<AGROW>
+    end
+end
+writetable(cell2table(rows, 'VariableNames', {'link', 'resolution', 'freq_mhz', 'itm_50_db', 'p452_50_db', ...
+    'p2001_50_db', 'delta_h_m'}), fullfile(options.OutDir, 'terrain_resolution_by_link.csv'));
 
 % Basemaps for the Python charts (no map download there)
 c = load('coastlines', 'coastlat', 'coastlon');

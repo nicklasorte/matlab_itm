@@ -68,7 +68,8 @@ def page(headline, sub, src, nrows=1, ncols=1, **kw):
     fig.text(0.07, 0.022, src, fontsize=8, color=DB, va="bottom")
     gs = fig.add_gridspec(nrows, ncols, left=kw.get("left", 0.2), right=kw.get("right", 0.93),
                           top=top, bottom=kw.get("bottom", 0.08),
-                          hspace=kw.get("hspace", 0.35), wspace=kw.get("wspace", 0.25))
+                          hspace=kw.get("hspace", 0.35), wspace=kw.get("wspace", 0.25),
+                          width_ratios=kw.get("width_ratios"), height_ratios=kw.get("height_ratios"))
     return fig, gs
 
 
@@ -398,8 +399,8 @@ def f3b():
 
 
 def f3c():
-    fig, gs = page(H3, "Predicted minus measured median loss by band: the bar spans 80 % of the datasets\n"
-                   "and the circle marks the median.", SRC_DB, left=0.2)
+    fig, gs = page(H3, "Predicted minus measured median loss by band: the line spans 80 % of the datasets\n"
+                   "and the marker is the median.", SRC_DB, left=0.2)
     ax = fig.add_subplot(gs[0]); soft(ax)
     y, ticks, labs = 0, [], []
     for b in BINS[::-1]:
@@ -407,8 +408,9 @@ def f3c():
             e = err(m, "50", db.bin == b)
             if e.size >= 3:
                 q = np.percentile(e, [10, 50, 90])
-                ax.plot(q[[0, 2]], [y, y], color=MCOL[m], lw=7, solid_capstyle="round", alpha=0.85)
-                ax.scatter([q[1]], [y], s=80, color="white", edgecolor=MCOL[m], linewidth=2.2, zorder=3)
+                ax.plot(q[[0, 2]], [y, y], color=LG, lw=2.5, solid_capstyle="round")
+                ax.scatter(q[[0, 2]], [y, y], s=14, color=GR, zorder=2)
+                ax.scatter([q[1]], [y], s=70, marker="s" if m == "p452" else "o", color=MCOL[m], edgecolor="white", zorder=3)
             ticks.append(y); labs.append(MLAB[m]); y += 1
         ax.text(-49, y - 2, b, fontweight="bold", fontsize=10.5, va="center")
         y += 0.9
@@ -442,24 +444,28 @@ def f3d():
 
 
 def f3e():
-    fig, gs = page("Where each model misses: the measured paths, colored by dB off",
+    fig, gs = page("Where each model misses: the three measurement regions, colored by dB off",
                    "Each dot is the midpoint of a measured path in the ITU-R databank, 30 MHz to 10 GHz.\n"
-                   "Large misses are drawn on top.", SRC_DB, nrows=3, left=0.04, right=0.96, hspace=0.12, bottom=0.13)
+                   "Large misses are drawn on top. One Australian path is not shown.", SRC_DB,
+                   nrows=3, ncols=3, left=0.1, right=0.97, hspace=0.12, wspace=0.05, bottom=0.15,
+                   width_ratios=[1.93, 0.87, 0.73])
+    regions = [("North America", (-125, -54), (24, 53), True), ("Europe", (-11, 16), (42.5, 61.5), False),
+               ("Japan", (128, 146.5), (26, 46.5), False)]
     norm = Normalize(0, 20)
+    lat = (db.tx_lat + db.rx_lat) / 2; lon = (db.tx_lon + db.rx_lon) / 2
     for i, m in enumerate(["itm", "p452", "p2001"]):
-        ax = fig.add_subplot(gs[i]); basemap(ax, (-125, 22), (25, 61), us=False)
-        e = (db[f"{m}_50"] - db.meas_50).abs()
-        d = db.assign(e=e).dropna(subset=["e"]).sort_values("e")
-        lat = (d.tx_lat + d.rx_lat) / 2; lon = (d.tx_lon + d.rx_lon) / 2
-        ax.scatter(lon, lat, c=d.e, cmap=PLASMA, norm=norm, s=26, edgecolor="white", linewidth=0.3, zorder=3)
-        ins = ax.inset_axes([0.79, 0.02, 0.2, 0.6]); basemap(ins, (127, 146), (25, 46), us=False)
-        ins.scatter(lon, lat, c=d.e, cmap=PLASMA, norm=norm, s=22, edgecolor="white", linewidth=0.3, zorder=3)
-        ins.text(0.05, 0.95, "Japan", transform=ins.transAxes, fontsize=8.5, va="top")
-        for sp in ins.spines.values():
-            sp.set_visible(True); sp.set_color(LG)
-        ax.text(0.01, 0.95, f"{MLAB[m]}   median {d.e.median():.1f} dB off", transform=ax.transAxes, fontsize=12,
-                fontweight="bold", va="top")
-    cbar(fig, mpl.cm.ScalarMappable(norm, PLASMA), [0.3, 0.07, 0.4, 0.012], "dB off the measured median")
+        for j, (rn, lo, la, us) in enumerate(regions):
+            ax = fig.add_subplot(gs[i, j]); basemap(ax, lo, la, us=us); ax.set_anchor("C")
+            sel = (lon >= lo[0]) & (lon <= lo[1]) & (lat >= la[0]) & (lat <= la[1])
+            d = db[sel].assign(e=(db[f"{m}_50"] - db.meas_50).abs(), x=lon[sel], y=lat[sel]).dropna(subset=["e"]).sort_values("e")
+            ax.scatter(d.x, d.y, c=d.e, cmap=PLASMA, norm=norm, s=16, edgecolor="white", linewidth=0.3, zorder=3)
+            ax.text(0.03, 0.03, f"median {d.e.median():.1f} dB", transform=ax.transAxes, fontsize=8.5, color=DB)
+            if i == 0:
+                ax.set_title(rn, fontsize=11.5)
+            if j == 0:
+                ax.text(-0.06, 0.5, MLAB[m], transform=ax.transAxes, rotation=90, ha="right", va="center",
+                        fontsize=13, fontweight="bold", color=MCOL[m] if m != "p452" else DB)
+    cbar(fig, mpl.cm.ScalarMappable(norm, PLASMA), [0.3, 0.09, 0.4, 0.012], "dB off the measured median")
     finish(fig, "3e_map_dB_off")
 
 
