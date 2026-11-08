@@ -234,7 +234,7 @@ if isfield(avail, "p2001")
     if ~exist('p2001_rev1', 'file')
         avail.p2001 = false;
         why.p2001 = "itu_p2001 not found (set P2001Dir)";
-    elseif nargout(which('p2001_rev1')) < 4
+    elseif nargout('p2001_rev1') < 4
         avail.p2001 = false;
         why.p2001 = "itu_p2001 is too old (needs the elevation and mechanism outputs); update it";
     end
