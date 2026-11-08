@@ -11,6 +11,9 @@ function make_wp_onepage_rev1(options)
 %             median from 1 GHz to 10 GHz (ITU-R SG3 databank)
 %     op4a-e  The tails: the ITU models predict too little loss at small
 %             time percentages (databank and real-terrain links)
+%   Two options per set of maps color each path by how many dB the models
+%   are apart, or how many dB a model is off the measurement, on the plasma
+%   colormap with a colorbar.
 %   No model runs; the script reads wp_results_rev1.mat and the CSV tables
 %   that make_wp_figures_rev1, diffraction_decomposition_rev1, and
 %   compare_dbsg3_rev1 write.
@@ -36,8 +39,7 @@ Dt = readtable(fullfile(d, 'table_diffraction_terms.csv'), 'TextType', 'string')
 Ab = readtable(fullfile(d, 'table_diffraction_ablation.csv'), 'TextType', 'string', 'VariableNamingRule', 'preserve');
 Db = readtable(fullfile(d, 'table_dbsg3_by_dataset_survey.csv'), 'TextType', 'string');
 Db = Db(Db.kept == 1, :);
-fl = compose('%.1f GHz', F / 1000);
-fl = replace(fl, ".0 GHz", " GHz");
+fl = string(arrayfun(@(f) sprintf('%g GHz', f / 1000), F, 'UniformOutput', false));
 
 %% ===== Finding 1: agreement in line of sight, split beyond the horizon =====
 gap = squeeze(E7.p2001(:, :, i50) - E7.itm(:, :, i50));     % F-by-K, P.2001 minus ITM
@@ -61,7 +63,7 @@ for c = 3:-1:1
 end
 xline(ax, 0, '-', 'Color', C.db, 'LineWidth', 1);
 set(ax, 'YTick', yt, 'YTickLabel', ytl); ylim(ax, [0.3 y]);
-xlabel(ax, 'P.2001 minus ITM at 50 % of time (dB); negative means ITM predicts more loss');
+xlabel(ax, {'P.2001 minus ITM at 50 % of time (dB)', 'Negative: ITM predicts more loss'});
 note(ax, 0.02, 0.97, 'Each dot is one link; the diamond is the median', C);
 style(ax, C);
 save_page(fig, d, 'op1a_strip_by_mechanism');
@@ -94,24 +96,27 @@ legend_text(ax, [C.lb; C.db; C.gray], ["ITM", "P.2001", "P.452"], ["o", "o", "s"
 style(ax, C);
 save_page(fig, d, 'op1b_dumbbell_excess_loss');
 
-% 1c: small multiples, distribution of the gap (CDF), 3 mechanisms by 3 frequencies
-[fig, ~, tl] = page(3, 3);
-for c = 1:3
-    for f = 1:numel(F)
-        ax = nexttile(tl); hold(ax, 'on');
-        g = sort(gap(f, cls(f, :) == ccode(c)));
-        col = C.gray; if c > 1, col = C.lb; end
-        stairs(ax, g, (1:numel(g)) / numel(g), 'Color', col, 'LineWidth', 2.5);
-        xline(ax, 0, '-', 'Color', C.db);
-        xlim(ax, [-110 20]); ylim(ax, [0 1]);
-        text(ax, -105, 0.92, sprintf('median %.0f dB', median(g)), 'FontSize', 10, 'Color', C.db, 'FontName', C.font, 'FontWeight', 'bold');
-        if c == 1, title(ax, fl(f), 'FontWeight', 'normal'); end
-        if f == 1, ylabel(ax, cname(c) + " (share of links)"); end
-        if c == 3, xlabel(ax, 'P.2001 minus ITM (dB)'); end
-        style(ax, C);
+% 1c: map of the 60 links, colored by how far apart the models are (plasma, dB)
+[fig, ~, tl] = page(numel(F), 1);
+cm = ramp(C);
+for f = 1:numel(F)
+    gx = geoaxes(tl); gx.Layout.Tile = f;
+    try, geobasemap(gx, 'grayland'); catch, geobasemap(gx, 'none'); end
+    hold(gx, 'on');
+    v = abs(gap(f, :));
+    for k = 1:numel(v)
+        ci = 1 + round(min(v(k), 60) / 60 * (size(cm, 1) - 1));
+        geoplot(gx, [E7.links.tx_lat(k) E7.links.rx_lat(k)], [E7.links.tx_lon(k) E7.links.rx_lon(k)], '-', ...
+            'Color', cm(ci, :), 'LineWidth', 2.5);
     end
+    geolimits(gx, [37.4 39.8], [-80.6 -75]);
+    gx.FontName = C.font; gx.FontSize = 9;
+    title(gx, fl(f), 'FontWeight', 'normal', 'Color', C.db);
+    colormap(gx, cm); clim(gx, [0 60]);
 end
-save_page(fig, d, 'op1c_cdf_small_multiples');
+cb = colorbar(gx); cb.Layout.Tile = 'east';
+cb.Label.String = '|P.2001 minus ITM| at 50 % of time (dB off)'; cb.FontName = C.font; cb.FontSize = 10; cb.Color = C.db;
+save_page(fig, d, 'op1c_map_colored_by_gap');
 
 % 1d: annotated heat table of the median gap
 [fig, ax] = page(); hold(ax, 'on');
@@ -126,7 +131,7 @@ imagesc(ax, -M); colormap(ax, ramp(C)); clim(ax, [0 50]);
 for c = 1:3
     for f = 1:numel(F)
         tc = [1 1 1]; if -M(c, f) > 30, tc = C.db; end
-        text(ax, f, c, sprintf('%.0f dB', -M(c, f)), 'HorizontalAlignment', 'center', 'FontSize', 26, ...
+        text(ax, f, c, sprintf('%.0f dB', abs(round(-M(c, f)))), 'HorizontalAlignment', 'center', 'FontSize', 26, ...
             'FontWeight', 'bold', 'Color', tc, 'FontName', C.font);
         text(ax, f, c + 0.3, sprintf('%d links', N(c, f)), 'HorizontalAlignment', 'center', 'FontSize', 10, ...
             'Color', tc, 'FontName', C.font);
@@ -155,7 +160,6 @@ for f = 1:numel(F)
     if f == 1, ylabel(ax, 'P.2001 minus ITM at 50 % of time (dB)'); end
     style(ax, C);
 end
-note(nexttile(tl, 1), 0.05, 0.12, 'Models agree', C);
 save_page(fig, d, 'op1e_boxes_by_frequency');
 
 %% ===== Finding 2: the diffraction gap and its causes =====
@@ -172,7 +176,7 @@ for f = 1:numel(F)
     ok = isfinite(mb);
     plot(ax, xb(ok), mb(ok), '-', 'Color', fc(f, :), 'LineWidth', 3);
     k = find(ok, 1, 'last');
-    text(ax, xb(k) * 1.15, mb(k), fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
+    text(ax, xb(k) * 1.15, mb(k) + 3 * (f - 2), fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
 end
 yline(ax, 0, '-', 'Color', C.db);
 set(ax, 'XScale', 'log'); xlim(ax, [5 3000]);
@@ -213,12 +217,14 @@ save_page(fig, d, 'op2b_waterfall');
 [fig, ax] = page(); hold(ax, 'on');
 cases5 = ["ITM as is", "2 no clutter term", "3 evaluated at the path", "1 single edge", "4 all three"];
 lab5 = ["ITM as published", "Without the clutter term", "Evaluated at the path", "One knife edge, not two", "All three removed"];
+yl = NaN(1, numel(cases5));
 for j = 1:numel(cases5)
     g = arrayfun(@(f) Ab.median_gap_db(Ab.freq_mhz == f & Ab.("case") == cases5(j)), F);
+    yl(j) = g(end); if j > 1 && any(abs(yl(1:j-1) - yl(j)) < 2.5), yl(j) = yl(j) - 3; end
     col = C.gray; lw = 2;
     if j == 1, col = C.lb; lw = 4; elseif j == 4, col = C.db; lw = 3; end
     plot(ax, F / 1000, g, '-o', 'Color', col, 'LineWidth', lw, 'MarkerFaceColor', col, 'MarkerSize', 7);
-    text(ax, F(end) / 1000 + 0.15, g(end), lab5(j), 'Color', col, 'FontSize', 11, 'FontName', C.font, 'FontWeight', 'bold');
+    text(ax, F(end) / 1000 + 0.15, yl(j), lab5(j), 'Color', col, 'FontSize', 11, 'FontName', C.font, 'FontWeight', 'bold');
 end
 yline(ax, 0, '-', 'Color', C.db);
 xlim(ax, [2.4 10.5]); set(ax, 'XTick', F / 1000);
@@ -296,8 +302,7 @@ for m = [2 3 1]
     e = sort(err(mods(m), "50", hi)); e = e(isfinite(e));
     stairs(ax, e, (1:numel(e)) / numel(e), 'Color', mcol(m, :), 'LineWidth', 3 + (m == 1));
     w = mean(abs(e) <= 10);
-    k = find(e > 12, 1); if isempty(k), k = numel(e); end
-    text(ax, e(k) + 1, k / numel(e) - 0.03 * m, sprintf('%s: %.0f %% within 10 dB', mlab(m), 100 * w), ...
+    text(ax, 14, 0.15 + 0.06 * (3 - m), sprintf('%s: %.0f %% within 10 dB', mlab(m), 100 * w), ...
         'Color', mcol(m, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
 end
 xline(ax, 0, '-', 'Color', C.db);
@@ -372,26 +377,33 @@ end
 set(ax, 'XTick', 1:3, 'XTickLabel', mlab, 'YTick', 1:numel(bins), 'YTickLabel', bins, 'YDir', 'reverse', 'XAxisLocation', 'top', ...
     'FontName', C.font, 'FontSize', 12, 'TickLength', [0 0]);
 axis(ax, 'tight'); box(ax, 'off'); ax.XColor = C.db; ax.YColor = C.db;
-xlabel(ax, 'Mean predicted minus measured median loss: blue too little loss, purple too much');
+xlabel(ax, {'Mean predicted minus measured median loss (dB)', 'Blue: too little loss; purple: too much'});
 ax.Position = [0.2 0.12 0.74 0.76];
 save_page(fig, d, 'op3d_heat_bias');
 
-% 3e: predicted against measured, one panel per model, 1:1 line
+% 3e: where each model misses: databank paths colored by |error| (plasma, dB off)
 [fig, ~, tl] = page(3, 1);
+cm = ramp(C);
+[~, ord] = sort(abs(Db.p2001_50 - Db.meas_50));          % large misses drawn last, on top
 for m = 1:3
-    ax = nexttile(tl); hold(ax, 'on');
-    x = Db.meas_50; yv = Db.(mods(m) + "_50");
-    scatter(ax, x(~hi), yv(~hi), 12, C.lgray, 'filled');
-    scatter(ax, x(hi), yv(hi), 22, mcol(m, :), 'filled', 'MarkerFaceAlpha', 0.8);
-    plot(ax, [100 300], [100 300], '-', 'Color', C.db);
-    plot(ax, [100 300], [110 310], ':', 'Color', C.db); plot(ax, [100 300], [90 290], ':', 'Color', C.db);
-    axis(ax, 'equal'); xlim(ax, [100 300]); ylim(ax, [100 300]);
-    ylabel(ax, mlab(m) + " (dB)");
-    if m == 3, xlabel(ax, 'Measured median basic transmission loss (dB)'); end
-    if m == 1, note(ax, 0.03, 0.93, 'Colored: 1 GHz to 10 GHz; gray: below 1 GHz; dotted: within 10 dB', C); end
-    style(ax, C);
+    gx = geoaxes(tl); gx.Layout.Tile = m;
+    try, geobasemap(gx, 'grayland'); catch, geobasemap(gx, 'none'); end
+    hold(gx, 'on');
+    e = abs(Db.(mods(m) + "_50") - Db.meas_50);
+    [~, o] = sort(e);
+    for k = o(:)'
+        if ~isfinite(e(k)), continue, end
+        ci = 1 + round(min(e(k), 20) / 20 * (size(cm, 1) - 1));
+        geoplot(gx, [Db.tx_lat(k) Db.rx_lat(k)], [Db.tx_lon(k) Db.rx_lon(k)], '-', 'Color', cm(ci, :), 'LineWidth', 2);
+    end
+    geolimits(gx, [20 62], [-125 145]);
+    gx.FontName = C.font; gx.FontSize = 9;
+    title(gx, mlab(m) + sprintf(' (median %.1f dB off)', median(e, 'omitnan')), 'FontWeight', 'normal', 'Color', C.db);
+    colormap(gx, cm); clim(gx, [0 20]);
 end
-save_page(fig, d, 'op3e_predicted_vs_measured');
+cb = colorbar(gx); cb.Layout.Tile = 'east';
+cb.Label.String = '|Predicted minus measured median| (dB off), 30 MHz to 10 GHz'; cb.FontName = C.font; cb.FontSize = 10; cb.Color = C.db;
+save_page(fig, d, 'op3e_map_colored_by_error');
 
 %% ===== Finding 4: the tails =====
 pc = ["01", "10", "50", "90", "99"]; pv = [1 10 50 90 99];
@@ -404,10 +416,10 @@ for m = [2 3 1]
     ok = isfinite(v);
     plot(ax, pv(ok), v(ok), '-o', 'Color', mcol(m, :), 'LineWidth', 3 + (m == 1), 'MarkerFaceColor', mcol(m, :), 'MarkerSize', 8);
     k = find(ok, 1, 'last');
-    text(ax, pv(k) * 1.12, v(k), mlab(m), 'Color', mcol(m, :), 'FontWeight', 'bold', 'FontSize', 12, 'FontName', C.font);
+    text(ax, pv(k) * 1.12, v(k) + 0.5 * (m - 2), mlab(m), 'Color', mcol(m, :), 'FontWeight', 'bold', 'FontSize', 12, 'FontName', C.font);
 end
 yline(ax, 0, '-', 'Color', C.db);
-set(ax, 'XScale', 'log', 'XTick', pv); xlim(ax, [0.8 160]); ylim(ax, [-14 6]);
+set(ax, 'XScale', 'log', 'XTick', [1 10 50 99]); xlim(ax, [0.8 160]); ylim(ax, [-14 6]);
 xlabel(ax, 'Percentage of time the loss is not exceeded'); ylabel(ax, 'Mean predicted minus measured loss, 1 GHz to 10 GHz (dB)');
 note(ax, 0.03, 0.08, 'Below zero at 1 %: the model predicts the signal is stronger than measured', C);
 note(ax, 0.03, 0.95, 'Shaded: within 3 dB', C);
@@ -476,7 +488,7 @@ for j = 1:4
     plot(ax, j + [-0.3 0.3], median(v) * [1 1], '-', 'Color', C.db, 'LineWidth', 3);
     text(ax, j + 0.33, median(v), sprintf('%.0f dB', median(v)), 'FontSize', 11, 'FontWeight', 'bold', 'Color', C.db, 'FontName', C.font);
 end
-set(ax, 'XTick', 1:4, 'XTickLabel', lab); xlim(ax, [0.4 4.8]); ylim(ax, [0 60]);
+set(ax, 'XTick', 1:4, 'XTickLabel', lab); xlim(ax, [0.4 4.8]); ylim(ax, [0 max(cellfun(@(v) max(v(isfinite(v))), vals)) + 3]);
 ylabel(ax, 'Loss at 50 % minus loss at 1 % of time, 1 GHz to 10 GHz (dB)');
 note(ax, 0.03, 0.95, 'How much stronger the signal gets 1 % of the time; line is the median', C);
 style(ax, C);
@@ -487,10 +499,11 @@ save_page(fig, d, 'op4d_enhancement_depth');
 for f = 1:numel(F)
     v = arrayfun(@(j) median(E7.p2001(f, :, j) - E7.itm(f, :, j)), 1:numel(P));
     plot(ax, P, v, '-', 'Color', fc(f, :), 'LineWidth', 3);
-    text(ax, P(end) * 1.05, v(end), fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
+    j50 = find(P == 50);
+    text(ax, 0.0012, v(1) + 1.2 * (f - 2), fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
 end
 yline(ax, 0, '-', 'Color', C.db);
-set(ax, 'XScale', 'log', 'XTick', [0.001 0.01 0.1 1 10 50 99 99.99]); xlim(ax, [0.001 300]);
+set(ax, 'XScale', 'log', 'XTick', [0.001 0.01 0.1 1 10 50]); xlim(ax, [0.001 100]);
 xlabel(ax, 'Percentage of time the loss is not exceeded'); ylabel(ax, 'P.2001 minus ITM, median over 60 real-terrain links (dB)');
 note(ax, 0.03, 0.08, 'At small percentages, ducting in P.2001 cuts its loss well below ITM''s', C);
 style(ax, C);
