@@ -105,7 +105,10 @@ paths = struct('name', {"smooth earth, 120 km", "rough western link"}, 'pfl', {[
 [paths(1).pfl, dk, hm, rxp] = flat(120, h0, tx0, E);
 paths(1).prof = struct('d_km', dk, 'h_m', hm, 'tx', tx0, 'rx', rxp);
 W = readtable(fullfile(options.OutDir, 'western_links.csv'), 'TextType', 'string');
-W = W(W.itm_class == "Diffraction" & W.length_km > 40 & W.length_km < 100, :);
+% a diffraction link of 40 km to 100 km that ITM doesn't flag for a horizon
+% angle over 200 mrad (warning bits 0x0080 and 0x0100), with the largest gap
+ok = bitand(uint32(W.itm_warnings), uint32(384)) == 0;
+W = W(ok & W.itm_class == "Diffraction" & W.length_km > 40 & W.length_km < 100, :);
 [~, iw] = max(W.itm_50 - W.p2001_50);
 pr = wp_terrain_profile([W.tx_lat(iw) W.tx_lon(iw)], [W.rx_lat(iw) W.rx_lon(iw)]);
 paths(2).pfl = [numel(pr.d_km) - 1; 1000 * pr.d_km(end) / (numel(pr.d_km) - 1); pr.h_m(:)];

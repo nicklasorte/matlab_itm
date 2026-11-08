@@ -4,6 +4,112 @@
   "ab_3 evaluated at the path": 23.4,
   "ab_4 all three": -8.7,
   "ab_ITM as is": 32.8,
+  "alg_120_itm": [
+    202.6,
+    180.5
+  ],
+  "alg_120_lbm": [
+    235.2,
+    153.5,
+    186.5
+  ],
+  "alg_120_p2001": [
+    203.3,
+    153.5
+  ],
+  "alg_ae_itm": 8264,
+  "alg_ae_p2001_1": 12385,
+  "alg_ae_p2001_50": 8317,
+  "alg_an1_d": 120,
+  "alg_an1_d3": [
+    49.3,
+    35.5
+  ],
+  "alg_an1_d4": [
+    77.6,
+    72
+  ],
+  "alg_an1_d5": [
+    235.1,
+    69.4
+  ],
+  "alg_an1_d6": [
+    435.1,
+    81.4
+  ],
+  "alg_an1_dml": 35.1,
+  "alg_an1_dsml": 35.1,
+  "alg_an1_dx": 67.9,
+  "alg_an1_itm": 62.5,
+  "alg_an1_name": "smooth earth, 120 km",
+  "alg_an1_p2001": 59.7,
+  "alg_an2_d": 72,
+  "alg_an2_d3": [
+    71.7,
+    151.7
+  ],
+  "alg_an2_d4": [
+    98.6,
+    167.2
+  ],
+  "alg_an2_d5": [
+    208.5,
+    126.2
+  ],
+  "alg_an2_d6": [
+    408.5,
+    141
+  ],
+  "alg_an2_dml": 8.5,
+  "alg_an2_dsml": 71.7,
+  "alg_an2_dx": 71.7,
+  "alg_an2_itm": 151.7,
+  "alg_an2_name": "rough western link (front range, 72 km)",
+  "alg_an2_p2001": 69.6,
+  "alg_d_sml": 35.1,
+  "alg_d_x": 67.9,
+  "alg_dn50": -36.7,
+  "alg_los_itm_from": 25,
+  "alg_los_itm_max": 0.1,
+  "alg_los_p2001_from": 20.5,
+  "alg_los_p2001_max": 0.7,
+  "alg_los_tworay": [
+    -6,
+    45.9
+  ],
+  "alg_m1_agree": 80,
+  "alg_m1_itm_tropo": 30,
+  "alg_m1_itm_tropo_p2001_diff": 24,
+  "alg_m1_n": 120,
+  "alg_m1_p2001_anom": 16,
+  "alg_m50_agree": 94,
+  "alg_m50_itm_tropo": 30,
+  "alg_m50_itm_tropo_p2001_diff": 26,
+  "alg_m50_n": 120,
+  "alg_m50_p2001_anom": 0,
+  "alg_ns": 285.5,
+  "alg_s1_anom_from": 26,
+  "alg_s1_gap120": 27,
+  "alg_s1_gap_50_400": [
+    13,
+    30.1
+  ],
+  "alg_s1_itm_tropo_from": 68,
+  "alg_s1_maxabs": 30.1,
+  "alg_s1_tropo_from": 548,
+  "alg_s50_gap120": -0.7,
+  "alg_s50_gap_50_400": [
+    -2.3,
+    2.1
+  ],
+  "alg_s50_itm_tropo_from": 68,
+  "alg_s50_maxabs": 5.1,
+  "alg_s50_tropo_from": 68,
+  "alg_t1_anom_until": 10,
+  "alg_t1_itm_spread": 39.4,
+  "alg_t1_p2001_spread": 66.5,
+  "alg_t2_itm_spread": 23,
+  "alg_t2_p2001_spread": 2.6,
   "arch_Double-horizon diffraction_itm_drop": 15.6,
   "arch_Double-horizon diffraction_p2001_drop": 3.3,
   "arch_Line of sight_itm_drop": 4.1,
