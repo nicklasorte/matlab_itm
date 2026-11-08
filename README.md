@@ -521,7 +521,10 @@ app with MATLAB Compiler and take 1 to 2 minutes.
 
 `tests/compare_models_rev1.m` runs random links through this port, SEADLib
 ITM, TIREM (on the SEADLib profile and through `propagationModel("tirem")`),
-and MATLAB's `propagationModel("longley-rice")`. It compares loss from 0.1 to
+MathWorks' `propagationModel("longley-rice")` on the same 1" terrain, and
+ITU-R P.452-18 from [matlab_itu_p452](https://github.com/nicklasorte/matlab_itu_p452)
+(bare earth, and with Copernicus ground cover; P.452 covers 0.001 to 50 %
+only). Put matlab_itu_p452 next to this repository or pass `P452Dir`. It compares loss from 0.1 to
 99.9 %, elevation angles, propagation mechanism, and time per link, and
 writes every result to an Excel workbook. Models that aren't installed are
 skipped: SEADLib needs Windows and `C:\USGS`, and TIREM needs its library.
