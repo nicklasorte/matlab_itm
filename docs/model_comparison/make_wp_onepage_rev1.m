@@ -33,7 +33,7 @@ E7 = R.E7; F = R.freqs_mhz; P = R.p; i50 = find(P == 50);
 cls = classify(E7.itm_mech);                       % F-by-K: 0 LOS, 1 diffraction, 3 troposcatter
 cname = ["Line of sight", "Diffraction", "Troposcatter"]; ccode = [0 1 3];
 Dt = readtable(fullfile(d, 'table_diffraction_terms.csv'), 'TextType', 'string');
-Ab = readtable(fullfile(d, 'table_diffraction_ablation.csv'), 'TextType', 'string');
+Ab = readtable(fullfile(d, 'table_diffraction_ablation.csv'), 'TextType', 'string', 'VariableNamingRule', 'preserve');
 Db = readtable(fullfile(d, 'table_dbsg3_by_dataset_survey.csv'), 'TextType', 'string');
 Db = Db(Db.kept == 1, :);
 fl = compose('%.1f GHz', F / 1000);
@@ -186,7 +186,7 @@ cases = ["ITM as is", "1 single edge", "4 all three"];
 [fig, ~, tl] = page(numel(F), 1);
 for f = 1:numel(F)
     ax = nexttile(tl); hold(ax, 'on');
-    g = arrayfun(@(c) Ab.median_gap_db(Ab.freq_mhz == F(f) & Ab.case == c), cases);
+    g = arrayfun(@(c) Ab.median_gap_db(Ab.freq_mhz == F(f) & Ab.("case") == c), cases);
     seg = [0 g(1); g(2) g(1); g(3) g(2); min(0, g(3)) max(0, g(3))];   % [from to] for each bar
     val = [g(1), g(2) - g(1), g(3) - g(2), g(3)];
     cols = [C.lb; C.gray; C.gray; C.db];
@@ -214,7 +214,7 @@ save_page(fig, d, 'op2b_waterfall');
 cases5 = ["ITM as is", "2 no clutter term", "3 evaluated at the path", "1 single edge", "4 all three"];
 lab5 = ["ITM as published", "Without the clutter term", "Evaluated at the path", "One knife edge, not two", "All three removed"];
 for j = 1:numel(cases5)
-    g = arrayfun(@(f) Ab.median_gap_db(Ab.freq_mhz == f & Ab.case == cases5(j)), F);
+    g = arrayfun(@(f) Ab.median_gap_db(Ab.freq_mhz == f & Ab.("case") == cases5(j)), F);
     col = C.gray; lw = 2;
     if j == 1, col = C.lb; lw = 4; elseif j == 4, col = C.db; lw = 3; end
     plot(ax, F / 1000, g, '-o', 'Color', col, 'LineWidth', lw, 'MarkerFaceColor', col, 'MarkerSize', 7);
