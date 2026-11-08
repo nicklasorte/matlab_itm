@@ -79,7 +79,12 @@ function R = compare_models_rev1(options)
 %   Name-value options:
 %     NumLinks     number of random links (20)
 %     Seed         random seed (1)
-%     FreqMHz      frequency (2700)
+%     FreqMHz      frequency, MHz: [min max] draws one frequency per link,
+%                  log-uniform ([100 10000]); a scalar uses it for every
+%                  link. 100 MHz to 20 GHz is the range every model
+%                  accepts (P.452 starts at 100 MHz, ITM and MathWorks
+%                  Longley-Rice stop at 20 GHz); ITM warns outside 40 to
+%                  10000 MHz.
 %     Region       [lat_min lat_max lon_min lon_max] for transmitters
 %                  ([36 41 -82 -75], the mid-Atlantic). Keep it inside your
 %                  C:\USGS tile coverage when running SEADLib.
@@ -116,7 +121,7 @@ function R = compare_models_rev1(options)
 arguments
     options.NumLinks (1,1) double {mustBeInteger, mustBePositive} = 20
     options.Seed (1,1) double = 1
-    options.FreqMHz (1,1) double {mustBePositive} = 2700
+    options.FreqMHz (1,:) double {mustBePositive} = [100 10000]
     options.Region (1,4) double = [36 41 -82 -75]
     options.LengthKm (1,2) double {mustBePositive} = [5 150]
     options.TxHeightM (1,2) double {mustBePositive} = [10 100]
@@ -139,7 +144,6 @@ addpath(fileparts(fileparts(mfilename('fullpath'))));
 rel = options.Reliability(:).';
 n_rel = numel(rel);
 conf = 50;
-f_mhz = options.FreqMHz;
 pol_name = ["horizontal", "vertical"];
 pol_name = pol_name(options.Tpol + 1);
 
@@ -153,8 +157,14 @@ az = 360 * rand(rs, n, 1);
 [rx_lat, rx_lon] = reckon(tx_ll(:, 1), tx_ll(:, 2), len_km * 1e3, az, wgs84Ellipsoid('meter'));
 tx = [tx_ll, options.TxHeightM(1) + diff(options.TxHeightM) * rand(rs, n, 1)];
 rx = [rx_lat, rx_lon, options.RxHeightM(1) + diff(options.RxHeightM) * rand(rs, n, 1)];
-links = table((1:n)', tx(:, 1), tx(:, 2), tx(:, 3), rx(:, 1), rx(:, 2), rx(:, 3), len_km, ...
-    'VariableNames', {'link', 'tx_lat', 'tx_lon', 'tx_h_m', 'rx_lat', 'rx_lon', 'rx_h_m', 'length_km'});
+if isscalar(options.FreqMHz)
+    freq = repmat(options.FreqMHz, n, 1);
+else
+    fr = options.FreqMHz;
+    freq = exp(log(fr(1)) + diff(log(fr)) * rand(rs, n, 1));    % log-uniform, drawn after the geometry
+end
+links = table((1:n)', tx(:, 1), tx(:, 2), tx(:, 3), rx(:, 1), rx(:, 2), rx(:, 3), len_km, freq, ...
+    'VariableNames', {'link', 'tx_lat', 'tx_lon', 'tx_h_m', 'rx_lat', 'rx_lon', 'rx_h_m', 'length_km', 'freq_mhz'});
 
 % Climate and N_0 with the SEADLib rule, shared by every ITM-family model
 climate = min(itm_radio_climate_rev1(tx(:, 1), tx(:, 2)), itm_radio_climate_rev1(rx(:, 1), rx(:, 2)));
@@ -332,11 +342,12 @@ R = struct('links', links, 'reliability', rel, 'models', models, 'skipped', why,
     'example_info', example_info);
 R.summary_time = summarize_time(out, models, cold);
 R.summary_loss = summarize_loss(out, models, rel);
+R.summary_loss_by_freq = summarize_by_freq(out, models, rel, freq);
 R.summary_angles = summarize_angles(out, models);
 R.summary_mechanism = summarize_mechanism(out, models);
 skipped = setdiff(options.Models, models);
-fprintf('\n%d links, %.0f to %.0f km, %g MHz, %d time percentages (%.1f to %.1f %%); MATLAB models on %s terrain\n', n, ...
-    min(len_km), max(len_km), f_mhz, n_rel, min(rel), max(rel), options.LRTerrain);
+fprintf('\n%d links, %.0f to %.0f km, %.0f to %.0f MHz, %d time percentages (%.1f to %.1f %%); MATLAB models on %s terrain\n', n, ...
+    min(len_km), max(len_km), min(freq), max(freq), n_rel, min(rel), max(rel), options.LRTerrain);
 for m = skipped
     fprintf('Skipped %s: %s\n', m, why.(m));
 end
@@ -345,6 +356,7 @@ for m = string(fieldnames(example_info))'
 end
 fprintf('\nTime per link (ms)\n'); disp(R.summary_time)
 fprintf('Path loss difference from matlab_itm (dB): model minus matlab_itm, all links\n'); disp(R.summary_loss)
+fprintf('Median path loss difference from matlab_itm at 50 %% (dB), by frequency band\n'); disp(R.summary_loss_by_freq)
 fprintf('Elevation angles (degrees): mean |difference| from matlab_itm\n'); disp(R.summary_angles)
 fprintf('Propagation mechanism: share of links in the same class as matlab_itm\n'); disp(R.summary_mechanism)
 for m = models
@@ -368,13 +380,13 @@ end
         mech_raw = "";
         switch m
             case "matlab_itm"
-                [L, ~, el, code] = itm_pathloss_rev1(tx(k, :), rx(k, :), f_mhz, rel, confidence=conf, ...
+                [L, ~, el, code] = itm_pathloss_rev1(tx(k, :), rx(k, :), freq(k), rel, confidence=conf, ...
                     polarization=options.Tpol, climate=climate(k), N_0=n0(k), validity="warn");
                 mech_raw = string(code);
 
             case "seadlib_itm"
                 itmp = ITMAcs.ITMP2P;
-                [Lnet, pm] = itmp.ITMp2pAryRels(tx(k, 3), rx(k, 3), n0(k), 0.02, 25.0, f_mhz, ...
+                [Lnet, pm] = itmp.ITMp2pAryRels(tx(k, 3), rx(k, 3), n0(k), 0.02, 25.0, freq(k), ...
                     int32(climate(k)), options.Tpol, conf / 100, rel / 100, tx(k, 1), tx(k, 2), ...
                     rx(k, 1), rx(k, 2), int32(1), char(options.SeadlibDir + "\"));
                 L = double(Lnet);
@@ -384,7 +396,7 @@ end
                 z = seadlib_profile(k);
                 d_m = deg2km(distance(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2))) * 1e3;
                 pfl = [numel(z) - 1; d_m / (numel(z) - 1); z(:)];
-                [L, info] = itm_p2p_rev1(tx(k, 3), rx(k, 3), pfl, f_mhz, rel, confidence=conf, ...
+                [L, info] = itm_p2p_rev1(tx(k, 3), rx(k, 3), pfl, freq(k), rel, confidence=conf, ...
                     climate=climate(k), N_0=n0(k), polarization=options.Tpol, validity="warn");
                 el = info.elevation_deg;
                 mech_raw = string(info.mode_code);
@@ -393,7 +405,7 @@ end
                 z = seadlib_profile(k);
                 d_m = deg2km(distance(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2))) * 1e3;
                 r = linspace(0, d_m, numel(z));
-                [L, info] = tirempl(r, z, f_mhz * 1e6, 'TransmitterAntennaHeight', tx(k, 3), ...
+                [L, info] = tirempl(r, z, freq(k) * 1e6, 'TransmitterAntennaHeight', tx(k, 3), ...
                     'ReceiverAntennaHeight', rx(k, 3), 'AntennaPolarization', pol_name, ...
                     'GroundConductivity', 0.02, 'GroundPermittivity', 25, 'AtmosphericRefractivity', n0(k));
                 [el, mech_raw] = tirem_info(info);
@@ -418,19 +430,19 @@ end
                 ok = rel >= 0.001 & rel <= 50;           % P.452-18 range
                 L = NaN(1, n_rel);
                 [L(ok), info] = p452_p2p_rev1(prof.d_km, prof.h_m, prof.g_m, prof.zone, tx(k, 3), rx(k, 3), ...
-                    f_mhz / 1000, rel(ok), tx_deg=tx(k, 1:2), rx_deg=rx(k, 1:2), polarization=pol_name);
+                    freq(k) / 1000, rel(ok), tx_deg=tx(k, 1:2), rx_deg=rx(k, 1:2), polarization=pol_name);
                 el = rad2deg([info.theta_t, info.theta_r] / 1000);   % mrad to degrees
                 mech_raw = p452_mechanism(info, rel(ok));
                 keep_info(m, info);
 
             case "p2001"
-                [L, info, el] = p2001_rev1(tx(k, :), rx(k, :), f_mhz, rel(:), DemSource="auto", ...
+                [L, info, el] = p2001_rev1(tx(k, :), rx(k, :), freq(k), rel(:), DemSource="auto", ...
                     Polarization=pol_name, Validity="warn", InfoDetail="brief");
                 [~, j50] = min(abs(rel - 50));
                 mech_raw = info.mechanism_name(j50);
 
             case "itm_on_matlab_terrain"
-                [L, info] = itm_p2p_rev1(tx(k, 3), rx(k, 3), matlab_terrain_profile(k), f_mhz, rel, ...
+                [L, info] = itm_p2p_rev1(tx(k, 3), rx(k, 3), matlab_terrain_profile(k), freq(k), rel, ...
                     confidence=conf, climate=climate(k), N_0=n0(k), polarization=options.Tpol, validity="warn");
                 el = info.elevation_deg;
                 mech_raw = string(info.mode_code);
@@ -443,7 +455,7 @@ end
                 else
                     lr_args = {'engine', "pathloss", 'terrain', "gmted2010"};
                 end
-                [L, info] = itm_matlab_lr_rev1(tx(k, :), rx(k, :), f_mhz, rel, 'confidence', conf, ...
+                [L, info] = itm_matlab_lr_rev1(tx(k, :), rx(k, :), freq(k), rel, 'confidence', conf, ...
                     'polarization', pol_name, 'climate', climate(k), 'N_0', n0(k), 'epsilon', 25, ...
                     'sigma', 0.02, lr_args{:});
                 el = info.elevation_deg;
@@ -481,7 +493,7 @@ end
 
     function [txs, rxs] = sites(k)
         txs = txsite('Latitude', tx(k, 1), 'Longitude', tx(k, 2), 'AntennaHeight', tx(k, 3), ...
-            'TransmitterFrequency', f_mhz * 1e6);
+            'TransmitterFrequency', freq(k) * 1e6);
         rxs = rxsite('Latitude', rx(k, 1), 'Longitude', rx(k, 2), 'AntennaHeight', rx(k, 3));
     end
 end
@@ -614,6 +626,7 @@ models = R.models;
 out = R.results;
 writetable(R.summary_time, file, 'Sheet', 'Summary_Time', 'WriteRowNames', true);
 writetable(R.summary_loss, file, 'Sheet', 'Summary_Loss', 'WriteRowNames', true);
+writetable(R.summary_loss_by_freq, file, 'Sheet', 'Summary_Loss_by_Freq', 'WriteRowNames', true);
 writetable(R.summary_angles, file, 'Sheet', 'Summary_Angles', 'WriteRowNames', true);
 writetable(R.summary_mechanism, file, 'Sheet', 'Summary_Mechanism', 'WriteRowNames', true);
 writetable(R.links, file, 'Sheet', 'Links');
@@ -654,4 +667,24 @@ elseif k == 2
 else
     mech = "Anomalous (ducting)";
 end
+end
+
+function T = summarize_by_freq(out, models, rel, freq)
+% Median difference from matlab_itm at 50 %, in frequency bands
+edges = [0 300 1000 3000 10000 Inf];
+labels = ["below_300_MHz", "MHz_300_to_1000", "MHz_1000_to_3000", "MHz_3000_to_10000", "above_10000_MHz"];
+[~, j] = min(abs(rel - 50));
+band = discretize(freq, edges);
+rows = setdiff(models, "matlab_itm", 'stable');
+v = NaN(numel(rows) + 1, numel(labels));
+for b = 1:numel(labels)
+    v(end, b) = nnz(band == b);
+end
+for i = 1:numel(rows)
+    d = out.(rows(i)).loss_db(:, j) - out.matlab_itm.loss_db(:, j);
+    for b = 1:numel(labels)
+        v(i, b) = median(d(band == b), 'omitnan');
+    end
+end
+T = array2table(v, 'VariableNames', cellstr(labels), 'RowNames', cellstr([rows, "links_in_band"]));
 end
