@@ -124,12 +124,17 @@ def s40_itm_anatomy():
         ax.plot(c.d_km, c.diffraction_line_db, color=LB, lw=1.4, ls=(0, (4, 2)))
         if c.scatter_line_db.notna().any():
             ax.plot(c.d_km, c.scatter_line_db, color=PU, lw=1.4, ls=(0, (1, 1.5)))
+        if c.los_fit_db.notna().any():
+            sml = a.set_index("kind").loc["d_sML", "d_km"]
+            q = c[c.d_km <= sml]
+            ax.plot(q.d_km, q.los_fit_db, color=GR, lw=1.6)
         pt = a.set_index("kind")
-        for k, col in [("d_3", LB), ("d_4", LB), ("d_5", PU), ("d_6", PU)]:
+        for k, col in [("d_3", LB), ("d_4", LB), ("d_5", PU), ("d_6", PU), ("d_0", GR), ("d_1", GR)]:
             if k in pt.index and np.isfinite(pt.loc[k, "value_db"]):
                 ax.scatter(pt.loc[k, "d_km"], pt.loc[k, "value_db"], s=26, color=col, zorder=3, edgecolor="white")
-                ax.text(pt.loc[k, "d_km"], pt.loc[k, "value_db"], "  " + k.replace("_", ""), fontsize=7.5, color=col,
-                        va="top")
+                lab = k.replace("_", "")
+                ax.text(pt.loc[k, "d_km"], pt.loc[k, "value_db"], (lab + "  ") if k == "d_0" else ("  " + lab), fontsize=7.5,
+                        color=col, va="top", ha="right" if k == "d_0" else "left")
         d = pt.loc["itm_at_path", "d_km"]
         ax.axvline(d, color=LG2, lw=0.8)
         ax.scatter([d], [pt.loc["itm_at_path", "value_db"]], s=60, marker="D", color=LB, zorder=4, edgecolor="white")
@@ -146,6 +151,8 @@ def s40_itm_anatomy():
     axs[0].text(0.03, 0.95, "Diffraction line", transform=axs[0].transAxes, color=LB, fontsize=8)
     axs[0].text(0.03, 0.88, "Scatter line: slope from d5 and d6,\njoined to the diffraction line at d_x", transform=axs[0].transAxes,
                 color=PU, fontsize=8, va="top")
+    axs[1].text(0.97, 0.05, "Line-of-sight fit through d0, d1,\nand the smooth-earth horizon", transform=axs[1].transAxes,
+                color=GR, fontsize=8, ha="right")
     save(fig, "s40_itm_anatomy")
 
 

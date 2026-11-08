@@ -43,29 +43,29 @@
   "alg_an1_itm": 62.5,
   "alg_an1_name": "smooth earth, 120 km",
   "alg_an1_p2001": 59.7,
-  "alg_an2_d": 72,
+  "alg_an2_d": 46.6,
   "alg_an2_d3": [
-    71.7,
-    151.7
+    74.1,
+    149.6
   ],
   "alg_an2_d4": [
-    98.6,
-    167.2
+    100.9,
+    164.1
   ],
   "alg_an2_d5": [
-    208.5,
-    126.2
+    null,
+    null
   ],
   "alg_an2_d6": [
-    408.5,
-    141
+    null,
+    null
   ],
-  "alg_an2_dml": 8.5,
-  "alg_an2_dsml": 71.7,
-  "alg_an2_dx": 71.7,
-  "alg_an2_itm": 151.7,
-  "alg_an2_name": "rough western link (front range, 72 km)",
-  "alg_an2_p2001": 69.6,
+  "alg_an2_dml": 16.3,
+  "alg_an2_dsml": 74.1,
+  "alg_an2_dx": null,
+  "alg_an2_itm": 133.5,
+  "alg_an2_name": "rough western link (front range, 47 km)",
+  "alg_an2_p2001": 64.1,
   "alg_d_sml": 35.1,
   "alg_d_x": 67.9,
   "alg_dn50": -36.7,
@@ -108,8 +108,8 @@
   "alg_t1_anom_until": 10,
   "alg_t1_itm_spread": 39.4,
   "alg_t1_p2001_spread": 66.5,
-  "alg_t2_itm_spread": 23,
-  "alg_t2_p2001_spread": 2.6,
+  "alg_t2_itm_spread": 11.3,
+  "alg_t2_p2001_spread": 2.8,
   "arch_Double-horizon diffraction_itm_drop": 15.6,
   "arch_Double-horizon diffraction_p2001_drop": 3.3,
   "arch_Line of sight_itm_drop": 4.1,
