@@ -493,6 +493,13 @@ for (const [n, title, items] of OPTS) {
   items.forEach(([f, lab], i) => body.push(...onepage(`chart_${f}.png`, `Option ${n}${"ABCDE"[i]}: ${lab}`)));
 }
 body.push(new Paragraph({ children: [new PageBreak()] }));
+body.push(H1("Appendix: ten forms of the key graph"));
+body.push(P("The paper's central result is how far ITM and P.2001 are apart, by propagation mechanism and frequency, on the 60 real-terrain links at 50 % of time. The ten pages that follow draw that one result ten ways, for the author to choose from. Line of sight is gray, diffraction NTIA light blue, and troposcatter NTIA purple. The pages are drawn by make_wp_key_graph_rev1.py from the same CSV files."));
+const KEY = [["01_ridgeline", "ridgeline"], ["02_beeswarm", "beeswarm"], ["03_raincloud", "raincloud"], ["04_hero_numbers", "hero numbers with link strips"],
+  ["05_paired_scatter", "paired scatter, ITM against P.2001"], ["06_slope", "slope chart, P.2001 to ITM"], ["07_exceedance", "share of links at or above a gap"],
+  ["08_waffle", "waffle of link-frequencies"], ["09_vs_length", "gap against path length"], ["10_dark_intervals", "interval bands, dark theme"]];
+KEY.forEach(([f, lab], i) => body.push(...onepage(`key_${f}.png`, `Key graph ${i + 1}: ${lab}`)));
+body.push(new Paragraph({ children: [new PageBreak()] }));
 body.push(H1("Appendix: reproducing the figures"));
 body.push(P("Every figure comes from MATLAB code in the matlab_itm repository, folder docs/model_comparison. To reproduce them, do the following:"));
 startList();
