@@ -35,7 +35,7 @@ formulas.
 | 5 | Region selection and combination | Line of sight if d < d_sML; diffraction up to d_x; scatter beyond (L393-484) | Four sub-models always computed; correlated power sum for 1 and 2 (eq. 58), then a −5 log Σ10^(−0.2 L) blend with 3 and 4 (eq. 59); Monte Carlo alternative (sec. 5.3, eq. 60); Attachment J | No | Smooth earth sweep; 120 links | Architecture diagram; mechanism agreement matrix | done |
 | 6 | Free space | 32.45 + 20 log f + 20 log d (L667-669) | Same, with the slant distance including the height difference (sec. 3.11) | Yes | Any | None needed; difference under 0.01 dB on the paper's paths | done (noted) |
 | 7 | Knife-edge function | 6.02 + 9.11√v² − 1.27v² (v² < 5.76), else 12.953 + 10 log v² (L512-518); each horizon edge gets v² from the full diffraction angle with the factor 1/(4π) (L503-510), which equals ν² for half the angle, and the two edge losses are added (12.0 dB at grazing against J(0) = 6.0 dB for one edge) | J(ν) = 6.9 + 20 log(√((ν − 0.1)² + 1) + ν − 0.1) for ν > −0.78 (sec. 3.12, eq. 43a) | Functions yes; arguments no | ν from 0 to 10 | Both against the Fresnel integral | done |
-| 8 | Which edges | One edge at each horizon, v from the horizon angles and distances (L503-510) | One equivalent Bullington edge where the lines from the terminals to their steepest obstacles cross (A.4, eqs. A.15 to A.22) | No | 20 km single knife edge; two-obstacle family (see item 20) | Loss against obstacle height for one and two obstacles | done (one edge); next (two obstacles) |
+| 8 | Which edges | One edge at each horizon, v from the horizon angles and distances (L503-510) | One equivalent Bullington edge where the lines from the terminals to their steepest obstacles cross (A.4, eqs. A.15 to A.22) | No | 20 km single knife edge; two-obstacle family (see item 20) | Loss against obstacle height for one and two obstacles | done |
 | 9 | Smooth-earth diffraction | Vogler three-radius method: G(x) − F(x_1) − F(x_2) − 20 with K from the ground constants (L520-560) | First-term spherical-earth loss −F_X − G(Y_t) − G(Y_r), K from the fixed land and sea constants of Table 2 weighted by the sea fraction ω (eqs. A.7, A.8); below d_los it interpolates using a_em (A.2, A.3, eqs. A.2 to A.14) | Only with the same a_e, heights, and ground constants | Smooth earth 20 km to 300 km, 30 m and 10 m antennas, both polarizations | Both smooth-earth losses against distance, with their difference | next |
 | 10 | Blending the diffraction terms | A_d = w A_se + (1 − w) A_k + A_fo; w from Δh, f, and the horizon geometry; A_fo ≤ 15 dB (L486-501) | L_d = L_dba + max(L_dsph − L_dbs, 0): the smooth-earth excess over a smooth Bullington path is added to the actual Bullington loss (A.1, eq. A.1) | No | 120 links | Term stack per model on the diffraction links (ITM: w A_se, (1 − w) A_k, A_fo; P.2001: J(ν), the empirical term, the spherical excess) | done (ITM terms); next (P.2001 terms beside them) |
 | 11 | Empirical additions | A_fo = min(15, 5 log(1 + 10⁻⁵ h_g1 h_g2 f σ_h)), σ_h from Δh(d_sML), f in MHz, h_g in metres (L489-491) | (1 − e^(−J/6))(10 + 0.02 d) (A.4, eq. A.23) | No | 120 links | Both terms against path length | next |
@@ -55,11 +55,11 @@ effect of a single difference can be measured.
 
 | # | Experiment | What it isolates | Test case | Output | Status |
 |---|-----------|------------------|-----------|--------|--------|
-| 20 | Two-obstacle family | Item 8: one Bullington edge against two horizon edges | Synthetic profiles with two knife edges of heights h_1, h_2 at 1/3 and 2/3 of a 30 km path, h from 0 to 300 m | Heat map of ITM minus P.2001 over (h_1, h_2) | next |
-| 21 | Roughness family | Items 2 and 10: how the gap grows with Δh | Random rough profiles (filtered noise) scaled to Δh from 10 m to 1,000 m, 10 km to 150 km, 20 draws each | Heat map of the median gap over (Δh, d); the paper's "divergence window" drawn from synthetic terrain | next |
+| 20 | Two-obstacle family | Item 8: one Bullington edge against two horizon edges | Synthetic profiles with two knife edges of heights h_1, h_2 at 1/3 and 2/3 of a 30 km path, h from 0 to 300 m | Heat map of ITM minus P.2001 over (h_1, h_2), with Epstein-Peterson and Deygout references | done |
+| 21 | Roughness family | Items 2 and 10: how the gap grows with Δh | Random rough profiles (filtered noise) scaled to Δh from 10 m to 1,000 m, 10 km to 150 km, 20 draws each | Heat map of the median gap over (Δh, d); the paper's "divergence window" drawn from synthetic terrain | done |
 | 22 | Earth-radius swap | Item 4 | Smooth earth and 120 links with ITM's curvature set to P.2001's a_e50 directly in a test branch (changing N_0 would also move ITM's troposcatter term and is limited to N_s 150-400), and P.2001's a_e50 and a_p both set to ITM's a_e | Gap before and after the swap | next |
 | 23 | Effective-height swap | Item 3 | 120 links with each model given the other's effective heights (code change in a test branch, not in the released functions) | Gap before and after | later |
-| 24 | Evaluation-point swap | Item 12 | ITM evaluated at the path (done in the ablation) and P.2001 evaluated at d_3 and d_4 and extended | Gap before and after | next |
+| 24 | Evaluation-point swap | Item 12 | ITM evaluated at the path (done in the ablation) and P.2001 evaluated at d_3 and d_4 and extended | Gap before and after | done |
 | 25 | Monte Carlo combination | Item 5: the single-percentage blend of sec. 5.2 against the Monte Carlo method of sec. 5.3 | Five archetypes, 10,000 draws | Loss against time percentage, both combinations, with their difference | next |
 | 26 | Reciprocity | Both models should give the same loss with the terminals swapped; P.2001 states it (sec. 1.2) | 120 links, both directions | Largest asymmetry per model | next |
 | 27 | Continuity | Items 13 and 15 | Smooth earth and 120 radial paths at 100 m steps | Jumps in loss and slope at d_sML, d_x, and the Bullington LoS or NLoS switch | next |
@@ -93,8 +93,9 @@ MATLAB CSV files; Python draws only.
 
 ## 4. Order of work
 
-1. Items 20, 21, and 24 (the diffraction geometry): they explain most of the
-   gap on rough terrain and need only synthetic profiles.
+1. Items 20, 21, and 24 (the diffraction geometry): done in revision 4. They
+   show the gap comes from ITM's horizon-based diffraction terms, not from
+   where it evaluates them.
 2. Items 9, 10, 11 (the diffraction terms side by side) and 16 (the ducting
    terms): one MATLAB export each from code already in both repos.
 3. Items 2, 3, 22, 26, 27 (inputs, swaps, reciprocity, continuity): cheap
@@ -104,6 +105,11 @@ MATLAB CSV files; Python draws only.
 5. Items 18, 19, 23 (later).
 
 ## 5. Checks
+
+The ledger was checked against both codebases and the Recommendation by an
+independent review on 2026-11-08; its six errors and nine imprecisions are
+corrected above.
+
 
 - Every number quoted in the paper's text comes from `numbers_3ghz.json`,
   which `paper_numbers_3ghz_rev1` writes; no number is typed by hand.

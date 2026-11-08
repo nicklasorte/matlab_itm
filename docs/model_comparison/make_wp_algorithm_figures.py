@@ -235,8 +235,79 @@ def s43_mechanism_agreement():
     save(fig, "s43_mechanism_agreement")
 
 
+def s44_two_obstacles():
+    """Two ridges: ITM far above the two-edge references, P.2001 near them."""
+    T = rd("fam_two_obstacles.csv")
+    T["itm"] = T.itm_db - T.fs_db; T["p"] = T.p2001_db - T.fs_db
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.3), layout="constrained")
+    a = axs[0]
+    H = sorted(T.h1_m.unique())
+    Z = T.pivot(index="h1_m", columns="h2_m", values="itm").values - T.pivot(index="h1_m", columns="h2_m", values="p").values
+    im = a.pcolormesh(np.r_[H, H[-1] + 20] - 10, np.r_[H, H[-1] + 20] - 10, Z, cmap="Purples", vmin=0, vmax=80, shading="flat")
+    cs = a.contour(H, H, Z, levels=[10, 20, 40], colors=DB, linewidths=0.8)
+    a.clabel(cs, fmt="%d dB", fontsize=7.5)
+    a.set_xlabel("Ridge at 20 km, height (m)"); a.set_ylabel("Ridge at 10 km, height (m)")
+    a.set_title("ITM minus P.2001 (dB)", loc="left", fontsize=9, color=DB)
+    a.set_aspect("equal")
+    for sp in a.spines.values():
+        sp.set_visible(False)
+    b = axs[1]; clean(b)
+    q = T[T.h1_m == T.h2_m]
+    b.fill_between(q.h1_m, q[["epstein_peterson_db", "deygout_db"]].min(axis=1), q[["epstein_peterson_db", "deygout_db"]].max(axis=1),
+                   color=LG2, alpha=0.8, lw=0)
+    b.plot(q.h1_m, q.p, color=DB, lw=2.2)
+    b.plot(q.h1_m, q.itm, color=LB, lw=2.2)
+    b.set_xlabel("Height of both ridges (m)"); b.set_ylabel("Loss above free space (dB)")
+    b.set_title("Two equal ridges", loc="left", fontsize=9, color=DB)
+    b.set_xlim(0, 300); b.set_ylim(0, 140)
+    b.text(300, q.itm.iloc[-1] - 4, "ITM", color=LB, fontsize=8.5, fontweight="semibold", ha="right", va="top")
+    b.text(300, q.p.iloc[-1] - 4, "P.2001", color=DB, fontsize=8.5, fontweight="semibold", ha="right", va="top")
+    b.text(235, 74, "Two-edge references\n(Epstein-Peterson\nto Deygout)", color=GR, fontsize=7.5, ha="center", va="bottom")
+    save(fig, "s44_two_obstacles")
+
+
+def s45_roughness_grid():
+    """Synthetic rough terrain: the gap is set by roughness, and long paths reconverge."""
+    G = rd("fam_roughness_grid.csv")
+    D = sorted(G.d_km.unique()); DH = sorted(G.target_delta_h_m.unique())
+    Z = G.pivot(index="target_delta_h_m", columns="d_km", values="median_gap_db").loc[DH, D].values
+    fig, ax = new(h=3.4)
+    ax.imshow(Z, cmap="Purples", vmin=0, vmax=70, aspect="auto", origin="lower")
+    for i in range(len(DH)):
+        for j in range(len(D)):
+            v = Z[i, j]
+            ax.text(j, i, f"{round(v) + 0:.0f}", ha="center", va="center", fontsize=8.5, color="white" if v > 40 else DB,
+                    fontweight="semibold" if v >= 20 else "normal")
+    ax.set_xticks(range(len(D)), [f"{d:g}" for d in D]); ax.set_yticks(range(len(DH)), [f"{h:,.0f}" for h in DH])
+    ax.set_xlabel("Path length (km)"); ax.set_ylabel("Terrain roughness:\ninterdecile range of heights (m)")
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+    ax.tick_params(length=0)
+    ax.set_title("Median ITM minus P.2001 (dB), 20 synthetic profiles per cell", loc="left", fontsize=9, color=DB)
+    save(fig, "s45_roughness_grid")
+
+
+def s46_evaluation_point():
+    """Giving P.2001 ITM's construction doesn't close the gap."""
+    P = rd("fam_evaluation_point.csv")
+    u = P[P.used == 1].copy()
+    u["g0"] = u.itm_excess_db - u.p2001_excess_db
+    u["g1"] = u.itm_excess_db - u.p2001_line_at_path_db
+    fig, ax = new(h=3.2); clean(ax)
+    for _, r in u.iterrows():
+        ax.plot([0, 1], [r.g0, r.g1], color=LG2, lw=0.8, zorder=1)
+    m0, m1 = u.g0.median(), u.g1.median()
+    ax.plot([0, 1], [m0, m1], color=PU, lw=2.6, marker="o", zorder=3)
+    ax.text(-0.04, m0, f"{m0:.0f} dB", color=PU, ha="right", va="center", fontsize=9, fontweight="semibold")
+    ax.text(1.04, m1, f"{m1:.0f} dB median", color=PU, ha="left", va="center", fontsize=9, fontweight="semibold")
+    ax.set_xticks([0, 1], ["P.2001 as it stands", "P.2001 evaluated at ITM's\nd₃ and d₄ and extended"])
+    ax.set_xlim(-0.35, 1.45); ax.axhline(0, color=DB, lw=0.6)
+    ax.set_ylabel("ITM minus P.2001 (dB)")
+    save(fig, "s46_evaluation_point")
+
+
 ALL = [s38_architecture, s39_smooth_mechanisms, s40_itm_anatomy, s41_line_of_sight, s42_time_mechanisms,
-       s43_mechanism_agreement]
+       s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point]
 
 if __name__ == "__main__":
     for fn in ALL:
