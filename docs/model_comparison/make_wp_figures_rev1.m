@@ -102,8 +102,10 @@ save_fig(fig, out, 'fig01_smooth_earth_land_50pct');
 
 %% E2: single knife edge vs. P.526 -----------------------------------------
 fprintf('E2 knife edge ...\n');
-H = [0 5 10 15 20 25 30 40 50 60 80 100 125 150 200];
-L_km = 20; h_ant = 20; ae = 6371e3 * 4 / 3;
+% Tall antennas (100 m) keep the smooth-earth term small, so the
+% excess loss is mostly the knife edge
+H = [0 25 50 75 100 125 150 175 200 250 300 400 500 600];
+L_km = 20; h_ant = 100; ae = 6371e3 * 4 / 3;
 for f = 1:numel(F)
     lam = 299.792458 / F(f);                   % m
     for k = 1:numel(H)
@@ -130,7 +132,7 @@ for f = 1:numel(F)
     ax = nexttile(tl); hold(ax, 'on');
     plot(ax, E2.v(f, :), E2.J(f, :), 'k--', 'LineWidth', 1.5, 'DisplayName', 'P.526 knife edge J(v)');
     plot_models(ax, E2.v(f, :), E2.itm(f, :), E2.p452(f, :), E2.p2001(f, :));
-    title(ax, sprintf('%g MHz, 20 km path, 20 m antennas', F(f))); xlabel(ax, 'Fresnel-Kirchhoff parameter v');
+    title(ax, sprintf('%g MHz, 20 km path, 100 m antennas', F(f))); xlabel(ax, 'Fresnel-Kirchhoff parameter v');
     if f == 1, ylabel(ax, 'Excess loss over free space (dB)'); legend(ax, 'Location', 'northwest'); end
     grid(ax, 'on');
 end
@@ -628,6 +630,11 @@ end
 end
 
 function save_fig(fig, out, name)
+% Light theme and white background whatever the desktop theme, for print
+if exist('theme', 'file') || exist('theme', 'builtin')
+    theme(fig, 'light');
+end
+set(fig, 'Color', 'w');
 exportgraphics(fig, fullfile(out, name + ".png"), 'Resolution', 200);
 close(fig);
 end
