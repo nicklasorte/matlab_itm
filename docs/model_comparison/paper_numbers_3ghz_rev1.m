@@ -343,6 +343,11 @@ if isfile(fullfile(CD, 'term_smooth_earth.csv'))
     N = term_numbers(N, CD, r1);
 end
 
+% ---- implementation checks (implementation_checks_rev1) ----
+if isfile(fullfile(CD, 'check_inputs.csv'))
+    N = check_numbers(N, CD, r1);
+end
+
 % ---- western terrain sample (western_terrain_rev1) ----
 fw = fullfile(CD, 'western_links.csv');
 if isfile(fw)
@@ -704,6 +709,47 @@ for i = 1:numel(nm)
     q2 = q(q.time_pct >= 0.01 & q.time_pct <= 99, :);
     [~, j2] = max(abs(q2.diff));
     N(key + "max_core") = [r1(q2.diff(j2)), q2.time_pct(j2)];
+end
+end
+
+function N = check_numbers(N, CD, r1)
+% Plan items 2, 3, 22, 26, and 27
+I = readtable(fullfile(CD, 'check_inputs.csv'), 'TextType', 'string');
+gap = I.itm_db - I.p2001_db;
+N("chk_n") = height(I);
+N("chk_rho_dh_hm") = round(100 * corr(I.itm_delta_h_m, I.p2001_hm_m, 'Type', 'Spearman')) / 100;
+N("chk_rho_dh_gap") = round(100 * corr(I.itm_delta_h_m, gap, 'Type', 'Spearman')) / 100;
+N("chk_rho_hm_gap") = round(100 * corr(I.p2001_hm_m, gap, 'Type', 'Spearman')) / 100;
+for sd = ["East", "West"]
+    q = I(I.side == sd, :);
+    N("chk_dh_hm_" + sd) = [round(median(q.itm_delta_h_m)), round(median(q.p2001_hm_m))];
+end
+he_itm = [I.itm_he_tx_m; I.itm_he_rx_m]; he_p = [I.p2001_htep_m; I.p2001_hrep_m]; he_a = [I.p2001_htea_m; I.p2001_hrea_m];
+hg = [I.h_tx_m; I.h_rx_m];
+N("chk_he_med") = [round(median(he_itm)), round(median(he_p)), round(median(he_a))];
+N("chk_he_absdiff") = [round(median(abs(he_itm - he_p))), round(max(abs(he_itm - he_p)))];
+N("chk_he_p_gt_itm") = round(100 * mean(he_p > he_itm + 1));
+N("chk_he_itm_below_hg") = nnz(he_itm < hg - 1e-6); N("chk_he_p_below_hg") = nnz(he_p < hg - 1e-6);
+N("chk_he_n") = numel(he_itm);
+S = readtable(fullfile(CD, 'check_radius_swap.csv'), 'TextType', 'string');
+N("chk_ae_med") = [round(median(S.itm_ae_km)), round(median(S.p2001_ae50_km))];
+N("chk_ae_range") = [round(min(S.itm_ae_km - S.p2001_ae50_km)), round(max(S.itm_ae_km - S.p2001_ae50_km))];
+di = abs(S.itm_at_p2001_ae_db - S.itm_db); dp = abs(S.p2001_at_itm_ae_db - S.p2001_db);
+N("chk_swap_itm") = [r1(median(di)), r1(max(di))]; N("chk_swap_p2001") = [r1(median(dp)), r1(max(dp))];
+N("chk_swap_gap") = [r1(median(S.itm_db - S.p2001_db)), r1(median(S.itm_at_p2001_ae_db - S.p2001_db)), r1(median(S.itm_db - S.p2001_at_itm_ae_db))];
+R = readtable(fullfile(CD, 'check_reciprocity.csv'), 'TextType', 'string');
+ai = abs(R.itm_db - R.itm_reversed_db); ap = abs(R.p2001_db - R.p2001_reversed_db);
+N("chk_rec_itm") = [round(max(ai), 2), nnz(ai > 0.01)]; N("chk_rec_p2001") = round(max(ap), 3);
+C = readtable(fullfile(CD, 'check_continuity.csv'), 'TextType', 'string');
+for pth = ["smooth earth", "Piedmont radial, east"]
+    q = C(C.path == pth, :); q = sortrows(q, 'd_km');
+    k = replace(extractBefore(pth + " ", " "), ",", "");
+    for m = ["itm", "p2001"]
+        x = q.(m + "_db") - q.fs_db; dx = diff(x);
+        N("chk_cont_" + k + "_" + m) = [r1(max(abs(dx))), nnz(abs(dx) > 3)];
+    end
+    N("chk_cont_" + k + "_itm_modeflips") = nnz(diff(q.itm_mode) ~= 0);
+    N("chk_cont_" + k + "_p2001_mechflips") = nnz(diff(q.p2001_mech) ~= 0);
 end
 end
 
