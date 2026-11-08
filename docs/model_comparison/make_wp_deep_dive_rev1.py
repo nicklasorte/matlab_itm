@@ -183,7 +183,7 @@ def fig35():
             x += v
         a2.text(x + 2, i, f"{tot:.0f} dB at 50 %", va="center", fontsize=8.5, fontweight="semibold")
     a2.set_yticks(range(3), [r[0] for r in rows]); a2.set_ylim(2.6, -0.6); a2.set_xlim(0, 185)
-    a2.set_xlabel("Diffraction loss above free space at 2.7 GHz (dB)")
+    a2.set_xlabel(f"Diffraction loss above free space at {F0 / 1000:g} GHz (dB)")
     save(fig, "fig35_anatomy_of_a_link")
 
 

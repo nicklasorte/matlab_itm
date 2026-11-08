@@ -65,7 +65,7 @@ writetable(G, fullfile(options.OutDir, 'real_terrain_gap_by_time.csv'));
 E3 = R.E3; rn = ["30 m", "90 m", "1 km smoothed"]; rows = {};
 for j = 1:numel(E3.links)
     for v = 1:3
-        rows(end + 1, :) = {E3.links(j), rn(v), 2700, E3.itm(j, v), E3.p452(j, v), E3.p2001(j, v), E3.dh(j, v)}; %#ok<AGROW>
+        rows(end + 1, :) = {E3.links(j), rn(v), F(1), E3.itm(j, v), E3.p452(j, v), E3.p2001(j, v), E3.dh(j, v)}; %#ok<AGROW>
     end
 end
 writetable(cell2table(rows, 'VariableNames', {'link', 'resolution', 'freq_mhz', 'itm_50_db', 'p452_50_db', ...
