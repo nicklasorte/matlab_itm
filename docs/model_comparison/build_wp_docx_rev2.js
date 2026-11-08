@@ -462,6 +462,37 @@ startList();
 REFS.forEach((r) => body.push(N(r)));
 
 // ===== Appendix
+// ===== Full-page figure options
+function onepage(file, label) {
+  const full = path.join(FIG, file);
+  const out = [new Paragraph({ children: [new PageBreak()] })];
+  if (fs.existsSync(full)) {
+    const s = pngSize(full);
+    const w = 624, h = Math.round(624 * s.h / s.w);
+    out.push(new Paragraph({ alignment: AlignmentType.CENTER, keepNext: true,
+      children: [new ImageRun({ type: "png", data: fs.readFileSync(full), transformation: { width: w, height: h } })] }));
+  } else {
+    out.push(P(`[Figure file ${file} not found]`));
+  }
+  out.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: label, bold: true, font: FONT, size: 18 })] }));
+  return out;
+}
+body.push(new Paragraph({ children: [new PageBreak()] }));
+body.push(H1("Appendix: full-page figure options"));
+body.push(P("This appendix gives five full-page designs for each of the paper's four main findings, for the author to choose from before the next revision. Each page stands alone: it carries the marking, the takeaway as its headline, and a source line. ITM is NTIA light blue, P.2001 dark blue, and P.452 gray throughout; sequential scales, including \"dB off\" and \"dB apart,\" use the plasma colormap, and over-and-under scales use dark blue for too little loss and purple for too much."));
+body.push(P("The pages are drawn with Python (matplotlib) by make_wp_charts_rev1.py, from CSV files only: chart_data/ (exported from the MATLAB results by export_wp_chart_data_rev1.m) and the result tables in figures/."));
+const OPTS = [
+  ["1", "The models agree in line of sight and split beyond the horizon", [["1a_strip", "strip plot"], ["1b_dumbbell", "dumbbell"], ["1c_map", "map colored by dB apart"], ["1d_heat", "heat table"], ["1e_violins", "violin plots"]]],
+  ["2", "The diffraction gap and what causes it", [["2a_gap_vs_terrain", "gap against terrain roughness"], ["2b_waterfall", "waterfall"], ["2c_slope", "slope chart"], ["2d_heat_terrain", "heat table by terrain and frequency"], ["2e_stacked_terms", "stacked terms"]]],
+  ["3", "Comparison with measurements at the median", [["3a_cdf_dB_off", "cumulative dB off"], ["3b_strips_by_band", "strip plots by band"], ["3c_range_bars", "range bars"], ["3d_heat_bias", "heat table of bias"], ["3e_map_dB_off", "map colored by dB off"]]],
+  ["4", "The tails of the time distribution", [["4a_bias_vs_time", "bias against time percentage"], ["4b_heat_by_time", "heat tables by band and time"], ["4c_dumbbell_50_vs_1", "dumbbell, 50 % against 1 %"], ["4d_enhancement_depth", "enhancement depth"], ["4e_gap_vs_time", "model gap against time on real terrain"]]],
+];
+for (const [n, title, items] of OPTS) {
+  body.push(H2(`Finding ${n}: ${title}`));
+  body.push(P(`Options ${n}A to ${n}E follow, one per page.`));
+  items.forEach(([f, lab], i) => body.push(...onepage(`chart_${f}.png`, `Option ${n}${"ABCDE"[i]}: ${lab}`)));
+}
+body.push(new Paragraph({ children: [new PageBreak()] }));
 body.push(H1("Appendix: reproducing the figures"));
 body.push(P("Every figure comes from MATLAB code in the matlab_itm repository, folder docs/model_comparison. To reproduce them, do the following:"));
 startList();
@@ -472,6 +503,7 @@ body.push(P("The model code cited in the footnotes is pinned to these commits:")
 body.push(B({ b: "matlab_itm: " }, SHA.itm));
 body.push(B({ b: "itu_p2001: " }, SHA.p2001));
 body.push(B({ b: "matlab_itu_p452: " }, SHA.p452));
+body.push(P("The full-page options come from python3 make_wp_charts_rev1.py in docs/model_comparison, after export_wp_chart_data_rev1 in MATLAB writes chart_data/."));
 body.push(P("The measured data are data/dbsg3/dbsg3_tableiii_30mhz_10ghz.csv, built from the ITU-R databank download in data/dbsg3; the model results for every dataset are in figures/table_dbsg3_by_dataset_survey.csv."));
 
 // ---------- assemble ----------
