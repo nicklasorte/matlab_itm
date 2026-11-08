@@ -453,6 +453,8 @@ O = K(K.siting == "O", :); Cn = K(K.siting == "C", :);
 Pp = O(io, {'set', 'path', 'freq_mhz', 'group', 'd_km'});
 Pp.meas_c_minus_o_db = Cn.meas_lb_db(ic) - O.meas_lb_db(io);
 for m = M, Pp.(m + "_c_minus_o_db") = Cn.(m + "_50")(ic) - O.(m + "_50")(io); end
+Pp.band = repmat("3-10 GHz", height(Pp), 1);
+Pp.band(Pp.freq_mhz < 3000) = "1-3 GHz"; Pp.band(Pp.freq_mhz < 1000) = "0.3-1 GHz"; Pp.band(Pp.freq_mhz < 300) = "Below 0.3 GHz";
 writetable(Pp, fullfile(CD, 'its_phase2_pairs.csv'));
 N("its_pairs_n") = height(Pp); N("its_pairs_paths") = numel(unique(Pp.set + Pp.path));
 bands = {"lo", Pp.freq_mhz < 1000; "mid", Pp.freq_mhz >= 1000 & Pp.freq_mhz < 3000; "hi", Pp.freq_mhz >= 3000};

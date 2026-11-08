@@ -633,28 +633,27 @@ def s33_its_error_by_distance():
 
 
 def s34_its_concealed():
-    """Measured loss at the concealed site minus the open site, against the models."""
+    """Measured loss at the concealed site minus the open site, by band, against the models."""
     f = CD / "its_phase2_pairs.csv"
     if not f.exists():
         return
     t = pd.read_csv(f)
-    fr = sorted(t.freq_mhz.unique())
+    bands = [b for b in ["Below 0.3 GHz", "0.3-1 GHz", "1-3 GHz", "3-10 GHz"] if (t.band == b).any()]
     fig, ax = new(); clean(ax)
     rng = np.random.default_rng(1)
-    for i, fq in enumerate(fr):
-        q = t[t.freq_mhz == fq].meas_c_minus_o_db.values
-        ax.scatter(i + rng.uniform(-0.18, 0.18, len(q)), q, s=12, color=GR, alpha=0.45, lw=0, zorder=2)
-        ax.plot([i - 0.28, i + 0.28], [np.median(q)] * 2, color=PU, lw=2.4, zorder=3)
-        mm = np.median(t[t.freq_mhz == fq].p2001_c_minus_o_db)
-        ax.plot([i - 0.28, i + 0.28], [mm] * 2, color=DB, lw=1.4, ls=(0, (3, 2)), zorder=3)
-    ax.axhline(0, color=DB, lw=0.8)
-    ax.set_xticks(range(len(fr)), [f"{x:g}" for x in fr]); ax.set_xlabel("Frequency (MHz)")
-    ax.set_ylabel("Concealed minus open site,\nmeasured loss (dB)")
-    ax.text(len(fr) - 0.6, np.median(t[t.freq_mhz == fr[-1]].meas_c_minus_o_db), " Measured median", color=PU, fontsize=8.5,
+    for i, bn in enumerate(bands):
+        q = t[t.band == bn]
+        ax.scatter(i + rng.uniform(-0.2, 0.2, len(q)), q.meas_c_minus_o_db, s=12, color=GR, alpha=0.45, lw=0, zorder=2)
+        ax.plot([i - 0.3, i + 0.3], [q.meas_c_minus_o_db.median()] * 2, color=PU, lw=2.6, zorder=3)
+        ax.plot([i - 0.3, i + 0.3], [q.p2001_c_minus_o_db.median()] * 2, color=DB, lw=1.4, ls=(0, (3, 2)), zorder=3)
+    ax.axhline(0, color=DB, lw=0.6)
+    ax.set_xticks(range(len(bands)), [f"{b}\n({(t.band == b).sum()} pairs)" for b in bands])
+    last = t[t.band == bands[-1]]
+    ax.text(len(bands) - 0.65, last.meas_c_minus_o_db.median(), " Measured median", color=PU, fontsize=8.5,
             fontweight="semibold", va="bottom")
-    ax.text(len(fr) - 0.6, np.median(t[t.freq_mhz == fr[-1]].p2001_c_minus_o_db), " Models (no clutter)", color=DB, fontsize=8.5,
-            va="top")
-    ax.set_xlim(-0.5, len(fr) + 1.3)
+    ax.text(len(bands) - 0.65, last.p2001_c_minus_o_db.median() - 1, " Models (no clutter)", color=DB, fontsize=8.5, va="top")
+    ax.set_xlim(-0.5, len(bands) + 0.6)
+    ax.set_ylabel("Concealed minus open site,\nmeasured loss (dB)")
     save(fig, "s34_its_concealed")
 
 
@@ -672,9 +671,7 @@ def s35_east_west():
     ax.set_xticks([10, 100, 1000], ["10", "100", "1,000"])
     ax.set_xlabel("ITM terrain irregularity Δh (m), log scale"); ax.set_ylabel(YL)
     ax.text(5, e.itm_minus_p2001_db.max() * 0.15 + 3, "Eastern links (60)", color=GR, fontsize=9, fontweight="semibold")
-    k = w.delta_h_m.idxmax()
-    ax.text(0.98, 0.96, f"Western links ({len(w)})", transform=ax.transAxes, ha="right", va="top", color=PU, fontsize=9,
-            fontweight="semibold")
+    ax.text(60, 70, f"Western links ({len(w)})", ha="center", color=PU, fontsize=9, fontweight="semibold")
     save(fig, "s35_east_west")
 
 
