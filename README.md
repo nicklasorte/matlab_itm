@@ -524,7 +524,9 @@ ITM, TIREM (on the SEADLib profile and through `propagationModel("tirem")`),
 MathWorks' `propagationModel("longley-rice")` on the same 1" terrain, and
 ITU-R P.452-18 from [matlab_itu_p452](https://github.com/nicklasorte/matlab_itu_p452)
 (bare earth, and with Copernicus ground cover; P.452 covers 0.001 to 50 %
-only). Put matlab_itu_p452 next to this repository or pass `P452Dir`. It compares loss from 0.1 to
+only), and ITU-R P.2001-6 from [itu_p2001](https://github.com/nicklasorte/itu_p2001).
+Put matlab_itu_p452 and itu_p2001 next to this repository, or pass
+`P452Dir` and `P2001Dir`. It compares loss from 0.1 to
 99.9 %, elevation angles, propagation mechanism, and time per link, and
 writes every result to an Excel workbook. Models that aren't installed are
 skipped: SEADLib needs Windows and `C:\USGS`, and TIREM needs its library.
