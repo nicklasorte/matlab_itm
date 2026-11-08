@@ -328,6 +328,11 @@ if isfile(fg)
     N("gclut_loss_p90") = r1(unique(Gc.median_clutter_loss_db(Gc.clutter == "rx_p90")));
 end
 
+% ---- algorithm comparison (algorithm_comparison_rev1) ----
+if isfile(fullfile(CD, 'alg_smooth_sweep.csv'))
+    N = alg_numbers(N, CD, r1);
+end
+
 % ---- western terrain sample (western_terrain_rev1) ----
 fw = fullfile(CD, 'western_links.csv');
 if isfile(fw)
@@ -529,6 +534,69 @@ q = T(T.terrain ~= "dem_high", :);
 N("spot_gap_med") = r1(median(q.itm_50 - q.p2001_50, 'omitnan'));
 a = T(T.terrain == "dem", :); b = T(T.terrain == "dem_high", :);
 N("spot_shift_itm") = r1(median(b.itm_50 - a.itm_50, 'omitnan'));
+end
+
+function N = alg_numbers(N, CD, r1)
+% Numbers for the ITM and P.2001 algorithm comparison
+S = readtable(fullfile(CD, 'alg_smooth_sweep.csv'));
+for p = [50 1]
+    q = S(S.time_pct == p, :);
+    g = q.itm_lb_db - q.p2001_lb_db;
+    N(sprintf('alg_s%d_maxabs', p)) = r1(max(abs(g)));
+    N(sprintf('alg_s%d_gap120', p)) = r1(g(q.d_km == 120));
+    k = find(q.p2001_mech == 3, 1); if ~isempty(k), N(sprintf('alg_s%d_tropo_from', p)) = round(q.d_km(k)); end
+    k = find(q.p2001_mech == 2, 1); if ~isempty(k), N(sprintf('alg_s%d_anom_from', p)) = round(q.d_km(k)); end
+    k = find(q.itm_mode == 3, 1); if ~isempty(k), N(sprintf('alg_s%d_itm_tropo_from', p)) = round(q.d_km(k)); end
+    w = q.d_km >= 50 & q.d_km <= 400;
+    N(sprintf('alg_s%d_gap_50_400', p)) = [r1(min(g(w))), r1(max(g(w)))];
+end
+q = S(S.time_pct == 50, :);
+N("alg_d_sml") = r1(q.itm_d_sml_km(1)); N("alg_d_x") = r1(max(q.itm_d_x_km));
+q1 = S(S.time_pct == 1 & S.d_km == 120, :); q5 = S(S.time_pct == 50 & S.d_km == 120, :);
+N("alg_120_itm") = [r1(q5.itm_lb_db), r1(q1.itm_lb_db)]; N("alg_120_p2001") = [r1(q5.p2001_lb_db), r1(q1.p2001_lb_db)];
+N("alg_120_lbm") = [r1(q1.p2001_lbm1_db), r1(q1.p2001_lbm2_db), r1(q1.p2001_lbm3_db)];
+L = readtable(fullfile(CD, 'alg_los_sweep.csv'));
+N("alg_los_tworay") = [r1(min(L.tworay_excess_db(L.d_km >= 2))), r1(max(L.tworay_excess_db(L.d_km >= 2)))];
+s = L.d_km <= 20;
+N("alg_los_itm_max") = r1(max(abs(L.itm_excess_db(s)))); N("alg_los_p2001_max") = r1(max(abs(L.p2001_excess_db(s))));
+k = find(L.p2001_excess_db > 1, 1); N("alg_los_p2001_from") = r1(L.d_km(k));
+k = find(L.itm_excess_db > 1, 1); N("alg_los_itm_from") = r1(L.d_km(k));
+A = readtable(fullfile(CD, 'alg_itm_anatomy.csv'), 'TextType', 'string');
+nm = unique(A.path, 'stable');
+for i = 1:numel(nm)
+    a = A(A.path == nm(i), :); key = sprintf('alg_an%d_', i);
+    g = @(kd, col) a.(col)(a.kind == kd);
+    N(key + "name") = nm(i);
+    N(key + "d") = r1(g("itm_at_path", 'd_km'));
+    N(key + "itm") = r1(g("itm_at_path", 'value_db')); N(key + "p2001") = r1(g("p2001_at_path", 'value_db'));
+    N(key + "d3") = [r1(g("d_3", 'd_km')), r1(g("d_3", 'value_db'))]; N(key + "d4") = [r1(g("d_4", 'd_km')), r1(g("d_4", 'value_db'))];
+    N(key + "d5") = [r1(g("d_5", 'd_km')), r1(g("d_5", 'value_db'))]; N(key + "d6") = [r1(g("d_6", 'd_km')), r1(g("d_6", 'value_db'))];
+    N(key + "dml") = r1(g("d_ML", 'd_km')); N(key + "dsml") = r1(g("d_sML", 'd_km')); N(key + "dx") = r1(g("d_x", 'd_km'));
+end
+T = readtable(fullfile(CD, 'alg_time_sweep.csv'), 'TextType', 'string');
+nm = unique(T.path, 'stable');
+for i = 1:numel(nm)
+    t = T(T.path == nm(i), :); key = sprintf('alg_t%d_', i);
+    v = @(col, p) t.(col)(t.time_pct == p);
+    N(key + "itm_spread") = r1(v('itm_lb_db', 99) - v('itm_lb_db', 1));
+    N(key + "p2001_spread") = r1(v('p2001_lb_db', 99) - v('p2001_lb_db', 1));
+    k = find(t.p2001_mech ~= 2, 1);
+    if t.p2001_mech(1) == 2 && ~isempty(k), N(key + "anom_until") = t.time_pct(k - 1); end
+end
+C = readtable(fullfile(CD, 'alg_constants.csv'), 'TextType', 'string');
+N("alg_ns") = r1(C.value(1)); N("alg_ae_itm") = round(C.value(2)); N("alg_dn50") = r1(C.value(3));
+N("alg_ae_p2001_50") = round(C.value(4)); N("alg_ae_p2001_1") = round(C.value(5));
+M = readtable(fullfile(CD, 'alg_mechanism_links.csv'), 'TextType', 'string');
+for p = [50 1]
+    m = M(M.time_pct == p, :);
+    tro = ismember(m.itm_mode_code, [6 10]);
+    N(sprintf('alg_m%d_itm_tropo', p)) = nnz(tro);
+    N(sprintf('alg_m%d_itm_tropo_p2001_diff', p)) = nnz(tro & m.p2001_mech == 1);
+    N(sprintf('alg_m%d_p2001_anom', p)) = nnz(m.p2001_mech == 2);
+    N(sprintf('alg_m%d_agree', p)) = nnz((m.itm_mode_code == 0 & m.p2001_mech == 0) | ...
+        (ismember(m.itm_mode_code, [4 5 8 9]) & m.p2001_mech == 1) | (tro & m.p2001_mech == 3));
+    N(sprintf('alg_m%d_n', p)) = height(m);
+end
 end
 
 function m = km_median(e, cens, w)

@@ -1,0 +1,6 @@
+model,quantity,value
+ITM,"surface refractivity N_s (N-units)",285.504029298854
+ITM,"effective earth radius (km)",8264.39000441886
+P.2001,"refractivity gradient, lowest 1 km, median (N-units/km)",-36.7404873481667
+P.2001,"effective earth radius at 50 % (km)",8317.40440272566
+P.2001,"effective earth radius at 1 % (km)",12384.829137072
