@@ -69,6 +69,11 @@ function [A_db, info] = itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability, op
 %            otherwise, on ITM's effective earth. theta_hzn_rad is ITM's
 %            internal horizon angle, which on paths well within line of
 %            sight is a smooth-earth estimate, not the geometric angle.
+%            lines (diagnostic) shows how the reference attenuation was
+%            built: the diffraction line through (d_3_m, A_3_db) and
+%            (d_4_m, A_4_db), the line-of-sight fit through d_0_m, d_1_m,
+%            and d_sML_m, and the scatter line through (d_5_m, A_5_db)
+%            and (d_6_m, A_6_db) with crossover d_x_m; NaN where unused.
 %
 %   Errors use identifiers of the form itm:<Name> and quote the C++ error
 %   code, for example itm:InvalidReliability (1007).

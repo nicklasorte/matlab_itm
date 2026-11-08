@@ -47,7 +47,7 @@ h_m = [h_tx_m, h_rx_m];
 [theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m, theta_geo] = quick_pfl(pfl, gamma_e, h_m);
 elev_deg = rad2deg(theta_geo);
 
-[A_ref_db, warnings, propmode] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
+[A_ref_db, warnings, propmode, lines] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
     gamma_e, N_s, delta_h_m, h_m, d_m, warnings);
 
 A_fs_db = free_space_loss(d_m, f_mhz);
@@ -92,7 +92,8 @@ if want_info
         'mode_name', mode_names(propmode), ...
         'mode_code', mode_code, ...
         'warnings', reshape(w, out_size), ...
-        'warning_messages', {itm_warning_text(wbits)});
+        'warning_messages', {itm_warning_text(wbits)}, ...
+        'lines', lines);
 end
 end
 
@@ -363,8 +364,13 @@ end
 %% ------------------------------------------------------------------------
 %  Reference attenuation (LongleyRice.cpp)
 %  ------------------------------------------------------------------------
-function [A_ref_db, warnings, propmode] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
+function [A_ref_db, warnings, propmode, lines] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
     gamma_e, N_s, delta_h_m, h_m, d_m, warnings)
+% lines: the reference-attenuation construction, for diagnostics (info.lines):
+% the diffraction line through (d_3, A_3) and (d_4, A_4), the line-of-sight
+% fit through (d_0, A_0), (d_1, A_1), and (d_sML, A_sML), and the scatter
+% line through (d_5, A_5) and (d_6, A_6), all in metres and dB. Fields that a
+% path's region doesn't compute are NaN.
 a_e = 1 / gamma_e;
 d_hzn_s = sqrt(2.0 * h_e_m * a_e);
 d_sML = d_hzn_s(1) + d_hzn_s(2);
@@ -390,6 +396,12 @@ A_3 = diffraction_loss(d_3, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los,
 A_4 = diffraction_loss(d_4, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz);
 M_d = (A_4 - A_3) / (d_4 - d_3);
 A_d0 = A_3 - M_d * d_3;
+nan_ = NaN;
+lines = struct('a_e_m', a_e, 'd_sML_m', d_sML, 'd_ML_m', d_ML, 'theta_los_rad', theta_los, ...
+    'd_3_m', d_3, 'd_4_m', d_4, 'A_3_db', A_3, 'A_4_db', A_4, 'M_d', M_d, 'A_d0_db', A_d0, ...
+    'd_0_m', nan_, 'd_1_m', nan_, 'A_0_db', nan_, 'A_1_db', nan_, 'A_sML_db', nan_, ...
+    'kHat_1', nan_, 'kHat_2', nan_, 'A_o_db', nan_, ...
+    'd_5_m', nan_, 'd_6_m', nan_, 'A_5_db', nan_, 'A_6_db', nan_, 'M_s', nan_, 'A_s0_db', nan_, 'd_x_m', nan_);
 
 d_min = abs(h_e_m(1) - h_e_m(2)) / 200e-3;
 if d_m < d_min,   warnings = bitor(warnings, 32); end
@@ -438,6 +450,9 @@ if d_m < d_sML
     A_o = A_sML - kHat_1 * d_sML - kHat_2 * log(d_sML);
     A_ref_db = A_o + kHat_1 * d_m + kHat_2 * log(d_m);
     propmode = 1;
+    lines.d_0_m = d_0; lines.d_1_m = d_1; lines.A_1_db = A_1; lines.A_sML_db = A_sML;
+    if d_0 < d_1, lines.A_0_db = A_0; end
+    lines.kHat_1 = kHat_1; lines.kHat_2 = kHat_2; lines.A_o_db = A_o;
 else
     % Transhorizon: diffraction or troposcatter
     d_5 = d_ML + 200e3;
@@ -455,6 +470,8 @@ else
         A_s0 = A_d0;
         d_x = 10e6;
     end
+    lines.d_5_m = d_5; lines.d_6_m = d_6; lines.A_5_db = A_5; lines.A_6_db = A_6;
+    lines.M_s = M_s; lines.A_s0_db = A_s0; lines.d_x_m = d_x;
     if d_m > d_x
         A_ref_db = M_s * d_m + A_s0;
         propmode = 3;
