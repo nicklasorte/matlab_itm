@@ -239,10 +239,13 @@ N("sens_gap_range") = [r1(min(q.median_gap_to_p2001_db)), r1(max(q.median_gap_to
 % ---- grid ----
 rows = {};
 for site = ["dc", "la"]
-    f = fullfile(CD, "grid_" + site + "_exclusion.csv");
+    tag = "_150km_2p5km";                          % the main grid: 300 km by 300 km at 2.5 km
+    if ~isfile(fullfile(CD, "grid_" + site + tag + "_exclusion.csv")), tag = ""; end
+    f = fullfile(CD, "grid_" + site + tag + "_exclusion.csv");
     if ~isfile(f), continue, end
     E = readtable(f, 'TextType', 'string'); E = E(E.time_pct == 50, :);
-    G = readtable(fullfile(CD, "grid_" + site + ".csv"));
+    G = readtable(fullfile(CD, "grid_" + site + tag + ".csv"));
+    N("grid_" + site + "_tag") = tag;
     ga = G.itm_50 - G.p2001_50;
     N("grid_" + site + "_gap_median") = r1(median(ga)); N("grid_" + site + "_gap_p90") = r1(prctile(ga, 90));
     N("grid_" + site + "_gap_max") = r1(max(ga)); N("grid_" + site + "_n") = height(G);
@@ -257,6 +260,20 @@ for site = ["dc", "la"]
     end
 end
 writetable(cell2table(rows, 'VariableNames', {'site', 'model', 'required_loss_db', 'area_km2', 'max_distance_km'}), fullfile(CD, 'grid_summary.csv'));
+fc = fullfile(CD, 'grid_convergence.csv');
+if isfile(fc)
+    Cv = readtable(fc, 'TextType', 'string');
+    for i = 1:height(Cv)
+        if ~ismember(Cv.required_loss_db(i), [150 160 170 180]), continue, end
+        N(sprintf('conv_%s_%s_%d_%g_%g', Cv.site(i), Cv.model(i), Cv.required_loss_db(i), Cv.half_width_km(i), Cv.step_km(i))) = ...
+            [Cv.area_km2(i), Cv.edge_points(i), r1(Cv.max_distance_km(i))];
+    end
+    % largest change in area between the 2.5 km and 1 km steps on the 100 km grid, 150 to 170 dB
+    q = Cv(Cv.half_width_km == 50 & ismember(Cv.required_loss_db, [150 160 170]), :);
+    a1 = q(q.step_km == 1, :); a25 = q(q.step_km == 2.5, :); a5 = q(q.step_km == 5, :);
+    N("conv_step25_maxpct") = round(100 * max(abs(a25.area_km2 ./ a1.area_km2 - 1)));
+    N("conv_step5_maxpct") = round(100 * max(abs(a5.area_km2 ./ a1.area_km2 - 1)));
+end
 
 % ---- ITU-R VHF/UHF point-to-area measurements (compare_dbsg3_area_rev1) ----
 fa = fullfile(FIG, 'table_dbsg3_area.csv');

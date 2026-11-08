@@ -527,20 +527,26 @@ def s28_sensitivity():
 
 
 def s29_grid_maps():
-    fig, axs = plt.subplots(1, 2, figsize=(W, 3.5), layout="constrained")
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.7), layout="constrained")
     cmap = mpl.colors.LinearSegmentedColormap.from_list("gap", ["#F2F3F5", "#A9B8E3", LB, DB])
     norm = mpl.colors.Normalize(0, 60)
     for ax, site, title in ((axs[0], "dc", "Washington, DC"), (axs[1], "la", "Los Angeles")):
-        G = pd.read_csv(CD / f"grid_{site}.csv")
-        gap = (G.itm_50 - G.p2001_50).clip(lower=0)
-        ax.scatter(G.dx_km, G.dy_km, c=gap, cmap=cmap, norm=norm, s=62, marker="s", linewidths=0)
-        ax.scatter([0], [0], marker="*", s=160, color=PU, edgecolor="white", zorder=3)
-        ax.set_aspect("equal"); ax.set_xlim(-53, 53); ax.set_ylim(-53, 53)
-        ax.set_xticks([-50, 0, 50]); ax.set_yticks([-50, 0, 50]); ax.tick_params(length=0)
+        G = rf(f"fig_grid_{site}.csv"); Bm = rf(f"fig_grid_{site}_basemap.csv")
+        x = np.sort(G.dx_km.unique()); y = np.sort(G.dy_km.unique())
+        piv = lambda c: G.pivot_table(index="dy_km", columns="dx_km", values=c).reindex(index=y, columns=x).values
+        ax.pcolormesh(x, y, np.clip(piv("itm_minus_p2001_db"), 0, None), cmap=cmap, norm=norm, shading="nearest", rasterized=True)
+        ax.plot(Bm.dx_km, Bm.dy_km, color="white", lw=0.9, alpha=0.9); ax.plot(Bm.dx_km, Bm.dy_km, color=GR, lw=0.5)
+        for c, col, ls in (("p2001_excluded_160", PU, "-"), ("itm_excluded_160", "#FFFFFF", (0, (3, 2)))):
+            ax.contour(x, y, piv(c).astype(float), levels=[0.5], colors=[col], linewidths=1.6, linestyles=[ls])
+        ax.scatter([0], [0], marker="*", s=150, color=PU, edgecolor="white", zorder=4)
+        ax.set_aspect("equal"); ax.set_xlim(-152, 152); ax.set_ylim(-152, 152)
+        ax.set_xticks([-150, 0, 150]); ax.set_yticks([-150, 0, 150]); ax.tick_params(length=0)
         for sp in ax.spines.values():
             sp.set_visible(False)
         ax.set_title(title, loc="left"); ax.set_xlabel("km east of the receiver")
     axs[0].set_ylabel("km north of the receiver")
+    axs[1].text(0.02, 0.02, "Purple line: P.2001 exclusion at 160 dB\nWhite dashed line: ITM exclusion at 160 dB", transform=axs[1].transAxes,
+                fontsize=7.5, color=DB, va="bottom", bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.85))
     cb = fig.colorbar(mpl.cm.ScalarMappable(norm, cmap), ax=axs, shrink=0.8, pad=0.01)
     cb.outline.set_visible(False); cb.set_label(f"ITM minus P.2001 at {FT}, 50 % (dB)")
     save(fig, "s29_grid_maps")
@@ -550,14 +556,33 @@ def s30_grid_exclusion():
     fig, axs = plt.subplots(1, 2, figsize=(W, 3.0), sharey=True, layout="constrained")
     for ax, site, title in ((axs[0], "dc", "Washington, DC"), (axs[1], "la", "Los Angeles")):
         clean(ax)
-        E = pd.read_csv(CD / f"grid_{site}_exclusion.csv").query("time_pct == 50")
-        for m, ls in (("p2001", "-"), ("itm", "-")):
+        E = pd.read_csv(CD / f"grid_{site}_150km_2p5km_exclusion.csv").query("time_pct == 50")
+        for m in ("p2001", "itm"):
             q = E[E.model == m]
-            ax.plot(q.required_loss_db, q.area_km2 / 1000, color=MC[m], lw=2.4, ls=ls)
+            ax.plot(q.required_loss_db, q.area_km2 / 1000, color=MC[m], lw=2.4)
             label_end(ax, q.required_loss_db.iloc[-1], q.area_km2.iloc[-1] / 1000, ML[m] if m == "itm" else "P.2001, P.452", MC[m])
-        ax.set_title(title, loc="left"); ax.set_xlabel("Required loss (dB)"); ax.set_xlim(110, 198)
+        ax.set_title(title, loc="left"); ax.set_xlabel("Required loss (dB)"); ax.set_xlim(110, 222)
     axs[0].set_ylabel("Area where a single transmitter\nwould exceed the criterion (1,000 km²)")
     save(fig, "s30_grid_exclusion")
+
+
+def s32_grid_convergence():
+    Cv = pd.read_csv(CD / "grid_convergence.csv").query("required_loss_db == 160 and model in ['itm', 'p2001']")
+    fig, axs = plt.subplots(1, 2, figsize=(W, 2.9), sharey=True, layout="constrained")
+    for ax, site, title in ((axs[0], "dc", "Washington, DC"), (axs[1], "la", "Los Angeles")):
+        clean(ax)
+        for m in ("p2001", "itm"):
+            q = Cv[(Cv.site == site) & (Cv.model == m)]
+            a25 = q[q.step_km == 2.5].sort_values("half_width_km"); a5 = q[q.step_km == 5].sort_values("half_width_km"); a1 = q[q.step_km == 1]
+            ax.plot(2 * a25.half_width_km, a25.area_km2 / 1000, "-o", color=MC[m], lw=2.2, ms=6, mec="white")
+            ax.scatter(2 * a5.half_width_km, a5.area_km2 / 1000, s=40, facecolor="white", edgecolor=MC[m], linewidth=1.4, zorder=3)
+            ax.scatter(2 * a1.half_width_km, a1.area_km2 / 1000, s=40, marker="D", color=MC[m], edgecolor="white", zorder=3)
+            label_end(ax, 300, a25.area_km2.iloc[-1] / 1000, ML[m] if m == "itm" else "P.2001", MC[m])
+        ax.set_title(title, loc="left"); ax.set_xticks([100, 200, 300]); ax.set_xlim(80, 360); ax.set_xlabel("Grid width (km)")
+    axs[0].set_ylabel("Exclusion area at 160 dB\n(1,000 km²)")
+    axs[0].text(0.03, 0.97, "filled circle: 2.5 km step\nopen circle: 5 km step\ndiamond: 1 km step", transform=axs[0].transAxes, fontsize=7.5, color=GR, va="top")
+    save(fig, "s32_grid_convergence")
+
 
 
 def s31_area_measurements():
@@ -584,7 +609,7 @@ ALL = [s01_smooth_earth, s02_knife_edge, s03_knife_edge_function, s04_gap_by_mec
        s07_terrain_resolution, s08_diffraction_terms, s09_ablation, s10_radials, s11_window_by_length, s12_the_jump, s13_anatomy,
        s14_where_window_falls, s15_window_over_time, s16_itm_vs_p452, s17_over_sea, s18_ducting_takeover, s19_enhancement_real,
        s20_enhancement_measured, s21_archetypes, s22_distance_threshold, s23_error_vs_frequency, s24_error_vs_time, s25_error_vs_terrain,
-       s26_uncertainty_gap, s27_uncertainty_measured, s28_sensitivity, s29_grid_maps, s30_grid_exclusion, s31_area_measurements]
+       s26_uncertainty_gap, s27_uncertainty_measured, s28_sensitivity, s29_grid_maps, s30_grid_exclusion, s31_area_measurements, s32_grid_convergence]
 
 if __name__ == "__main__":
     for fn in ALL:

@@ -162,6 +162,29 @@ for surf = ["land", "sea"]
     end
 end
 wt(cell2table(rows, 'VariableNames', {'surface', 'd_km', 'max_ducting_time_pct'}), 'fig_s18_ducting_takeover.csv');
+% s29, s30, s32 grids: the main 300 km grid, with the exclusion at 160 dB, and the basemap in km from the receiver
+E = wgs84Ellipsoid('km');
+sites = struct('dc', [38.8895, -77.0353], 'la', [34.0537, -118.2428]);
+cst = readtable(fullfile(CD, 'basemap_coastlines.csv')); ust = readtable(fullfile(CD, 'basemap_us_states.csv'));
+for site = ["dc", "la"]
+    f = fullfile(CD, "grid_" + site + "_150km_2p5km.csv");
+    if ~isfile(f), continue, end
+    Gd = readtable(f);
+    Gd.itm_minus_p2001_db = Gd.itm_50 - Gd.p2001_50;
+    Gd.itm_excluded_160 = Gd.itm_50 < 160; Gd.p2001_excluded_160 = Gd.p2001_50 < 160;
+    wt(Gd(:, {'dx_km', 'dy_km', 'd_km', 'itm_50', 'p2001_50', 'itm_minus_p2001_db', 'itm_excluded_160', 'p2001_excluded_160'}), "fig_grid_" + site + ".csv");
+    rx = sites.(site); rows = {};
+    for src = {cst, ust}
+        B = src{1}; la = B.lat; lo = B.lon;
+        near = abs(la - rx(1)) < 2.5 & abs(lo - rx(2)) < 3.5 | isnan(la);
+        la = la(near); lo = lo(near);
+        [dd, az] = distance(rx(1), rx(2), la, lo, E);
+        x = dd .* sind(az); y = dd .* cosd(az);
+        x(isnan(la)) = NaN; y(isnan(la)) = NaN;
+        rows{end + 1} = table([x; NaN], [y; NaN], 'VariableNames', {'dx_km', 'dy_km'}); %#ok<AGROW>
+    end
+    wt(vertcat(rows{:}), "fig_grid_" + site + "_basemap.csv");
+end
 fprintf('wrote figure data to %s\n', OUT);
 end
 
