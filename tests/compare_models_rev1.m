@@ -31,6 +31,10 @@ function R = compare_models_rev1(options)
 %     p452_clutter     The same with P.452's ground-cover profile g from
 %                      Copernicus GLO-30 (p452_terrain_profiles_rev1), as
 %                      the model is meant to be run
+%     p2001            ITU-R P.2001-6, nicklasorte/itu_p2001 (p2001_rev1,
+%                      DemSource "auto": USGS 1" then Copernicus, as
+%                      matlab_itm), with its own great-circle profile.
+%                      Mechanism: its dominant mechanism at 50 %.
 %     itm_on_matlab_terrain
 %                      itm_p2p_rev1 on a profile read through MATLAB's
 %                      terrain (elevation with the same Map as matlab_lr,
@@ -87,6 +91,7 @@ function R = compare_models_rev1(options)
 %     P452Dir      folder with matlab_itu_p452 (""; if empty, it must be
 %                  on the path, or in a matlab_itu_p452 folder next to this
 %                  repository)
+%     P2001Dir     folder with itu_p2001 (""; as P452Dir)
 %     SeadlibDir   folder with SEADLib.dll and the USGS tiles ("C:\USGS")
 %     TiremDir     folder with the TIREM library ("C:\USGS\TIREM5")
 %     Models       subset of models to run (all)
@@ -119,10 +124,11 @@ arguments
     options.Tpol (1,1) double {mustBeMember(options.Tpol, [0 1])} = 1
     options.Reliability (1,:) double = [0.1:0.1:0.9, 1:9, 10:10:90, 91:99, 99.1:0.1:99.9]
     options.P452Dir (1,1) string = ""
+    options.P2001Dir (1,1) string = ""
     options.SeadlibDir (1,1) string = "C:\USGS"
     options.TiremDir (1,1) string = "C:\USGS\TIREM5"
     options.Models (1,:) string = ["matlab_itm", "seadlib_itm", "itm_on_seadlib_profile", ...
-        "seadlib_tirem", "rfprop_tirem", "matlab_lr", "p452", "p452_clutter", "itm_on_matlab_terrain"]
+        "seadlib_tirem", "rfprop_tirem", "matlab_lr", "p452", "p452_clutter", "p2001", "itm_on_matlab_terrain"]
     options.LRTerrain (1,1) string {mustBeMember(options.LRTerrain, ["usgs1", "usgs1_dted", "gmted2010"])} = "usgs1"
     options.Prefetch (1,1) logical = true
     options.ExcelFile (1,1) string = "compare_models_results.xlsx"
@@ -214,6 +220,23 @@ if any(isfield(avail, ["p452", "p452_clutter"]))
             avail.(m) = false;
             why.(m) = "matlab_itu_p452 not found (set P452Dir)";
         end
+    end
+end
+% P.2001: on the path, in P2001Dir, or next to this repository
+if isfield(avail, "p2001")
+    p2001_dir = options.P2001Dir;
+    if strlength(p2001_dir) == 0
+        p2001_dir = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), "itu_p2001");
+    end
+    if isfile(fullfile(p2001_dir, "p2001_rev1.m"))
+        addpath(char(p2001_dir));
+    end
+    if ~exist('p2001_rev1', 'file')
+        avail.p2001 = false;
+        why.p2001 = "itu_p2001 not found (set P2001Dir)";
+    elseif nargout(which('p2001_rev1')) < 4
+        avail.p2001 = false;
+        why.p2001 = "itu_p2001 is too old (needs the elevation and mechanism outputs); update it";
     end
 end
 if options.LRTerrain == "usgs1" && isfield(avail, "itm_on_matlab_terrain")
@@ -399,6 +422,12 @@ end
                 el = rad2deg([info.theta_t, info.theta_r] / 1000);   % mrad to degrees
                 mech_raw = p452_mechanism(info, rel(ok));
                 keep_info(m, info);
+
+            case "p2001"
+                [L, info, el] = p2001_rev1(tx(k, :), rx(k, :), f_mhz, rel(:), DemSource="auto", ...
+                    Polarization=pol_name, Validity="warn", InfoDetail="brief");
+                [~, j50] = min(abs(rel - 50));
+                mech_raw = info.mechanism_name(j50);
 
             case "itm_on_matlab_terrain"
                 [L, info] = itm_p2p_rev1(tx(k, 3), rx(k, 3), matlab_terrain_profile(k), f_mhz, rel, ...
