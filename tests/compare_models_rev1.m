@@ -20,14 +20,22 @@ function R = compare_models_rev1(options)
 %     seadlib_tirem    SEADLib USGS profile + tirempl, as in
 %                      TIREM5_mechanism_angles_rev4 (needs the TIREM library)
 %     rfprop_tirem     propagationModel("tirem") + pathloss (needs the TIREM
-%                      library; MATLAB terrain)
+%                      library; terrain from LRTerrain)
 %     matlab_lr        propagationModel("longley-rice") + pathloss, one call
-%                      per time percentage (MATLAB terrain)
+%                      per time percentage (terrain from LRTerrain)
 %     itm_on_matlab_terrain
-%                      itm_p2p_rev1 on a profile from MATLAB's terrain
-%                      (elevation with Map="gmted2010", 90 m steps), so a
-%                      difference from matlab_lr is the model or sampling,
-%                      and a difference from matlab_itm is the terrain
+%                      itm_p2p_rev1 on a profile read through MATLAB's
+%                      terrain (elevation with the same Map as matlab_lr,
+%                      90 m steps), so a difference from matlab_lr is the
+%                      model or its sampling, not the terrain
+%
+%   Terrain for the MATLAB models (LRTerrain):
+%     "usgs1" (default) USGS 3DEP 1", the terrain matlab_itm uses. MATLAB
+%             reads custom terrain only as DTED, so the tiles the links
+%             cross are written once as DTED level 2 with
+%             itm_dted_tiles_rev1 (about 1.3 s and 26 MB per tile, cached)
+%             and registered with addCustomTerrain as "itm_usgs1".
+%     "gmted2010" MATLAB's built-in global terrain (about 250 m)
 %
 %   All models use the same inputs: epsilon 25, sigma 0.02 S/m, vertical
 %   polarization unless Tpol says otherwise, confidence 50 %, and the radio
@@ -66,6 +74,7 @@ function R = compare_models_rev1(options)
 %     SeadlibDir   folder with SEADLib.dll and the USGS tiles ("C:\USGS")
 %     TiremDir     folder with the TIREM library ("C:\USGS\TIREM5")
 %     Models       subset of models to run (all)
+%     LRTerrain    "usgs1" (default) or "gmted2010"; see above
 %     Prefetch     run every model on every link once, untimed, before
 %                  the timed pass, so downloads and first-use costs aren't
 %                  in the per-link times (true). The untimed pass's times
@@ -97,6 +106,7 @@ arguments
     options.TiremDir (1,1) string = "C:\USGS\TIREM5"
     options.Models (1,:) string = ["matlab_itm", "seadlib_itm", "itm_on_seadlib_profile", ...
         "seadlib_tirem", "rfprop_tirem", "matlab_lr", "itm_on_matlab_terrain"]
+    options.LRTerrain (1,1) string {mustBeMember(options.LRTerrain, ["usgs1", "gmted2010"])} = "usgs1"
     options.Prefetch (1,1) logical = true
     options.ExcelFile (1,1) string = "compare_models_results.xlsx"
     options.SaveFile (1,1) string = ""
@@ -175,6 +185,25 @@ for m = ["matlab_lr", "itm_on_matlab_terrain"]
 end
 models = options.Models(arrayfun(@(m) avail.(m), options.Models));
 
+%% Terrain for the MATLAB terrain models
+map_name = options.LRTerrain;
+if any(ismember(models, ["matlab_lr", "rfprop_tirem", "itm_on_matlab_terrain"])) && map_name == "usgs1"
+    map_name = "itm_usgs1";
+    tiles = zeros(0, 2);
+    for k = 1:n % every 1-degree tile a path crosses
+        [la, lo] = track2(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), [], 'degrees', 200);
+        tiles = [tiles; floor([la, lo])]; %#ok<AGROW> n links
+    end
+    tiles = unique(tiles, 'rows');
+    fprintf('Writing %d USGS 1" tiles as DTED for the MATLAB terrain models ...\n', size(tiles, 1));
+    dted = itm_dted_tiles_rev1(tiles(:, 1), tiles(:, 2));
+    try
+        removeCustomTerrain(map_name);
+    catch
+    end
+    addCustomTerrain(map_name, cellstr(dted), 'FillMissing', true, 'Attribution', 'USGS 3DEP 1 arc-second');
+end
+
 %% Storage: loss (n x n_rel), angles (n x 2), mechanism class, seconds per link
 blank = struct('loss_db', NaN(n, n_rel), 'elev_deg', NaN(n, 2), 'mech', strings(n, 1), ...
     'mech_raw', strings(n, 1), 'seconds', NaN(n, 1), 'error', strings(n, 1));
@@ -241,14 +270,15 @@ end
 
 %% Summaries
 R = struct('links', links, 'reliability', rel, 'models', models, 'skipped', why, 'results', out, ...
+    'lr_terrain', options.LRTerrain, ...
     'example_info', example_info);
 R.summary_time = summarize_time(out, models, cold);
 R.summary_loss = summarize_loss(out, models, rel);
 R.summary_angles = summarize_angles(out, models);
 R.summary_mechanism = summarize_mechanism(out, models);
 skipped = setdiff(options.Models, models);
-fprintf('\n%d links, %.0f to %.0f km, %g MHz, %d time percentages (%.1f to %.1f %%)\n', n, ...
-    min(len_km), max(len_km), f_mhz, n_rel, min(rel), max(rel));
+fprintf('\n%d links, %.0f to %.0f km, %g MHz, %d time percentages (%.1f to %.1f %%); MATLAB models on %s terrain\n', n, ...
+    min(len_km), max(len_km), f_mhz, n_rel, min(rel), max(rel), options.LRTerrain);
 for m = skipped
     fprintf('Skipped %s: %s\n', m, why.(m));
 end
@@ -315,7 +345,7 @@ end
                 [txs, rxs] = sites(k);
                 pm = propagationModel("tirem", 'AntennaPolarization', pol_name, ...
                     'GroundConductivity', 0.02, 'GroundPermittivity', 25, 'AtmosphericRefractivity', n0(k));
-                [L, info] = pathloss(pm, rxs, txs);
+                [L, info] = pathloss(pm, rxs, txs, 'Map', map_name);
                 el = mw_angles(info);
                 [~, mech_raw] = tirem_info(info);
                 keep_info(m, info);
@@ -336,23 +366,23 @@ end
                         'TimeVariabilityTolerance', min(max(round(rel(j) / 100, 6), 0.001), 0.999), ...
                         'SituationVariabilityTolerance', round(conf / 100, 6));
                     if j == 1
-                        [L(j), info] = pathloss(pm, rxs, txs);
+                        [L(j), info] = pathloss(pm, rxs, txs, 'Map', map_name);
                         el = mw_angles(info);
                         keep_info(m, info);
                     else
-                        L(j) = pathloss(pm, rxs, txs);
+                        L(j) = pathloss(pm, rxs, txs, 'Map', map_name);
                     end
                 end
         end
     end
 
     function pfl = matlab_terrain_profile(k)
-        % MATLAB's terrain (GMTED2010) at 90 m steps along the WGS84 geodesic
+        % MATLAB's terrain (the same Map as matlab_lr) at 90 m steps along the geodesic
         e = wgs84Ellipsoid('meter');
         d_m = distance(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), e);
         npt = max(ceil(d_m / 90) + 1, 11);
         [la, lo] = track2(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), e, 'degrees', npt);
-        z = elevation(rxsite('Latitude', la, 'Longitude', lo), 'Map', 'gmted2010');
+        z = elevation(rxsite('Latitude', la, 'Longitude', lo), 'Map', map_name);
         pfl = [npt - 1; d_m / (npt - 1); z(:)];
     end
 
