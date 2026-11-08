@@ -247,9 +247,6 @@ for m = models
     out.(m) = blank;
 end
 seadlib_prof = cell(n, 1);
-prof_seconds = zeros(n, 1);     % SEADLib terrain profile time, charged to both models that use it
-prof_first = strings(n, 1);
-m_now = "";
 example_info = struct();        % first info struct per model, to show its fields
 
 %% Untimed pass: tile downloads, maps, first-use compilation
@@ -276,23 +273,26 @@ end
 for m = models
     out.(m) = blank;
 end
-seadlib_prof(:) = {[]};         % read the profiles again inside the timing
-prof_seconds(:) = 0;
-prof_first(:) = "";
 
-%% Timed runs
-for k = 1:n
-    fprintf('Link %d of %d (%.1f km)\n', k, n, len_km(k));
-    for m = models
+%% Timed runs, one model at a time
+% Model by model, each after an untimed pass over the same links, so
+% every model is timed with its own tiles in memory (models share the
+% tile cache, and P.452 with ground cover reads Copernicus tiles too).
+% A model that reads the SEADLib profile pays for its own read.
+for m = models
+    fprintf('Timing %s on %d links\n', m, n);
+    for k = 1:n % untimed: load this model's tiles
         try
-            m_now = m;
+            run_model(m, k);
+        catch
+        end
+    end
+    seadlib_prof(:) = {[]};
+    for k = 1:n
+        try
             t0 = tic;
             [L, el, mech_raw] = run_model(m, k);
             out.(m).seconds(k) = toc(t0);
-            if any(m == ["itm_on_seadlib_profile", "seadlib_tirem"]) && ~isnan(out.(m).seconds(k))
-                % The profile is read once per link; charge its time to both
-                out.(m).seconds(k) = out.(m).seconds(k) - prof_charged(m, k) + prof_seconds(k);
-            end
             out.(m).loss_db(k, :) = expand_loss(L, n_rel);
             out.(m).elev_deg(k, :) = el;
             out.(m).mech_raw(k) = string(mech_raw);
@@ -433,26 +433,15 @@ end
     end
 
     function z = seadlib_profile(k)
-        % Same call as TIREM5_mechanism_angles_rev4; cached so both models
-        % that use it see one profile and the timing isn't charged twice
+        % Same call as TIREM5_mechanism_angles_rev4; cached per link within
+        % a model's pass
         if isempty(seadlib_prof{k})
-            tp = tic;
             usgs = TerrainPcs.USGS;
             usgs.TerrainDataPath = char(options.SeadlibDir);
             seadlib_prof{k} = double(usgs.GetPathElevation(TerrainPcs.Geolocation(tx(k, 1), tx(k, 2)), ...
                 TerrainPcs.Geolocation(rx(k, 1), rx(k, 2)), 90, true));
-            prof_seconds(k) = toc(tp);
-            prof_first(k) = m_now;
         end
         z = seadlib_prof{k};
-    end
-
-    function t = prof_charged(m, k)
-        % Profile time already inside this model's toc (it paid for the read)
-        t = 0;
-        if prof_first(k) == m
-            t = prof_seconds(k);
-        end
     end
 
     function keep_info(m, info)
