@@ -151,7 +151,7 @@ for kk = 1:numel(key)
     plot(ax, P, itm(k, :), '-', 'Color', [0 0.447 0.698], 'LineWidth', 1.8, 'DisplayName', 'ITM v1.4');
     plot(ax, P, p452(k, :), '--', 'Color', [0.835 0.369 0], 'LineWidth', 1.8, 'DisplayName', 'P.452-18');
     plot(ax, P, p2001(k, :), '-.', 'Color', [0 0.620 0.451], 'LineWidth', 1.8, 'DisplayName', 'P.2001-6');
-    set(ax, 'XScale', 'log', 'XTick', P);
+    set(ax, 'XScale', 'log', 'XTick', [1 10 50 99]);
     title(ax, sprintf('Path %s: %.0f MHz, %.0f km', key(kk), S.freq_mhz(k), S.d_km(k)), 'FontSize', 9);
     subtitle(ax, S.tx_name(k) + " to " + S.rx_name(k), 'FontSize', 8);
     xlabel(ax, 'Time percentage (%)');
