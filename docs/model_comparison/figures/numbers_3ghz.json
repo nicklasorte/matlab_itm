@@ -255,5 +255,95 @@
    "mean_abs_diff_deg_tx_rx_1": 0.0021091789106013,
    "mean_abs_diff_deg_tx_rx_2": 0.0013557492140304
   }
+ ],
+ "u_Line_of_sight_links_lo": -0.1,
+ "u_Line_of_sight_links_hi": -0.0,
+ "u_Line_of_sight_links_n3": 18,
+ "u_Diffraction_links_lo": 13.6,
+ "u_Diffraction_links_hi": 43.7,
+ "u_Diffraction_links_n3": 680,
+ "u_Troposcatter_links_lo": 2.6,
+ "u_Troposcatter_links_hi": 55.8,
+ "u_Troposcatter_links_n3": 1177,
+ "u_w_under_0.12_lo": 43.4,
+ "u_w_under_0.12_hi": 46.5,
+ "u_w_under_0.12_n3": null,
+ "u_w_0.12_or_more_lo": 4.6,
+ "u_w_0.12_or_more_hi": 13.9,
+ "u_w_0.12_or_more_n3": null,
+ "u_split": 0.1,
+ "u_split_lo": 0.04,
+ "u_split_hi": 0.205,
+ "u_dip": 0.102,
+ "u_dip_p": 0.0179,
+ "u_B": 10000,
+ "um_All_itm": [
+  -2.2,
+  -3.4,
+  -1.0,
+  340
+ ],
+ "um_All_p452": [
+  -2.9,
+  -4.0,
+  -1.9,
+  237
+ ],
+ "um_All_p2001": [
+  -2.7,
+  -3.7,
+  -1.8,
+  338
+ ],
+ "um_30 MHz-1 GHz_itm": [
+  -2.9,
+  -4.1,
+  -1.7,
+  300
+ ],
+ "um_30 MHz-1 GHz_p452": [
+  -3.4,
+  -4.5,
+  -2.3,
+  196
+ ],
+ "um_30 MHz-1 GHz_p2001": [
+  -3.3,
+  -4.3,
+  -2.3,
+  298
+ ],
+ "um_1-10 GHz_itm": [
+  0.5,
+  -2.0,
+  3.0,
+  76
+ ],
+ "um_1-10 GHz_p452": [
+  -1.8,
+  -4.0,
+  0.4,
+  76
+ ],
+ "um_1-10 GHz_p2001": [
+  -0.6,
+  -3.1,
+  1.7,
+  76
+ ],
+ "u_Line_of_sight_links_share": [
+  0,
+  0,
+  0
+ ],
+ "u_Diffraction_links_share": [
+  56,
+  37,
+  74
+ ],
+ "u_Troposcatter_links_share": [
+  67,
+  40,
+  87
  ]
 }

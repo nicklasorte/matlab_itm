@@ -1,47 +1,39 @@
 function run_3ghz_rev1(options)
-%RUN_3GHZ_REV1 Rerun the working paper's model calculations at 3 GHz only.
-%   RUN_3GHZ_REV1() runs, serially, at 3000 MHz:
-%     make_wp_figures_rev1(Freqs=3000)      smooth earth, knife edge, the 60
-%                                           real-terrain links, resolution,
-%                                           archetypes, sweeps, radials
-%     diffraction_decomposition_rev1        ITM's diffraction terms and the
-%                                           ablation
-%     export_wp_chart_data_rev1             chart_data/*.csv
-%   and writes everything to figures/ and chart_data/, replacing the
-%   three-frequency results (which stay in git history). The ITU-R databank
-%   comparison is measured data and is not rerun.
+%RUN_3GHZ_REV1 Run every MATLAB analysis behind the 3 GHz working paper, in order.
+%   RUN_3GHZ_REV1() runs, serially, and writes CSV results to figures/ and
+%   chart_data/ (the Python scripts then only draw figures from them):
+%     1  make_wp_figures_rev1(Freqs=3000)  smooth earth, knife edge, the 60
+%                                          real-terrain links, resolution,
+%                                          archetypes, sweeps, radials
+%     2  diffraction_decomposition_rev1    ITM's diffraction terms, ablation
+%     3  export_deep_dive_data_rev1        the model results as CSV
+%     4  sensitivity_rev1                  model settings on the 60 links
+%     5  grid_separation_rev1, DC and LA   single-entry 100 km grids
+%     6  uncertainty_rev1                  bootstrap intervals
+%     7  paper_numbers_3ghz_rev1           every number the text quotes
+%   The ITU-R databank comparison (compare_dbsg3_rev1) is separate; its
+%   tables are inputs to steps 6 and 7.
 %
-%   With Push=true it commits the outputs to branch wp-3ghz and pushes,
-%   writing a log line per stage to figures/run_3ghz_log.txt.
+%   Options: Models (true: run steps 1 and 2; false starts at step 3 from
+%   the saved results), Grid (true), P2001Dir, P452Dir.
 
 arguments
-    options.Push (1,1) logical = true
-    options.Freq (1,1) double = 3000
+    options.Models (1,1) logical = true
+    options.Grid (1,1) logical = true
+    options.P2001Dir (1,1) string = ""
+    options.P452Dir (1,1) string = ""
 end
-here = fileparts(mfilename('fullpath'));
-logf = fullfile(here, 'figures', 'run_3ghz_log.txt');
-note = @(s) fprintf(fopen(logf, 'a'), '%s  %s\n', datestr(now, 31), s); %#ok<TNOW1,DATST>
-fclose('all');
-note(sprintf('start, %g MHz', options.Freq)); fclose('all');
-try
-    t = tic;
-    make_wp_figures_rev1(Freqs=options.Freq);
-    note(sprintf('make_wp_figures_rev1 done in %.0f s', toc(t))); fclose('all');
-    t = tic;
-    diffraction_decomposition_rev1();
-    note(sprintf('diffraction_decomposition_rev1 done in %.0f s', toc(t))); fclose('all');
-    export_wp_chart_data_rev1();
-    note('export_wp_chart_data_rev1 done'); fclose('all');
-catch err
-    note(['ERROR: ' err.identifier ' ' err.message]); fclose('all');
-    for k = 1:min(numel(err.stack), 6)
-        note(sprintf('  at %s line %d', err.stack(k).name, err.stack(k).line)); fclose('all');
-    end
+d = {'P2001Dir', options.P2001Dir, 'P452Dir', options.P452Dir};
+if options.Models
+    make_wp_figures_rev1(Freqs=3000, d{:});
+    diffraction_decomposition_rev1(d{:});
 end
-if options.Push
-    root = fileparts(fileparts(here));
-    cmd = sprintf(['cd "%s" && git checkout -q -B wp-3ghz && git add -A docs/model_comparison/figures ' ...
-        'docs/model_comparison/chart_data && git commit -q -m "3 GHz rerun outputs" ; git push -q -f origin wp-3ghz'], root);
-    system(cmd);
+export_deep_dive_data_rev1();
+sensitivity_rev1(d{:});
+if options.Grid
+    grid_separation_rev1(Site="dc", d{:});
+    grid_separation_rev1(Site="la", d{:});
 end
+uncertainty_rev1();
+paper_numbers_3ghz_rev1();
 end
