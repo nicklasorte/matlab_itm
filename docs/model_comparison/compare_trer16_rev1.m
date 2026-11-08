@@ -1,15 +1,19 @@
 function T = compare_trer16_rev1(options)
 %COMPARE_TRER16_REV1 ITM, P.452, and P.2001 against measured U.S. paths from OT/TRER 16.
-%   T = COMPARE_TRER16_REV1() runs the three models on the 34 U.S. paths
-%   at 1 GHz and above in data/trer16_us_paths.csv and compares them with
-%   the measured long-term distributions of basic transmission loss.
+%   T = COMPARE_TRER16_REV1() runs the three models on the 41 U.S. paths
+%   from 1 GHz to 10 GHz in data/trer16_us_paths.csv and compares them
+%   with the measured long-term distributions of basic transmission loss.
 %
 %   Source of the measurements: A. G. Longley, R. K. Reasoner, and V. L.
 %   Fuller, "Measured and Predicted Long-Term Distributions of Tropospheric
 %   Transmission Loss," OT/TRER 16, Office of Telecommunications, July 1971
 %   (data/sources/OT-TRER-16.pdf), Tables 1 and 2. The CSV was read from the
 %   page images and checked: the great-circle distance between the listed
-%   coordinates matches the listed path length within 0.2 % on every path.
+%   coordinates matches the listed path length within 0.2 % on 34 paths.
+%   The seven Southern California over-sea paths (1903-1909) list
+%   coordinates only to the arcminute (within 1.7 %), list no antenna
+%   heights (10 m is assumed; column heights_assumed), and give only the
+%   median; the summary reports them separately.
 %
 %   Every model gets the same profile: USGS 3DEP 1" terrain at 30 m along
 %   the geodesic between the listed sites (wp_terrain_profile). Antenna
@@ -70,12 +74,12 @@ end
 grp = strings(n, 1);
 grp(S.freq_mhz < 2000) = "1.0-1.7 GHz";
 grp(S.freq_mhz >= 2000 & S.freq_mhz < 3000) = "2.3-2.8 GHz";
-grp(S.freq_mhz >= 3000 & S.freq_mhz < 5000) = "3.7-4.1 GHz";
+grp(S.freq_mhz >= 3000 & S.freq_mhz < 5000) = "3.4-4.1 GHz";
 grp(S.freq_mhz >= 9000) = "9.1-9.4 GHz";
 
 % Per-path table
-T = table(S.path, S.freq_mhz, S.d_km, S.htg_m, S.hrg_m, S.n_horizons, S.region, grp, itm_code, itm_dh, itm_clim, sea_frac, fsl, ...
-    'VariableNames', {'path', 'freq_mhz', 'd_km', 'htg_m', 'hrg_m', 'n_horizons', 'region', 'group', ...
+T = table(S.path, S.freq_mhz, S.d_km, S.htg_m, S.hrg_m, S.heights_assumed, S.n_horizons, S.region, grp, itm_code, itm_dh, itm_clim, sea_frac, fsl, ...
+    'VariableNames', {'path', 'freq_mhz', 'd_km', 'htg_m', 'hrg_m', 'heights_assumed', 'n_horizons', 'region', 'group', ...
     'itm_mode_code', 'itm_delta_h_m', 'itm_climate', 'sea_fraction', 'free_space_db'});
 for j = 1:5
     tag = sprintf('%02d', P(j));
@@ -91,11 +95,17 @@ writetable(T, fullfile(out, 'table_trer16_by_path.csv'));
 % Summary: error = predicted minus measured
 models = {itm, p452, p2001, [NaN(n, 2), S.tn101_lbcr_db, NaN(n, 2)], [NaN(n, 2), S.essa70_lbcr_db, NaN(n, 2)]};
 names = ["ITM v1.4", "P.452-18", "P.2001-6", "TN 101 (1967)", "ESSA 70 (1970)"];
-groups = ["All", unique(grp)'];
+listed = S.heights_assumed == 0;
+groups = ["All, listed heights", unique(grp(listed))', "California over sea, heights assumed"];
 rows = {};
 for g = groups
-    sel = true(n, 1);
-    if g ~= "All", sel = grp == g; end
+    if g == "All, listed heights"
+        sel = listed;
+    elseif g == "California over sea, heights assumed"
+        sel = ~listed;
+    else
+        sel = listed & grp == g;
+    end
     for m = 1:numel(models)
         for j = 1:5
             e = models{m}(sel, j) - meas(sel, j);
@@ -122,7 +132,8 @@ set(ax, 'XTick', x, 'XTickLabel', lab, 'XTickLabelRotation', 60, 'FontSize', 8);
 xlim(ax, [0.5 n + 0.5]);
 ylabel(ax, 'Predicted minus measured median (dB)');
 xlabel(ax, 'OT/TRER 16 path number (frequency, MHz), sorted by frequency and distance');
-title(ax, 'Median basic transmission loss, 34 measured U.S. paths at 1 GHz and above');
+title(ax, sprintf('Median basic transmission loss, %d measured U.S. paths from 1 GHz to 10 GHz', n));
+xline(ax, find(~listed(ord)) - 0.5, ':', 'Color', [0.6 0.6 0.6], 'HandleVisibility', 'off');
 legend(ax, 'Location', 'northwest'); grid(ax, 'on');
 wp_save_fig(fig, out, 'fig12_trer16_median_error');
 
@@ -147,6 +158,34 @@ for kk = 1:numel(key)
     grid(ax, 'on');
 end
 wp_save_fig(fig, out, 'fig13_trer16_distributions');
+
+% Fig. 16: where the measured paths are
+fig = figure('Visible', 'off', 'Position', [0 0 1100 560]);
+gx = geoaxes(fig);
+try
+    geobasemap(gx, 'grayland');
+catch
+    geobasemap(gx, 'none');
+end
+hold(gx, 'on');
+gnames = unique(grp)';
+cols = [0.5 0.5 0.5; 0.835 0.369 0; 0 0.620 0.451; 0 0.447 0.698];
+for g = 1:numel(gnames)
+    first = true;
+    for k = find(grp == gnames(g))'
+        la = [dms(S.tx_lat(k)) dms(S.rx_lat(k))]; lo = [dms(S.tx_lon(k)) dms(S.rx_lon(k))];
+        if first
+            geoplot(gx, la, lo, '-', 'Color', cols(g, :), 'LineWidth', 2, 'DisplayName', gnames(g));
+            first = false;
+        else
+            geoplot(gx, la, lo, '-', 'Color', cols(g, :), 'LineWidth', 2, 'HandleVisibility', 'off');
+        end
+    end
+end
+geolimits(gx, [24 50], [-125 -66]);
+legend(gx, 'Location', 'southoutside', 'NumColumns', 4);
+title(gx, 'Measured U.S. paths from 1 GHz to 10 GHz in OT/TRER 16, by frequency group');
+wp_save_fig(fig, out, 'fig16_trer16_path_map');
 end
 
 function d = dms(s)
