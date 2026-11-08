@@ -534,7 +534,7 @@ def f4c():
 
 
 def f4d():
-    fig, gs = page("The ITU models predict a deeper 1 % signal enhancement than the measurements show",
+    fig, gs = page("All three models predict a deeper 1 % signal enhancement than the measurements show",
                    "Loss at 50 % minus loss at 1 % of time: how much stronger the signal gets 1 % of the time,\n"
                    "ITU-R databank, 1 GHz to 10 GHz. The bar is the median.", SRC_DB, left=0.12)
     ax = fig.add_subplot(gs[0]); soft(ax, "y")
