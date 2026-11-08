@@ -1,8 +1,11 @@
 function T = compare_trer16_rev1(options)
 %COMPARE_TRER16_REV1 ITM, P.452, and P.2001 against measured U.S. paths from OT/TRER 16.
-%   T = COMPARE_TRER16_REV1() runs the three models on the 41 U.S. paths
-%   from 1 GHz to 10 GHz in data/trer16_us_paths.csv and compares them
-%   with the measured long-term distributions of basic transmission loss.
+%   T = COMPARE_TRER16_REV1() runs the three models on the measured paths
+%   from 1 GHz to 10 GHz in data/trer16_us_paths.csv (41 U.S. paths) and
+%   data/trer16_nonus_paths.csv (75 paths in Japan, Germany, England,
+%   France, Canada, and elsewhere) and compares them with the measured
+%   long-term distributions of basic transmission loss. Outside the U.S.
+%   the terrain is Copernicus GLO-30 (30 m), through the same profile code.
 %
 %   Source of the measurements: A. G. Longley, R. K. Reasoner, and V. L.
 %   Fuller, "Measured and Predicted Long-Term Distributions of Tropospheric
@@ -29,7 +32,11 @@ function T = compare_trer16_rev1(options)
 %     fig12_trer16_median_error.png predicted minus measured median, by path
 %     fig13_trer16_distributions.png measured and predicted distributions on
 %                                   six paths from 2.3 GHz to 4.1 GHz
-%     fig16_trer16_path_map.png     map of the paths
+%     fig16_trer16_path_map.png     map of the U.S. paths
+%     fig21_trer16_nonus_median_error.png  median error by path, outside the U.S.
+%     fig22_trer16_error_vs_frequency.png  median error against frequency, all paths
+%     fig23_trer16_nonus_path_map.png      map of the paths outside the U.S.
+%     fig24_trer16_nonus_distributions.png six distributions outside the U.S.
 %     fig20_trer16_error_vs_delta_h.png median error against ITM's Delta h
 %
 %   Name-value options:
@@ -47,11 +54,10 @@ here = fileparts(mfilename('fullpath'));
 out = options.OutDir;
 if ~isfolder(out), mkdir(out); end
 
-csv = fullfile(here, 'data', 'trer16_us_paths.csv');
-io = detectImportOptions(csv, 'Delimiter', ',');
-io = setvartype(io, {'path', 'tx_name', 'tx_lat', 'tx_lon', 'rx_name', 'rx_lat', 'rx_lon', 'years', 'region'}, 'string');
-S = readtable(csv, io);
+S = [read_paths(fullfile(here, 'data', 'trer16_us_paths.csv'), true); ...
+    read_paths(fullfile(here, 'data', 'trer16_nonus_paths.csv'), false)];
 n = height(S);
+isUS = S.us;
 P = [1 10 50 90 99];
 meas_cols = ["lb01_db", "lb10_db", "lb50_db", "lb90_db", "lb99_db"];
 
@@ -73,15 +79,18 @@ for k = 1:n
         S.path(k), S.freq_mhz(k), S.d_km(k), meas(k, 3), itm(k, 3), p452(k, 3), p2001(k, 3));
 end
 
-grp = strings(n, 1);
-grp(S.freq_mhz < 2000) = "1.0-1.7 GHz";
-grp(S.freq_mhz >= 2000 & S.freq_mhz < 3000) = "2.3-2.8 GHz";
-grp(S.freq_mhz >= 3000 & S.freq_mhz < 5000) = "3.4-4.1 GHz";
-grp(S.freq_mhz >= 9000) = "9.1-9.4 GHz";
+fb = strings(n, 1);                     % frequency bin
+fb(S.freq_mhz < 2000) = "1-2 GHz";
+fb(S.freq_mhz >= 2000 & S.freq_mhz < 3000) = "2-3 GHz";
+fb(S.freq_mhz >= 3000 & S.freq_mhz < 6000) = "3-6 GHz";
+fb(S.freq_mhz >= 6000) = "6-10 GHz";
+scope = repmat("Outside U.S.", n, 1);
+scope(isUS) = "U.S.";
+grp = scope + ", " + fb;
 
 % Per-path table
-T = table(S.path, S.freq_mhz, S.d_km, S.htg_m, S.hrg_m, S.heights_assumed, S.n_horizons, S.region, grp, itm_code, itm_dh, itm_clim, sea_frac, fsl, ...
-    'VariableNames', {'path', 'freq_mhz', 'd_km', 'htg_m', 'hrg_m', 'heights_assumed', 'n_horizons', 'region', 'group', ...
+T = table(S.path, S.us, S.freq_mhz, S.d_km, S.htg_m, S.hrg_m, S.heights_assumed, S.n_horizons, S.region, grp, itm_code, itm_dh, itm_clim, sea_frac, fsl, ...
+    'VariableNames', {'path', 'us', 'freq_mhz', 'd_km', 'htg_m', 'hrg_m', 'heights_assumed', 'n_horizons', 'region', 'group', ...
     'itm_mode_code', 'itm_delta_h_m', 'itm_climate', 'sea_fraction', 'free_space_db'});
 for j = 1:5
     tag = sprintf('%02d', P(j));
@@ -98,15 +107,16 @@ writetable(T, fullfile(out, 'table_trer16_by_path.csv'));
 models = {itm, p452, p2001, [NaN(n, 2), S.tn101_lbcr_db, NaN(n, 2)], [NaN(n, 2), S.essa70_lbcr_db, NaN(n, 2)]};
 names = ["ITM v1.4", "P.452-18", "P.2001-6", "TN 101 (1967)", "ESSA 70 (1970)"];
 listed = S.heights_assumed == 0;
-groups = ["All, listed heights", unique(grp(listed))', "California over sea, heights assumed"];
+groups = ["U.S., listed heights", "California over sea, heights assumed", "Outside U.S.", ...
+    "All, listed heights", unique(grp(listed))'];
 rows = {};
 for g = groups
-    if g == "All, listed heights"
-        sel = listed;
-    elseif g == "California over sea, heights assumed"
-        sel = ~listed;
-    else
-        sel = listed & grp == g;
+    switch g
+        case "U.S., listed heights", sel = listed & isUS;
+        case "California over sea, heights assumed", sel = ~listed;
+        case "Outside U.S.", sel = ~isUS;
+        case "All, listed heights", sel = listed;
+        otherwise, sel = listed & grp == g;
     end
     for m = 1:numel(models)
         for j = 1:5
@@ -121,21 +131,24 @@ Sm = cell2table(rows, 'VariableNames', {'group', 'model', 'percent', 'n_paths', 
 writetable(Sm, fullfile(out, 'table_trer16_summary.csv'));
 
 % Fig. 12: median error by path
-[~, ord] = sortrows([S.heights_assumed, S.freq_mhz, S.d_km]);   % assumed-height paths last
+usi = find(isUS);
+[~, o2] = sortrows([S.heights_assumed(usi), S.freq_mhz(usi), S.d_km(usi)]);   % assumed-height paths last
+ord = usi(o2);
+nu = numel(ord);
 fig = figure('Visible', 'off', 'Position', [0 0 1300 460]);
 ax = axes(fig); hold(ax, 'on');
-x = 1:n;
+x = 1:nu;
 plot(ax, x, itm(ord, 3) - meas(ord, 3), 'o', 'MarkerFaceColor', [0 0.447 0.698], 'Color', [0 0.447 0.698], 'DisplayName', 'ITM v1.4');
 plot(ax, x, p452(ord, 3) - meas(ord, 3), 's', 'Color', [0.835 0.369 0], 'LineWidth', 1.2, 'DisplayName', 'P.452-18');
 plot(ax, x, p2001(ord, 3) - meas(ord, 3), 'd', 'Color', [0 0.620 0.451], 'LineWidth', 1.2, 'DisplayName', 'P.2001-6');
 yline(ax, 0, 'k:', 'HandleVisibility', 'off');
 lab = S.path(ord) + " (" + string(round(S.freq_mhz(ord))) + ")";
 set(ax, 'XTick', x, 'XTickLabel', lab, 'XTickLabelRotation', 60, 'FontSize', 8);
-xlim(ax, [0.5 n + 0.5]);
+xlim(ax, [0.5 nu + 0.5]);
 ylabel(ax, 'Predicted minus measured median (dB)');
 xlabel(ax, 'OT/TRER 16 path number (frequency, MHz), sorted by frequency and distance');
-title(ax, sprintf('Median basic transmission loss, %d measured U.S. paths from 1 GHz to 10 GHz', n));
-xline(ax, nnz(listed) + 0.5, 'k--', 'Heights assumed', 'LabelVerticalAlignment', 'bottom', 'HandleVisibility', 'off');
+title(ax, sprintf('Median basic transmission loss, %d measured U.S. paths from 1 GHz to 10 GHz', nu));
+xline(ax, nnz(listed & isUS) + 0.5, 'k--', 'Heights assumed', 'LabelVerticalAlignment', 'bottom', 'HandleVisibility', 'off');
 legend(ax, 'Location', 'northwest'); grid(ax, 'on');
 wp_save_fig(fig, out, 'fig12_trer16_median_error');
 
@@ -170,18 +183,112 @@ for m = 1:3
     ax = nexttile(tl); hold(ax, 'on');
     e = mods{m}(:, 3) - meas(:, 3);
     trans = itm_code > 0;
-    scatter(ax, max(itm_dh(listed & trans), 5), e(listed & trans), 36, mc(m, :), 'filled', 'DisplayName', 'Beyond line of sight');
-    scatter(ax, max(itm_dh(listed & ~trans), 5), e(listed & ~trans), 36, mc(m, :), 'DisplayName', 'Line of sight');
+    u = listed & isUS;
+    scatter(ax, max(itm_dh(u & trans), 5), e(u & trans), 36, mc(m, :), 'filled', 'DisplayName', 'U.S., beyond line of sight');
+    scatter(ax, max(itm_dh(u & ~trans), 5), e(u & ~trans), 36, mc(m, :), 'DisplayName', 'U.S., line of sight');
+    scatter(ax, max(itm_dh(~isUS), 5), e(~isUS), 30, [0.45 0.45 0.45], '^', 'DisplayName', 'Outside U.S.');
     for k = find(S.path == "321" | S.path == "1712")'
         text(ax, max(itm_dh(k), 5), e(k), "  " + S.path(k), 'FontSize', 8);
     end
     yline(ax, 0, 'k:', 'HandleVisibility', 'off');
-    set(ax, 'XScale', 'log'); ylim(ax, [-30 40]);
+    set(ax, 'XScale', 'log'); ylim(ax, [-40 50]);
     title(ax, mn(m)); xlabel(ax, 'ITM terrain irregularity \Deltah (m)');
     if m == 1, ylabel(ax, 'Predicted minus measured median (dB)'); legend(ax, 'Location', 'northwest'); end
     grid(ax, 'on');
 end
 wp_save_fig(fig, out, 'fig20_trer16_error_vs_delta_h');
+
+% Fig. 21: median error by path, outside the U.S.
+oi = find(~isUS);
+[~, o2] = sortrows([S.freq_mhz(oi), S.d_km(oi)]);
+ord = oi(o2); no = numel(ord);
+fig = figure('Visible', 'off', 'Position', [0 0 1500 480]);
+ax = axes(fig); hold(ax, 'on');
+x = 1:no;
+plot(ax, x, itm(ord, 3) - meas(ord, 3), 'o', 'MarkerFaceColor', mc(1, :), 'Color', mc(1, :), 'DisplayName', 'ITM v1.4');
+plot(ax, x, p452(ord, 3) - meas(ord, 3), 's', 'Color', mc(2, :), 'LineWidth', 1.2, 'DisplayName', 'P.452-18');
+plot(ax, x, p2001(ord, 3) - meas(ord, 3), 'd', 'Color', mc(3, :), 'LineWidth', 1.2, 'DisplayName', 'P.2001-6');
+yline(ax, 0, 'k:', 'HandleVisibility', 'off');
+set(ax, 'XTick', x, 'XTickLabel', S.path(ord) + " (" + string(round(S.freq_mhz(ord))) + ")", 'XTickLabelRotation', 70, 'FontSize', 7);
+xlim(ax, [0.5 no + 0.5]);
+ylabel(ax, 'Predicted minus measured median (dB)');
+xlabel(ax, 'OT/TRER 16 path number (frequency, MHz), sorted by frequency and distance');
+title(ax, sprintf('Median basic transmission loss, %d measured paths outside the U.S. from 1 GHz to 10 GHz', no));
+legend(ax, 'Location', 'northwest'); grid(ax, 'on');
+wp_save_fig(fig, out, 'fig21_trer16_nonus_median_error');
+
+% Fig. 22: median error against frequency, every path with listed heights
+fig = figure('Visible', 'off', 'Position', [0 0 1200 420]);
+tl = tiledlayout(fig, 1, 3, 'TileSpacing', 'compact');
+edges = [1000 2000 3000 6000 10000];
+for m = 1:3
+    ax = nexttile(tl); hold(ax, 'on');
+    e = mods{m}(:, 3) - meas(:, 3);
+    ok = listed & isfinite(e);
+    scatter(ax, S.freq_mhz(ok & isUS) / 1000, e(ok & isUS), 26, mc(m, :), 'filled', 'MarkerFaceAlpha', 0.6, 'DisplayName', 'U.S.');
+    scatter(ax, S.freq_mhz(ok & ~isUS) / 1000, e(ok & ~isUS), 26, [0.45 0.45 0.45], '^', 'DisplayName', 'Outside U.S.');
+    bm = NaN(1, 4); bc = sqrt(edges(1:4) .* edges(2:5)) / 1000;
+    for b = 1:4
+        sb = ok & S.freq_mhz >= edges(b) & S.freq_mhz < edges(b + 1);
+        if any(sb), bm(b) = median(e(sb)); end
+    end
+    plot(ax, bc, bm, 'k-s', 'LineWidth', 2, 'MarkerFaceColor', 'k', 'DisplayName', 'Median by frequency bin');
+    yline(ax, 0, 'k:', 'HandleVisibility', 'off');
+    set(ax, 'XScale', 'log', 'XTick', [1 2 3 5 7 10]); xlim(ax, [0.9 11]); ylim(ax, [-40 50]);
+    title(ax, mn(m)); xlabel(ax, 'Frequency (GHz)');
+    if m == 1, ylabel(ax, 'Predicted minus measured median (dB)'); legend(ax, 'Location', 'northwest'); end
+    grid(ax, 'on');
+end
+wp_save_fig(fig, out, 'fig22_trer16_error_vs_frequency');
+
+% Fig. 24: distributions on six paths outside the U.S. across 2.6 GHz to 7.3 GHz
+key = ["2212", "1438", "2365", "1536", "2352", "2237"];
+fig = figure('Visible', 'off', 'Position', [0 0 1200 700]);
+tl = tiledlayout(fig, 2, 3, 'TileSpacing', 'compact');
+for kk = 1:numel(key)
+    k = find(S.path == key(kk));
+    ax = nexttile(tl); hold(ax, 'on');
+    ok = isfinite(meas(k, :));
+    plot(ax, P(ok), meas(k, ok), 'k-o', 'LineWidth', 2, 'MarkerFaceColor', 'k', 'DisplayName', 'Measured');
+    plot(ax, P, itm(k, :), '-', 'Color', mc(1, :), 'LineWidth', 1.8, 'DisplayName', 'ITM v1.4');
+    plot(ax, P, p452(k, :), '--', 'Color', mc(2, :), 'LineWidth', 1.8, 'DisplayName', 'P.452-18');
+    plot(ax, P, p2001(k, :), '-.', 'Color', mc(3, :), 'LineWidth', 1.8, 'DisplayName', 'P.2001-6');
+    set(ax, 'XScale', 'log', 'XTick', [1 10 50 99]);
+    title(ax, sprintf('Path %s: %.0f MHz, %.0f km', key(kk), S.freq_mhz(k), S.d_km(k)), 'FontSize', 9);
+    subtitle(ax, S.tx_name(k) + " to " + S.rx_name(k), 'FontSize', 8);
+    xlabel(ax, 'Time percentage (%)');
+    if mod(kk, 3) == 1, ylabel(ax, 'Basic transmission loss (dB)'); end
+    if kk == 1, legend(ax, 'Location', 'northwest'); end
+    grid(ax, 'on');
+end
+wp_save_fig(fig, out, 'fig24_trer16_nonus_distributions');
+
+% Fig. 23: where the paths outside the U.S. are
+fig = figure('Visible', 'off', 'Position', [0 0 1300 620]);
+gx = geoaxes(fig);
+try
+    geobasemap(gx, 'grayland');
+catch
+    geobasemap(gx, 'none');
+end
+hold(gx, 'on');
+fbn = ["1-2 GHz", "2-3 GHz", "3-6 GHz", "6-10 GHz"];
+cols = [0.5 0.5 0.5; 0.835 0.369 0; 0 0.620 0.451; 0 0.447 0.698];
+for g = 1:numel(fbn)
+    first = true;
+    for k = find(~isUS & fb == fbn(g))'
+        la = [dms(S.tx_lat(k)) dms(S.rx_lat(k))]; lo = [dms(S.tx_lon(k)) dms(S.rx_lon(k))];
+        if first
+            geoplot(gx, la, lo, '-', 'Color', cols(g, :), 'LineWidth', 2.5, 'DisplayName', fbn(g)); first = false;
+        else
+            geoplot(gx, la, lo, '-', 'Color', cols(g, :), 'LineWidth', 2.5, 'HandleVisibility', 'off');
+        end
+    end
+end
+geolimits(gx, [-45 62], [-90 160]);
+legend(gx, 'Location', 'southoutside', 'NumColumns', 4);
+title(gx, 'Measured paths outside the U.S. from 1 GHz to 10 GHz in OT/TRER 16, by frequency');
+wp_save_fig(fig, out, 'fig23_trer16_nonus_path_map');
 
 % Fig. 16: where the measured paths are
 fig = figure('Visible', 'off', 'Position', [0 0 1100 560]);
@@ -192,11 +299,11 @@ catch
     geobasemap(gx, 'none');
 end
 hold(gx, 'on');
-gnames = unique(grp)';
+gnames = unique(fb(isUS))';
 cols = [0.5 0.5 0.5; 0.835 0.369 0; 0 0.620 0.451; 0 0.447 0.698];
 for g = 1:numel(gnames)
     first = true;
-    for k = find(grp == gnames(g))'
+    for k = find(isUS & fb == gnames(g))'
         la = [dms(S.tx_lat(k)) dms(S.rx_lat(k))]; lo = [dms(S.tx_lon(k)) dms(S.rx_lon(k))];
         if first
             geoplot(gx, la, lo, '-', 'Color', cols(g, :), 'LineWidth', 2, 'DisplayName', gnames(g));
@@ -210,6 +317,13 @@ geolimits(gx, [24 50], [-125 -66]);
 legend(gx, 'Location', 'southoutside', 'NumColumns', 4);
 title(gx, 'Measured U.S. paths from 1 GHz to 10 GHz in OT/TRER 16, by frequency group');
 wp_save_fig(fig, out, 'fig16_trer16_path_map');
+end
+
+function S = read_paths(csv, us)
+io = detectImportOptions(csv, 'Delimiter', ',');
+io = setvartype(io, {'path', 'tx_name', 'tx_lat', 'tx_lon', 'rx_name', 'rx_lat', 'rx_lon', 'years', 'region'}, 'string');
+S = readtable(csv, io);
+S.us = repmat(us, height(S), 1);
 end
 
 function d = dms(s)
