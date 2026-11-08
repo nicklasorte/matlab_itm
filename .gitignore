@@ -1,3 +1,5 @@
 build/
 *.asv
 *.part
+__pycache__/
+*.pyc
