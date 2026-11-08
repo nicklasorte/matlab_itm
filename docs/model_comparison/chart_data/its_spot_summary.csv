@@ -1,0 +1,55 @@
+set,label,terrain,band,model,paths,km_median_error_db,censored_share,median_delta_h_m
+PL,"Colorado plains",survey,50 MHz,itm,122,-22.105966066159,0,101.744090579949
+PL,"Colorado plains",survey,50 MHz,p452,122,NaN,0,101.744090579949
+PL,"Colorado plains",survey,50 MHz,p2001,122,-24.652262539126,0,101.744090579949
+PL,"Colorado plains",survey,100 MHz,itm,173,-16.926869279754,0,97.743258339409
+PL,"Colorado plains",survey,100 MHz,p452,173,-19.670591825153,0,97.743258339409
+PL,"Colorado plains",survey,100 MHz,p2001,173,-19.581438730404,0,97.743258339409
+MT,"Colorado mountains",survey,50 MHz,itm,40,-20.874770580849,0,539.821884093511
+MT,"Colorado mountains",survey,50 MHz,p452,40,NaN,0,539.821884093511
+MT,"Colorado mountains",survey,50 MHz,p2001,40,-22.827884570567,0,539.821884093511
+MT,"Colorado mountains",survey,100 MHz,itm,47,-16.727161116484,0.00709219858156029,582.230961636583
+MT,"Colorado mountains",survey,100 MHz,p452,47,-20.415361273915,0.00709219858156029,582.230961636583
+MT,"Colorado mountains",survey,100 MHz,p2001,47,-20.416555145763,0.00709219858156029,582.230961636583
+OH,"Ohio hills",survey,50 MHz,itm,246,-12.645023768898,0.231707317073171,94.6753055177736
+OH,"Ohio hills",survey,50 MHz,p452,246,NaN,0.231707317073171,94.6753055177736
+OH,"Ohio hills",survey,50 MHz,p2001,246,-8.77508522966701,0.231707317073171,94.6753055177736
+OH,"Ohio hills",survey,100 MHz,itm,246,-15.668356757289,0.183672086720868,94.5337782797016
+OH,"Ohio hills",survey,100 MHz,p452,246,-11.832604172224,0.183672086720868,94.5337782797016
+OH,"Ohio hills",survey,100 MHz,p2001,246,-11.827865709366,0.183672086720868,94.5337782797016
+WY,"Laramie Mountains, Wyoming",dem,230 MHz,itm,45,-12.902050652113,0,122.138570060109
+WY,"Laramie Mountains, Wyoming",dem,230 MHz,p452,45,-14.971362038078,0,122.138570060109
+WY,"Laramie Mountains, Wyoming",dem,230 MHz,p2001,45,-14.981398138618,0,122.138570060109
+WY,"Laramie Mountains, Wyoming",dem,416 MHz,itm,45,-7.91510707587901,0,122.138570060109
+WY,"Laramie Mountains, Wyoming",dem,416 MHz,p452,45,-12.629183515785,0,122.138570060109
+WY,"Laramie Mountains, Wyoming",dem,416 MHz,p2001,45,-12.630571947046,0,122.138570060109
+WY,"Laramie Mountains, Wyoming",dem_high,230 MHz,itm,45,-17.037235503696,0,124.623197000234
+WY,"Laramie Mountains, Wyoming",dem_high,230 MHz,p452,45,-18.200952151867,0,124.623197000234
+WY,"Laramie Mountains, Wyoming",dem_high,230 MHz,p2001,45,-18.205554111302,0,124.623197000234
+WY,"Laramie Mountains, Wyoming",dem_high,416 MHz,itm,45,-12.769015592449,0,124.623197000234
+WY,"Laramie Mountains, Wyoming",dem_high,416 MHz,p452,45,-15.237948110402,0,124.623197000234
+WY,"Laramie Mountains, Wyoming",dem_high,416 MHz,p2001,45,-15.24540473072,0,124.623197000234
+ID,"Snake River Plateau, Idaho",dem,230 MHz,itm,30,-13.331830096466,0,70.3910987120695
+ID,"Snake River Plateau, Idaho",dem,230 MHz,p452,30,-14.832626254999,0,70.3910987120695
+ID,"Snake River Plateau, Idaho",dem,230 MHz,p2001,30,-14.834082536656,0,70.3910987120695
+ID,"Snake River Plateau, Idaho",dem,416 MHz,itm,28,-10.276761899704,0,74.9681734320836
+ID,"Snake River Plateau, Idaho",dem,416 MHz,p452,28,-13.920151333627,0,74.9681734320836
+ID,"Snake River Plateau, Idaho",dem,416 MHz,p2001,28,-13.916346917728,0,74.9681734320836
+ID,"Snake River Plateau, Idaho",dem_high,230 MHz,itm,30,-16.662056442568,0,69.8680126043168
+ID,"Snake River Plateau, Idaho",dem_high,230 MHz,p452,30,-18.546142400123,0,69.8680126043168
+ID,"Snake River Plateau, Idaho",dem_high,230 MHz,p2001,30,-18.552105261877,0,69.8680126043168
+ID,"Snake River Plateau, Idaho",dem_high,416 MHz,itm,28,-14.380590731314,0,76.13657642962
+ID,"Snake River Plateau, Idaho",dem_high,416 MHz,p452,28,-16.489606932257,0,76.13657642962
+ID,"Snake River Plateau, Idaho",dem_high,416 MHz,p2001,28,-16.496317427054,0,76.13657642962
+WA,"Columbia Plateau, Washington",dem,230 MHz,itm,63,-1.10478894820599,0,202.195007151257
+WA,"Columbia Plateau, Washington",dem,230 MHz,p452,63,-2.89540388583399,0,202.195007151257
+WA,"Columbia Plateau, Washington",dem,230 MHz,p2001,63,-2.879122564395,0,202.195007151257
+WA,"Columbia Plateau, Washington",dem,416 MHz,itm,55,1.24102877244999,0,197.223413048973
+WA,"Columbia Plateau, Washington",dem,416 MHz,p452,55,-1.82882494229202,0,197.223413048973
+WA,"Columbia Plateau, Washington",dem,416 MHz,p2001,55,-1.828507060774,0,197.223413048973
+WA,"Columbia Plateau, Washington",dem_high,230 MHz,itm,63,-5.766948070103,0,204.738865849324
+WA,"Columbia Plateau, Washington",dem_high,230 MHz,p452,63,-6.51737440520401,0,204.738865849324
+WA,"Columbia Plateau, Washington",dem_high,230 MHz,p2001,63,-6.51696592340201,0,204.738865849324
+WA,"Columbia Plateau, Washington",dem_high,416 MHz,itm,55,-2.40034069319802,0,197.374342633096
+WA,"Columbia Plateau, Washington",dem_high,416 MHz,p452,55,-4.70489621025899,0,197.374342633096
+WA,"Columbia Plateau, Washington",dem_high,416 MHz,p2001,55,-4.71307318912599,0,197.374342633096

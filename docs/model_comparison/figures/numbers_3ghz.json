@@ -1068,6 +1068,441 @@
   "gap_Diffraction": 32.7,
   "gap_Line of sight": -0.1,
   "gap_Troposcatter": 36.9,
+  "gclut_dc_itm_rx_p10_150": [
+    256.25,
+    13.5
+  ],
+  "gclut_dc_itm_rx_p10_160": [
+    362.5,
+    25
+  ],
+  "gclut_dc_itm_rx_p10_170": [
+    400,
+    30.1
+  ],
+  "gclut_dc_itm_rx_p10_180": [
+    531.25,
+    32.6
+  ],
+  "gclut_dc_itm_rx_p10_190": [
+    931.25,
+    40.1
+  ],
+  "gclut_dc_itm_rx_p10_200": [
+    2181.25,
+    45.3
+  ],
+  "gclut_dc_itm_rx_p50_150": [
+    156.25,
+    7.9
+  ],
+  "gclut_dc_itm_rx_p50_160": [
+    331.25,
+    22.5
+  ],
+  "gclut_dc_itm_rx_p50_170": [
+    387.5,
+    27.6
+  ],
+  "gclut_dc_itm_rx_p50_180": [
+    431.25,
+    30.1
+  ],
+  "gclut_dc_itm_rx_p50_190": [
+    668.75,
+    37.6
+  ],
+  "gclut_dc_itm_rx_p50_200": [
+    1375,
+    42.6
+  ],
+  "gclut_dc_itm_rx_p90_150": [
+    50,
+    3.5
+  ],
+  "gclut_dc_itm_rx_p90_160": [
+    250,
+    12.7
+  ],
+  "gclut_dc_itm_rx_p90_170": [
+    362.5,
+    25
+  ],
+  "gclut_dc_itm_rx_p90_180": [
+    400,
+    30.1
+  ],
+  "gclut_dc_itm_rx_p90_190": [
+    518.75,
+    32.6
+  ],
+  "gclut_dc_itm_rx_p90_200": [
+    912.5,
+    40.1
+  ],
+  "gclut_dc_p2001_rx_p10_150": [
+    231.25,
+    13.5
+  ],
+  "gclut_dc_p2001_rx_p10_160": [
+    356.25,
+    25
+  ],
+  "gclut_dc_p2001_rx_p10_170": [
+    506.25,
+    30.1
+  ],
+  "gclut_dc_p2001_rx_p10_180": [
+    968.75,
+    37.6
+  ],
+  "gclut_dc_p2001_rx_p10_190": [
+    2762.5,
+    45.1
+  ],
+  "gclut_dc_p2001_rx_p10_200": [
+    5675,
+    73.9
+  ],
+  "gclut_dc_p2001_rx_p50_150": [
+    143.75,
+    7.9
+  ],
+  "gclut_dc_p2001_rx_p50_160": [
+    318.75,
+    25
+  ],
+  "gclut_dc_p2001_rx_p50_170": [
+    425,
+    30.1
+  ],
+  "gclut_dc_p2001_rx_p50_180": [
+    656.25,
+    35
+  ],
+  "gclut_dc_p2001_rx_p50_190": [
+    1625,
+    42.6
+  ],
+  "gclut_dc_p2001_rx_p50_200": [
+    4137.5,
+    49.3
+  ],
+  "gclut_dc_p2001_rx_p90_150": [
+    50,
+    3.5
+  ],
+  "gclut_dc_p2001_rx_p90_160": [
+    225,
+    13.5
+  ],
+  "gclut_dc_p2001_rx_p90_170": [
+    356.25,
+    25
+  ],
+  "gclut_dc_p2001_rx_p90_180": [
+    493.75,
+    30.1
+  ],
+  "gclut_dc_p2001_rx_p90_190": [
+    956.25,
+    37.6
+  ],
+  "gclut_dc_p2001_rx_p90_200": [
+    2681.25,
+    45.1
+  ],
+  "gclut_dc_p452_rx_p10_150": [
+    231.25,
+    13.5
+  ],
+  "gclut_dc_p452_rx_p10_160": [
+    356.25,
+    25
+  ],
+  "gclut_dc_p452_rx_p10_170": [
+    506.25,
+    30.1
+  ],
+  "gclut_dc_p452_rx_p10_180": [
+    968.75,
+    37.6
+  ],
+  "gclut_dc_p452_rx_p10_190": [
+    2762.5,
+    45.1
+  ],
+  "gclut_dc_p452_rx_p10_200": [
+    5675,
+    73.9
+  ],
+  "gclut_dc_p452_rx_p50_150": [
+    143.75,
+    7.9
+  ],
+  "gclut_dc_p452_rx_p50_160": [
+    318.75,
+    25
+  ],
+  "gclut_dc_p452_rx_p50_170": [
+    425,
+    30.1
+  ],
+  "gclut_dc_p452_rx_p50_180": [
+    656.25,
+    35
+  ],
+  "gclut_dc_p452_rx_p50_190": [
+    1631.25,
+    42.6
+  ],
+  "gclut_dc_p452_rx_p50_200": [
+    4137.5,
+    49.3
+  ],
+  "gclut_dc_p452_rx_p90_150": [
+    50,
+    3.5
+  ],
+  "gclut_dc_p452_rx_p90_160": [
+    225,
+    13.5
+  ],
+  "gclut_dc_p452_rx_p90_170": [
+    356.25,
+    25
+  ],
+  "gclut_dc_p452_rx_p90_180": [
+    493.75,
+    30.1
+  ],
+  "gclut_dc_p452_rx_p90_190": [
+    956.25,
+    37.6
+  ],
+  "gclut_dc_p452_rx_p90_200": [
+    2681.25,
+    45.1
+  ],
+  "gclut_la_itm_rx_p10_150": [
+    225,
+    13.5
+  ],
+  "gclut_la_itm_rx_p10_160": [
+    506.25,
+    35.8
+  ],
+  "gclut_la_itm_rx_p10_170": [
+    1062.5,
+    135.8
+  ],
+  "gclut_la_itm_rx_p10_180": [
+    1556.25,
+    144.7
+  ],
+  "gclut_la_itm_rx_p10_190": [
+    2962.5,
+    144.7
+  ],
+  "gclut_la_itm_rx_p10_200": [
+    5012.5,
+    144.7
+  ],
+  "gclut_la_itm_rx_p50_150": [
+    87.5,
+    7.9
+  ],
+  "gclut_la_itm_rx_p50_160": [
+    375,
+    25
+  ],
+  "gclut_la_itm_rx_p50_170": [
+    793.75,
+    78.1
+  ],
+  "gclut_la_itm_rx_p50_180": [
+    1250,
+    144.7
+  ],
+  "gclut_la_itm_rx_p50_190": [
+    2087.5,
+    144.7
+  ],
+  "gclut_la_itm_rx_p50_200": [
+    4087.5,
+    144.7
+  ],
+  "gclut_la_itm_rx_p90_150": [
+    31.25,
+    3.5
+  ],
+  "gclut_la_itm_rx_p90_160": [
+    225,
+    13.5
+  ],
+  "gclut_la_itm_rx_p90_170": [
+    506.25,
+    35.8
+  ],
+  "gclut_la_itm_rx_p90_180": [
+    1050,
+    135.8
+  ],
+  "gclut_la_itm_rx_p90_190": [
+    1531.25,
+    144.7
+  ],
+  "gclut_la_itm_rx_p90_200": [
+    2906.25,
+    144.7
+  ],
+  "gclut_la_p2001_rx_p10_150": [
+    218.75,
+    14.6
+  ],
+  "gclut_la_p2001_rx_p10_160": [
+    775,
+    43.7
+  ],
+  "gclut_la_p2001_rx_p10_170": [
+    1475,
+    135.8
+  ],
+  "gclut_la_p2001_rx_p10_180": [
+    2837.5,
+    144.7
+  ],
+  "gclut_la_p2001_rx_p10_190": [
+    5143.75,
+    145.1
+  ],
+  "gclut_la_p2001_rx_p10_200": [
+    8412.5,
+    145.1
+  ],
+  "gclut_la_p2001_rx_p50_150": [
+    87.5,
+    7.9
+  ],
+  "gclut_la_p2001_rx_p50_160": [
+    456.25,
+    25.1
+  ],
+  "gclut_la_p2001_rx_p50_170": [
+    1050,
+    71.6
+  ],
+  "gclut_la_p2001_rx_p50_180": [
+    1987.5,
+    144.7
+  ],
+  "gclut_la_p2001_rx_p50_190": [
+    4068.75,
+    145.1
+  ],
+  "gclut_la_p2001_rx_p50_200": [
+    6750,
+    145.1
+  ],
+  "gclut_la_p2001_rx_p90_150": [
+    31.25,
+    3.5
+  ],
+  "gclut_la_p2001_rx_p90_160": [
+    212.5,
+    14.1
+  ],
+  "gclut_la_p2001_rx_p90_170": [
+    768.75,
+    42.8
+  ],
+  "gclut_la_p2001_rx_p90_180": [
+    1462.5,
+    127.7
+  ],
+  "gclut_la_p2001_rx_p90_190": [
+    2812.5,
+    144.7
+  ],
+  "gclut_la_p2001_rx_p90_200": [
+    5100,
+    145.1
+  ],
+  "gclut_la_p452_rx_p10_150": [
+    218.75,
+    14.6
+  ],
+  "gclut_la_p452_rx_p10_160": [
+    775,
+    43.7
+  ],
+  "gclut_la_p452_rx_p10_170": [
+    1468.75,
+    127.7
+  ],
+  "gclut_la_p452_rx_p10_180": [
+    2837.5,
+    144.7
+  ],
+  "gclut_la_p452_rx_p10_190": [
+    5143.75,
+    145.1
+  ],
+  "gclut_la_p452_rx_p10_200": [
+    8412.5,
+    145.1
+  ],
+  "gclut_la_p452_rx_p50_150": [
+    87.5,
+    7.9
+  ],
+  "gclut_la_p452_rx_p50_160": [
+    456.25,
+    25.1
+  ],
+  "gclut_la_p452_rx_p50_170": [
+    1050,
+    71.6
+  ],
+  "gclut_la_p452_rx_p50_180": [
+    1987.5,
+    144.7
+  ],
+  "gclut_la_p452_rx_p50_190": [
+    4068.75,
+    145.1
+  ],
+  "gclut_la_p452_rx_p50_200": [
+    6743.75,
+    145.1
+  ],
+  "gclut_la_p452_rx_p90_150": [
+    31.25,
+    3.5
+  ],
+  "gclut_la_p452_rx_p90_160": [
+    212.5,
+    14.1
+  ],
+  "gclut_la_p452_rx_p90_170": [
+    768.75,
+    42.8
+  ],
+  "gclut_la_p452_rx_p90_180": [
+    1462.5,
+    127.7
+  ],
+  "gclut_la_p452_rx_p90_190": [
+    2812.5,
+    144.7
+  ],
+  "gclut_la_p452_rx_p90_200": [
+    5075,
+    145.1
+  ],
+  "gclut_loss": 29.7,
+  "gclut_loss_p10": 24.6,
+  "gclut_loss_p90": 34.9,
   "grid_dc_gap_max": 76.2,
   "grid_dc_gap_median": 0.2,
   "grid_dc_gap_p90": 21.5,
@@ -1904,6 +2339,236 @@
     1.1,
     4.9
   ],
+  "spot_ID_dem_230MHz_itm": [
+    -13.3,
+    30
+  ],
+  "spot_ID_dem_230MHz_p2001": [
+    -14.8,
+    30
+  ],
+  "spot_ID_dem_230MHz_p452": [
+    -14.8,
+    30
+  ],
+  "spot_ID_dem_416MHz_itm": [
+    -10.3,
+    28
+  ],
+  "spot_ID_dem_416MHz_p2001": [
+    -13.9,
+    28
+  ],
+  "spot_ID_dem_416MHz_p452": [
+    -13.9,
+    28
+  ],
+  "spot_ID_dem_high_230MHz_itm": [
+    -16.7,
+    30
+  ],
+  "spot_ID_dem_high_230MHz_p2001": [
+    -18.6,
+    30
+  ],
+  "spot_ID_dem_high_230MHz_p452": [
+    -18.5,
+    30
+  ],
+  "spot_ID_dem_high_416MHz_itm": [
+    -14.4,
+    28
+  ],
+  "spot_ID_dem_high_416MHz_p2001": [
+    -16.5,
+    28
+  ],
+  "spot_ID_dem_high_416MHz_p452": [
+    -16.5,
+    28
+  ],
+  "spot_MT_survey_100MHz_itm": [
+    -16.7,
+    47
+  ],
+  "spot_MT_survey_100MHz_p2001": [
+    -20.4,
+    47
+  ],
+  "spot_MT_survey_100MHz_p452": [
+    -20.4,
+    47
+  ],
+  "spot_MT_survey_50MHz_itm": [
+    -20.9,
+    40
+  ],
+  "spot_MT_survey_50MHz_p2001": [
+    -22.8,
+    40
+  ],
+  "spot_MT_survey_50MHz_p452": [
+    null,
+    40
+  ],
+  "spot_OH_survey_100MHz_itm": [
+    -15.7,
+    246
+  ],
+  "spot_OH_survey_100MHz_p2001": [
+    -11.8,
+    246
+  ],
+  "spot_OH_survey_100MHz_p452": [
+    -11.8,
+    246
+  ],
+  "spot_OH_survey_50MHz_itm": [
+    -12.6,
+    246
+  ],
+  "spot_OH_survey_50MHz_p2001": [
+    -8.8,
+    246
+  ],
+  "spot_OH_survey_50MHz_p452": [
+    null,
+    246
+  ],
+  "spot_PL_survey_100MHz_itm": [
+    -16.9,
+    173
+  ],
+  "spot_PL_survey_100MHz_p2001": [
+    -19.6,
+    173
+  ],
+  "spot_PL_survey_100MHz_p452": [
+    -19.7,
+    173
+  ],
+  "spot_PL_survey_50MHz_itm": [
+    -22.1,
+    122
+  ],
+  "spot_PL_survey_50MHz_p2001": [
+    -24.7,
+    122
+  ],
+  "spot_PL_survey_50MHz_p452": [
+    null,
+    122
+  ],
+  "spot_WA_dem_230MHz_itm": [
+    -1.1,
+    63
+  ],
+  "spot_WA_dem_230MHz_p2001": [
+    -2.9,
+    63
+  ],
+  "spot_WA_dem_230MHz_p452": [
+    -2.9,
+    63
+  ],
+  "spot_WA_dem_416MHz_itm": [
+    1.2,
+    55
+  ],
+  "spot_WA_dem_416MHz_p2001": [
+    -1.8,
+    55
+  ],
+  "spot_WA_dem_416MHz_p452": [
+    -1.8,
+    55
+  ],
+  "spot_WA_dem_high_230MHz_itm": [
+    -5.8,
+    63
+  ],
+  "spot_WA_dem_high_230MHz_p2001": [
+    -6.5,
+    63
+  ],
+  "spot_WA_dem_high_230MHz_p452": [
+    -6.5,
+    63
+  ],
+  "spot_WA_dem_high_416MHz_itm": [
+    -2.4,
+    55
+  ],
+  "spot_WA_dem_high_416MHz_p2001": [
+    -4.7,
+    55
+  ],
+  "spot_WA_dem_high_416MHz_p452": [
+    -4.7,
+    55
+  ],
+  "spot_WY_dem_230MHz_itm": [
+    -12.9,
+    45
+  ],
+  "spot_WY_dem_230MHz_p2001": [
+    -15,
+    45
+  ],
+  "spot_WY_dem_230MHz_p452": [
+    -15,
+    45
+  ],
+  "spot_WY_dem_416MHz_itm": [
+    -7.9,
+    45
+  ],
+  "spot_WY_dem_416MHz_p2001": [
+    -12.6,
+    45
+  ],
+  "spot_WY_dem_416MHz_p452": [
+    -12.6,
+    45
+  ],
+  "spot_WY_dem_high_230MHz_itm": [
+    -17,
+    45
+  ],
+  "spot_WY_dem_high_230MHz_p2001": [
+    -18.2,
+    45
+  ],
+  "spot_WY_dem_high_230MHz_p452": [
+    -18.2,
+    45
+  ],
+  "spot_WY_dem_high_416MHz_itm": [
+    -12.8,
+    45
+  ],
+  "spot_WY_dem_high_416MHz_p2001": [
+    -15.2,
+    45
+  ],
+  "spot_WY_dem_high_416MHz_p452": [
+    -15.2,
+    45
+  ],
+  "spot_gap_med": 0.7,
+  "spot_lowant_cens": 0,
+  "spot_lowant_itm": -6.7,
+  "spot_lowant_p2001": -8.8,
+  "spot_lowant_p452": -9,
+  "spot_lowant_paths": 142,
+  "spot_paths": 608,
+  "spot_phase1_cens": 12,
+  "spot_phase1_itm": -16.7,
+  "spot_phase1_p2001": -16,
+  "spot_phase1_p452": -16,
+  "spot_phase1_paths": 466,
+  "spot_rows": 7793,
+  "spot_shift_itm": -2.5,
   "sweep_Double-horizon diffraction_100": 45.8,
   "sweep_Double-horizon diffraction_1000": 60.6,
   "sweep_Double-horizon diffraction_10000": 111,

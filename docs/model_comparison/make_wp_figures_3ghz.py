@@ -723,9 +723,8 @@ def s37_spot_sets():
     ax.axvline(0, color=DB, lw=0.8)
     ax.set_yticks(range(len(order)), order, fontsize=8)
     ax.set_xlabel("Median predicted minus measured loss (dB)")
-    ax.text(0.99, 0.04, "ITM", transform=ax.transAxes, ha="right", color=LB, fontsize=8.5, fontweight="semibold")
-    ax.text(0.99, 0.11, "P.2001", transform=ax.transAxes, ha="right", color=DB, fontsize=8.5, fontweight="semibold")
-    ax.text(0.99, 0.18, "P.452", transform=ax.transAxes, ha="right", color=GR, fontsize=8.5, fontweight="semibold")
+    for k, (lab, c) in enumerate([("ITM", LB), ("P.2001", DB), ("P.452", GR)]):
+        ax.text(0.02, 0.96 - 0.07 * k, lab, transform=ax.transAxes, ha="left", va="top", color=c, fontsize=8.5, fontweight="semibold")
     save(fig, "s37_spot_sets")
 
 
