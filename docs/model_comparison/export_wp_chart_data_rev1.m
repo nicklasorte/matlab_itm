@@ -11,6 +11,10 @@ function export_wp_chart_data_rev1(options)
 %     real_terrain_gap_by_time.csv  median P.2001 minus ITM and P.452 minus
 %                                ITM over the links, by frequency and time
 %                                percentage (all 30 percentages)
+%     basemap_coastlines.csv     world coastlines (Mapping Toolbox
+%                                coastlines.mat), NaN-separated, for maps
+%     basemap_us_states.csv      U.S. state outlines (Mapping Toolbox
+%                                usastatelo.shp), NaN-separated
 %   The other chart data (diffraction terms and ablation, ITU-R databank
 %   results) are already CSV tables in figures/; make_wp_charts_rev1.py
 %   reads those directly. No model runs.
@@ -54,4 +58,14 @@ for f = 1:numel(F)
 end
 G = cell2table(rows, 'VariableNames', {'freq_mhz', 'time_pct', 'p2001_minus_itm_median_db', 'p452_minus_itm_median_db'});
 writetable(G, fullfile(options.OutDir, 'real_terrain_gap_by_time.csv'));
+
+% Basemaps for the Python charts (no map download there)
+c = load('coastlines', 'coastlat', 'coastlon');
+writetable(table(c.coastlat, c.coastlon, 'VariableNames', {'lat', 'lon'}), fullfile(options.OutDir, 'basemap_coastlines.csv'));
+st = shaperead('usastatelo', 'UseGeoCoords', true);
+la = []; lo = [];
+for k = 1:numel(st)
+    la = [la; st(k).Lat(:); NaN]; lo = [lo; st(k).Lon(:); NaN]; %#ok<AGROW>
+end
+writetable(table(la, lo, 'VariableNames', {'lat', 'lon'}), fullfile(options.OutDir, 'basemap_us_states.csv'));
 end
