@@ -31,20 +31,34 @@ function D = diffraction_decomposition_rev1(options)
 %   Writes table_diffraction_terms.csv, table_diffraction_ablation.csv,
 %   fig14_diffraction_terms.png, and fig15_diffraction_ablation.png to
 %   options.OutDir.
+%
+%   Other links: options.Links (a table with tx_lat, tx_lon, rx_lat, rx_lon,
+%   tx_h_m, rx_h_m, and region, such as western_terrain_rev1 writes) and
+%   options.Freqs (MHz) run the same split on those links instead, and
+%   options.Tag is added to every output file name ("_west").
 
 arguments
     options.OutDir (1,1) string = fullfile(fileparts(mfilename('fullpath')), 'figures')
     options.Results (1,1) string = fullfile(fileparts(mfilename('fullpath')), 'figures', 'wp_results_rev1.mat')
     options.P2001Dir (1,1) string = ""
     options.P452Dir (1,1) string = ""
+    options.Links table = table()
+    options.Freqs double = []
+    options.Tag (1,1) string = ""
 end
 
 wp_setup(options.P2001Dir, options.P452Dir);
 out = options.OutDir;
-s = load(options.Results, 'R');
-R = s.R;
-L = R.E7.links;
-F = R.freqs_mhz;
+if isempty(options.Links)
+    s = load(options.Results, 'R');
+    L = s.R.E7.links;
+    F = s.R.freqs_mhz;
+else
+    L = options.Links;
+    F = 3000;
+end
+if ~isempty(options.Freqs), F = options.Freqs; end
+tag = options.Tag;
 n = height(L);
 
 rows = {};
@@ -74,7 +88,7 @@ D = cell2table(rows, 'VariableNames', {'link', 'region', 'freq_mhz', 'd_km', 'it
     'A_k_d3', 'A_se_d3', 'w_d3', 'A_fo', 'A_d_d3', 'A_ref', 'A_d_at_path', ...
     'A_ref_single_edge', 'A_ref_no_clutter', 'A_ref_all_three', ...
     'itm_excess_50', 'Lbulla', 'Lbulls', 'Ldsph', 'Ld50_p452', 'p452_excess_50', 'p2001_excess_50', 'bullington_nu'});
-writetable(D, fullfile(out, 'table_diffraction_terms.csv'));
+writetable(D, fullfile(out, 'table_diffraction_terms' + tag + '.csv'));
 
 % Ablation summary: median gap (ITM excess minus P.452 Ld50) after each change
 abl = {'ITM as is', D.A_ref; '1 single edge', D.A_ref_single_edge; '2 no clutter term', D.A_ref_no_clutter; ...
@@ -89,7 +103,7 @@ for f = 1:numel(F)
     end
 end
 A = cell2table(rows, 'VariableNames', {'freq_mhz', 'case', 'n_links', 'median_gap_db', 'mean_gap_db', 'p10_gap_db', 'p90_gap_db'});
-writetable(A, fullfile(out, 'table_diffraction_ablation.csv'));
+writetable(A, fullfile(out, 'table_diffraction_ablation' + tag + '.csv'));
 
 % Fig. 14: the terms, link by link (first study frequency) and by frequency
 fig = figure('Visible', 'off', 'Position', [0 0 1200 420]);
@@ -132,7 +146,7 @@ ylabel(ax, 'Median term (dB)');
 legend(ax, [b1 b2], {'ITM w A_{se}', 'ITM (1-w) A_k', 'ITM A_{fo}', 'ITM line fit to path', ...
     'P.452 Bullington', 'P.452 spherical excess'}, 'Location', 'northoutside', 'NumColumns', 2, 'FontSize', 7);
 title(ax, 'Median terms: ITM (left), P.452 (right)'); grid(ax, 'on');
-wp_save_fig(fig, out, 'fig14_diffraction_terms');
+wp_save_fig(fig, out, 'fig14_diffraction_terms' + tag);
 
 % Fig. 15: ablation
 fig = figure('Visible', 'off', 'Position', [0 0 900 380]);
@@ -144,7 +158,7 @@ set(ax, 'XTick', 1:numel(cases), 'XTickLabel', cases);
 ylabel(ax, 'Median of ITM minus P.452 Ld (dB)');
 legend(ax, compose('%g MHz', F), 'Location', 'northeast');
 title(ax, 'How much of the diffraction gap each ITM ingredient explains'); grid(ax, 'on');
-wp_save_fig(fig, out, 'fig15_diffraction_ablation');
+wp_save_fig(fig, out, 'fig15_diffraction_ablation' + tag);
 end
 
 %% ------------------------------------------------------------------------
