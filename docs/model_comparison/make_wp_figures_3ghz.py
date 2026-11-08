@@ -4,11 +4,14 @@ One idea per figure, one panel where possible, direct labels, NTIA colors:
 ITM light blue, P.2001 dark blue, P.452 gray; mechanism classes gray (line
 of sight), light blue (diffraction), and purple (troposcatter).
 
-Reads CSV only: chart_data/ (export_wp_chart_data_rev1.m and
-export_deep_dive_data_rev1.py) and figures/table_*.csv. The study frequency
+Draws only: every number comes from CSV files the MATLAB analysis writes
+(chart_data/ from export_deep_dive_data_rev1, uncertainty_rev1,
+sensitivity_rev1, grid_separation_rev1, and paper_numbers_3ghz_rev1;
+figures/table_*.csv from make_wp_figures_rev1, diffraction_decomposition_rev1,
+compare_dbsg3_rev1, and compare_dbsg3_area_rev1). The study frequency
 is read from the data (3000 MHz after run_3ghz_rev1). Writes figures/sNN_*.png.
 
-Run:  python3 export_deep_dive_data_rev1.py; python3 make_wp_figures_3ghz.py
+Run:  run_3ghz_rev1 in MATLAB, then python3 make_wp_figures_3ghz.py
 """
 
 import matplotlib as mpl
@@ -384,16 +387,12 @@ def s19_enhancement_real():
 
 
 def s20_enhancement_measured():
-    d = db1
-    ed = np.array([0, 60, 120, 200, 300, 450, 900]); xm = np.sqrt(np.maximum(ed[:-1], 20) * ed[1:])
-    bb = np.digitize(d.d_km, ed) - 1
+    t = pd.read_csv(CD / "meas_enhancement_by_distance.csv")
     fig, ax = new(); clean(ax); ends = []
     for key, col, lab, lw in (("meas", "#222222", "Measured", 3), ("itm", LB, "ITM", 2.2), ("p2001", DB, "P.2001", 2.2)):
-        v = (d[f"{key}_50"] - d[f"{key}_01"]).values
-        m = np.array([np.nanmedian(v[bb == i]) if (bb == i).sum() >= 3 else np.nan for i in range(len(xm))])
-        ok = ~np.isnan(m)
-        ax.plot(xm[ok], m[ok], "-o", color=col, lw=lw, ms=5, mec="white")
-        ends.append((m[ok][-1], lab, col)); xe = xm[ok][-1]
+        q = t[(t.series == key) & (t.n >= 3)]
+        ax.plot(q.d_mid_km, q.median_db, "-o", color=col, lw=lw, ms=5, mec="white")
+        ends.append((q.median_db.iloc[-1], lab, col)); xe = q.d_mid_km.iloc[-1]
     ax.set_xscale("log"); ax.set_xlim(20, 1500); ax.set_ylim(0, 35)
     stack_labels(ax, xe, ends)
     ax.set_xticks([30, 100, 300, 1000], ["30", "100", "300", "1,000"])
@@ -435,11 +434,12 @@ def s22_distance_threshold():
 
 # ===================== measurements =====================
 def s23_error_vs_frequency():
+    t = pd.read_csv(CD / "meas_error_by_band.csv")
     bins = C.BINS
     fig, ax = new(); clean(ax); ends = []
     for m in ["p452", "p2001", "itm"]:
-        v = [C.err(m, "50", db.bin == bn) for bn in bins]
-        y = [x.median() if x.size >= 3 else np.nan for x in v]
+        q = t[t.model == m].set_index("band").reindex(bins)
+        y = np.where(q.n >= 3, q.median_error_db, np.nan)
         ax.plot(range(6), y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
         ends.append((y[-1], ML[m], MC[m]))
     ax.axhline(0, color=DB, lw=0.8)
@@ -450,14 +450,13 @@ def s23_error_vs_frequency():
 
 
 def s24_error_vs_time():
-    pc, pv = ["01", "10", "50", "90", "99"], [1, 10, 50, 90, 99]
+    t = pd.read_csv(CD / "meas_error_by_time.csv")
+    pv = [1, 10, 50, 90, 99]
     fig, ax = new(); clean(ax); ends = []
-    hi = db.freq_mhz > 0
     for m in ["p452", "p2001", "itm"]:
-        y = np.array([C.err(m, p, hi).mean() if C.err(m, p, hi).size else np.nan for p in pc])
-        ok = ~np.isnan(y)
-        ax.plot(np.array(pv)[ok], y[ok], "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
-        ends.append((y[ok][-1], ML[m], MC[m]))
+        q = t[(t.model == m) & (t.n > 0)]
+        ax.plot(q.time_pct, q.mean_error_db, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
+        ends.append((q.mean_error_db.iloc[-1], ML[m], MC[m]))
     ax.axhline(0, color=DB, lw=0.8); ax.set_xscale("log"); ax.set_xlim(0.8, 250)
     stack_labels(ax, 99, ends)
     ax.set_xticks(pv, ["1 %", "10 %", "50 %", "", "99 %"]); ax.set_xlabel("Percentage of time")
@@ -466,26 +465,133 @@ def s24_error_vs_time():
 
 
 def s25_error_vs_terrain():
-    d = db1
-    ed = np.array([0, 25, 50, 100, 200, 400, 3000]); xm = np.sqrt(np.maximum(ed[:-1], 10) * ed[1:])
-    bb = np.digitize(d.itm_delta_h_m, ed) - 1
+    t = pd.read_csv(CD / "meas_error_by_dh.csv")
     fig, ax = new(); clean(ax); ends = []
     for m in ["p452", "p2001", "itm"]:
-        v = (d[f"{m}_50"] - d.meas_50).values
-        y = np.array([np.nanmedian(v[bb == i]) if (bb == i).sum() >= 3 else np.nan for i in range(len(xm))])
-        ax.plot(xm, y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
-        ends.append((y[-1], ML[m], MC[m]))
+        q = t[t.model == m]
+        y = np.where(q.n >= 3, q.median_error_db, np.nan)
+        ax.plot(q.dh_mid_m, y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
+        ends.append((y[-1], ML[m], MC[m])); xe = q.dh_mid_m.iloc[-1]
     ax.axhline(0, color=DB, lw=0.8); ax.set_xscale("log"); ax.set_xlim(10, 3000)
-    stack_labels(ax, xm[-1], ends)
+    stack_labels(ax, xe, ends)
     ax.set_xticks([10, 100, 1000], ["10", "100", "1,000"]); ax.set_xlabel("Terrain irregularity Δh (m), log scale")
     ax.set_ylabel("Median predicted minus\nmeasured loss at 50 % (dB)")
     save(fig, "s25_error_vs_terrain")
 
 
+
+# ===================== uncertainty, sensitivity, grids, point-to-area =====================
+def s26_uncertainty_gap():
+    U = pd.read_csv(CD / "uncertainty_summary.csv")
+    fig, ax = new(2.9); clean(ax, "x")
+    for i, r in U.iterrows():
+        col = CC.get(r.quantity.replace(" links", ""), DB if "under" in r.quantity else LB)
+        ax.plot([r.ci_low_db, r.ci_high_db], [i, i], color=col, lw=6, alpha=0.35, solid_capstyle="round")
+        ax.scatter([r.median_db], [i], s=60, color=col, edgecolor="white", zorder=3)
+        z = lambda x: f"{0 if abs(x) < 0.5 else x:.0f}"
+        ax.text(r.ci_high_db + 1.5, i, f"{z(r.median_db)} dB ({z(r.ci_low_db)} to {z(r.ci_high_db)})", va="center", fontsize=8.5)
+    ax.axvline(0, color=DB, lw=0.8)
+    ax.set_yticks(range(len(U)), [f"{q} ({n})" for q, n in zip(U.quantity, U.n)]); ax.set_ylim(len(U) - 0.4, -0.6)
+    ax.set_xlim(-10, 80); ax.set_xlabel(f"Median ITM minus P.2001 at {FT} with its 95 % bootstrap interval (dB)")
+    save(fig, "s26_uncertainty_gap")
+
+
+def s27_uncertainty_measured():
+    M = pd.read_csv(CD / "uncertainty_measurements.csv")
+    fig, ax = new(3.0); clean(ax, "x")
+    y, ticks, labs = 0, [], []
+    for g in ["All", "30 MHz-1 GHz", "1-10 GHz"]:
+        for m in ["itm", "p452", "p2001"]:
+            r = M[(M.group == g) & (M.model == m)]
+            if r.empty:
+                continue
+            r = r.iloc[0]
+            ax.plot([r.ci_low_db, r.ci_high_db], [y, y], color=MC[m], lw=6, alpha=0.35, solid_capstyle="round")
+            ax.scatter([r.mean_error_db], [y], s=55, color=MC[m], edgecolor="white", zorder=3)
+            ticks.append(y); labs.append(f"{ML[m]}, {g}"); y += 1
+        y += 0.6
+    ax.axvline(0, color=DB, lw=0.8)
+    ax.set_yticks(ticks, labs); ax.set_ylim(y - 0.4, -0.6); ax.set_xlim(-6, 4)
+    ax.set_xlabel("Mean predicted minus measured loss at 50 %, with 95 % interval (dB)")
+    save(fig, "s27_uncertainty_measured")
+
+
+def s28_sensitivity():
+    S = pd.read_csv(CD / "sensitivity_summary.csv")
+    q = S[(S.itm_class == "Diffraction") & (S.model == "itm")].copy()
+    base = q[q["case"] == "baseline"].median_gap_to_p2001_db.iloc[0]
+    q = q.iloc[::-1]
+    fig, ax = new(4.4); clean(ax, "x")
+    ax.axvspan(base - 3, base + 3, color="#EEF1FA", zorder=0)
+    for i, (_, r) in enumerate(q.iterrows()):
+        b0 = r["case"] == "baseline"
+        ax.plot([base, r.median_gap_to_p2001_db], [i, i], color=LG, lw=2)
+        ax.scatter([r.median_gap_to_p2001_db], [i], s=60 if b0 else 44, color=DB if b0 else LB, edgecolor="white", zorder=3)
+        ax.text(max(base, r.median_gap_to_p2001_db) + 1, i, f"{r.median_gap_to_p2001_db:.0f} dB", va="center", fontsize=8.5)
+    ax.set_yticks(range(len(q)), [("ITM " + c if c != "baseline" else "ITM baseline") for c in q["case"]])
+    ax.set_xlim(0, 60); ax.set_xlabel(f"Median ITM minus P.2001 on the diffraction links, {FT} (dB); band: baseline ± 3 dB")
+    save(fig, "s28_sensitivity")
+
+
+def s29_grid_maps():
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.5), layout="constrained")
+    cmap = mpl.colors.LinearSegmentedColormap.from_list("gap", ["#F2F3F5", "#A9B8E3", LB, DB])
+    norm = mpl.colors.Normalize(0, 60)
+    for ax, site, title in ((axs[0], "dc", "Washington, DC"), (axs[1], "la", "Los Angeles")):
+        G = pd.read_csv(CD / f"grid_{site}.csv")
+        gap = (G.itm_50 - G.p2001_50).clip(lower=0)
+        ax.scatter(G.dx_km, G.dy_km, c=gap, cmap=cmap, norm=norm, s=62, marker="s", linewidths=0)
+        ax.scatter([0], [0], marker="*", s=160, color=PU, edgecolor="white", zorder=3)
+        ax.set_aspect("equal"); ax.set_xlim(-53, 53); ax.set_ylim(-53, 53)
+        ax.set_xticks([-50, 0, 50]); ax.set_yticks([-50, 0, 50]); ax.tick_params(length=0)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.set_title(title, loc="left"); ax.set_xlabel("km east of the receiver")
+    axs[0].set_ylabel("km north of the receiver")
+    cb = fig.colorbar(mpl.cm.ScalarMappable(norm, cmap), ax=axs, shrink=0.8, pad=0.01)
+    cb.outline.set_visible(False); cb.set_label(f"ITM minus P.2001 at {FT}, 50 % (dB)")
+    save(fig, "s29_grid_maps")
+
+
+def s30_grid_exclusion():
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.0), sharey=True, layout="constrained")
+    for ax, site, title in ((axs[0], "dc", "Washington, DC"), (axs[1], "la", "Los Angeles")):
+        clean(ax)
+        E = pd.read_csv(CD / f"grid_{site}_exclusion.csv").query("time_pct == 50")
+        for m, ls in (("p2001", "-"), ("itm", "-")):
+            q = E[E.model == m]
+            ax.plot(q.required_loss_db, q.area_km2 / 1000, color=MC[m], lw=2.4, ls=ls)
+            label_end(ax, q.required_loss_db.iloc[-1], q.area_km2.iloc[-1] / 1000, ML[m] if m == "itm" else "P.2001, P.452", MC[m])
+        ax.set_title(title, loc="left"); ax.set_xlabel("Required loss (dB)"); ax.set_xlim(110, 198)
+    axs[0].set_ylabel("Area where a single transmitter\nwould exceed the criterion (1,000 km²)")
+    save(fig, "s30_grid_exclusion")
+
+
+def s31_area_measurements():
+    f = CD / "meas_area_error_by_band.csv"
+    if not f.exists():
+        return
+    t = pd.read_csv(f)
+    bins = [b for b in ["30-100 MHz", "100-300 MHz", "0.3-1 GHz", "1-2 GHz", "2-3 GHz"] if (t[t.band == b].n >= 5).any()]
+    fig, ax = new(); clean(ax); ends = []
+    for m in ["p452", "p2001", "itm"]:
+        q = t[t.model == m].set_index("band").reindex(bins)
+        y = np.where(q.n >= 5, q.mean_error_db, np.nan)
+        ax.plot(range(len(bins)), y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
+        ok = ~np.isnan(y)
+        ends.append((y[ok][-1], ML[m], MC[m])); xe = np.arange(len(bins))[ok][-1]
+    ax.axhline(0, color=DB, lw=0.8)
+    stack_labels(ax, xe, ends)
+    ax.set_xticks(range(len(bins)), bins); ax.set_xlim(-0.3, len(bins) + 0.3)
+    ax.set_ylabel("Mean predicted minus measured\nlocation-median loss (dB)")
+    save(fig, "s31_area_measurements")
+
+
 ALL = [s01_smooth_earth, s02_knife_edge, s03_knife_edge_function, s04_gap_by_mechanism, s05_gap_vs_terrain, s06_frequency_sweep,
        s07_terrain_resolution, s08_diffraction_terms, s09_ablation, s10_radials, s11_window_by_length, s12_the_jump, s13_anatomy,
        s14_where_window_falls, s15_window_over_time, s16_itm_vs_p452, s17_over_sea, s18_ducting_takeover, s19_enhancement_real,
-       s20_enhancement_measured, s21_archetypes, s22_distance_threshold, s23_error_vs_frequency, s24_error_vs_time, s25_error_vs_terrain]
+       s20_enhancement_measured, s21_archetypes, s22_distance_threshold, s23_error_vs_frequency, s24_error_vs_time, s25_error_vs_terrain,
+       s26_uncertainty_gap, s27_uncertainty_measured, s28_sensitivity, s29_grid_maps, s30_grid_exclusion, s31_area_measurements]
 
 if __name__ == "__main__":
     for fn in ALL:

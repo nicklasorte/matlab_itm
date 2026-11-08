@@ -15,3 +15,8 @@ point is the transmitter in every profile file).
 
 Columns `a001` to `a9999` are the attenuation relative to free space (dB) not
 exceeded for 0.01, 0.1, 1, 10, 50, 90, 99, 99.9, and 99.99 % of the time.
+
+## VHF/UHF point-to-area data (Rec. ITU-R P.311 Tables VI-1 and VI-2)
+
+- `itu_r_sg3_dbsg3_vhfuhf_rssdata.zip`: ITU-R SG3 databank of VHF/UHF measurements relating to terrestrial broadcasting, downloaded from https://www.itu.int/oth/R0A0400005B/en (free). Spatial records (Table VI-2) in bands 1 to 7 (30 MHz to 3 GHz) in `disk1` and `disk2`; surveyed profiles in `disk3` to `disk5`.
+- `dbsg3_area_30mhz_3ghz.csv`: every spatial record parsed by `compare_dbsg3_area_rev1.m`. Column 40 of the .SPL files is the field strength exceeded at 50 % of locations for 1 kW e.r.p.; `meas_50` is basic transmission loss, 141.45 - E + 20 log10(f_MHz).

@@ -1,349 +1,891 @@
 {
- "n_Line of sight": 18,
- "gap_Line of sight": -0.1,
- "gap452_Line of sight": -0.1,
- "n_Diffraction": 27,
- "gap_Diffraction": 32.7,
- "gap452_Diffraction": 32.7,
- "n_Troposcatter": 15,
- "gap_Troposcatter": 36.9,
- "gap452_Troposcatter": 36.8,
- "los_maxabs": 8.3,
- "p2001_p452_maxmed": 0.02,
- "se_maxabs": 4.8,
- "ke_itm": 7.3,
- "ke_p452": 10.2,
- "ke_p2001": 10.2,
- "ke_itm_minus_J_max_v": 32.0,
- "ke_itm_at_max": 63.3,
- "ke_p2001_at_max": 53.5,
- "ke_J_at_max": 43.0,
- "sweep_Line of sight_1000": 0.1,
- "sweep_Line of sight_10000": 2.1,
- "sweep_Line of sight_3162": 4.2,
- "sweep_Line of sight_100": 0.5,
- "sweep_Single-horizon diffraction_1000": 2.6,
- "sweep_Single-horizon diffraction_10000": 0.8,
- "sweep_Single-horizon diffraction_3162": 2.0,
- "sweep_Single-horizon diffraction_100": 1.0,
- "sweep_Double-horizon diffraction_1000": 60.6,
- "sweep_Double-horizon diffraction_10000": 111.0,
- "sweep_Double-horizon diffraction_3162": 82.8,
- "sweep_Double-horizon diffraction_100": 45.8,
- "res90_itm": -0.02,
- "res1k_itm": -5.2,
- "res90_p2001": -0.03,
- "res1k_p2001": -3.4,
- "res_n": 27,
- "res_med30": 32.7,
- "res_med1k": 14.2,
- "res_moved10": 7,
- "res_medabs": 1.9,
- "res_max": 46.5,
- "nd": 27,
- "term_se": 29.2,
- "term_k": 57.4,
- "term_fo": 12.9,
- "term_itm_tot": 99.5,
- "term_bull": 45.4,
- "ratio": 1.75,
- "ratio_lt1": 1,
- "w_lt": 44.4,
- "w_lt_n": 15,
- "w_ge": 8.0,
- "w_ge_n": 12,
- "ab_ITM as is": 32.8,
- "ab_1 single edge": 8.4,
- "ab_2 no clutter term": 21.6,
- "ab_3 evaluated at the path": 23.4,
- "ab_4 all three": -8.7,
- "rad0_max60": 29.0,
- "rad0_med80": 26.9,
- "rad0_maxabs80": 55.8,
- "rad90_max60": 29.0,
- "rad90_med80": -3.1,
- "rad90_maxabs80": 3.8,
- "rad180_max60": 40.0,
- "rad180_med80": -2.7,
- "rad180_maxabs80": 3.9,
- "rad270_max60": 54.0,
- "rad270_med80": 43.6,
- "rad270_maxabs80": 69.9,
- "meas150_n": 367,
- "meas150_med": -2.6,
- "win_n": 22,
- "win_gt20": 21,
- "win_med": 44.6,
- "win_out": 1.2,
- "mwin_n": 45,
- "mwin_los": 31,
- "mwin_big_n": 13,
- "mwin_big_paths": 8,
- "mwin_big_itm": 9.8,
- "mwin_big_p2001": -7.8,
- "mwin_hi_n": 19,
- "mwin_hi_big_n": 5,
- "mwin_hi_big_paths": 3,
- "mwin_hi_big_itm": 23.6,
- "mwin_hi_big_p2001": -0.9,
- "mwin_lo_n": 26,
- "mwin_lo_big_n": 8,
- "mwin_lo_big_paths": 5,
- "mwin_lo_big_itm": 1.2,
- "mwin_lo_big_p2001": -12.1,
- "meas_n": 573,
- "time_Line of sight_0.001": 11.0,
- "time_Line of sight_1": 3.0,
- "time_Line of sight_50": -0.0,
- "time_Line of sight_99": -3.0,
- "time_Diffraction_0.001": 42.0,
- "time_Diffraction_1": 34.0,
- "time_Diffraction_50": 33.0,
- "time_Diffraction_99": 30.0,
- "time_Troposcatter_0.001": 27.0,
- "time_Troposcatter_1": 33.0,
- "time_Troposcatter_50": 37.0,
- "time_Troposcatter_99": 37.0,
- "dep_itm_Line of sight": 0.5,
- "dep_p2001_Line of sight": 3.9,
- "dep_itm_Diffraction": 1.8,
- "dep_p2001_Diffraction": 2.3,
- "dep_itm_Troposcatter": 19.8,
- "dep_p2001_Troposcatter": 10.7,
- "sea_len": 127.0,
- "sea_fs": 144.1,
- "sea_itm_0.01": 153.3,
- "sea_p452_0.01": 135.7,
- "sea_p2001_0.01": 128.8,
- "sea_itm_1": 173.3,
- "sea_p452_1": 141.3,
- "sea_p2001_1": 137.9,
- "sea_itm_50": 200.5,
- "sea_p452_50": 201.7,
- "sea_p2001_50": 203.9,
- "sea_below_fs": 2.0,
- "dbl_p2001_1": 207.9,
- "dbl_mech_ducting": false,
- "duct_land": {
-  "26": 1.0,
-  "28": 2.0,
-  "30": 2.0,
-  "32": 2.0,
-  "34": 2.0,
-  "36": 2.0,
-  "38": 2.0,
-  "40": 5.0,
-  "42": 5.0,
-  "44": 5.0,
-  "46": 5.0,
-  "48": 5.0,
-  "50": 5.0,
-  "55": 10.0,
-  "60": 10.0,
-  "65": 10.0,
-  "70": 10.0,
-  "75": 10.0,
-  "80": 10.0,
-  "85": 10.0,
-  "90": 10.0,
-  "95": 10.0,
-  "100": 10.0,
-  "105": 10.0,
-  "110": 10.0,
-  "115": 10.0,
-  "120": 10.0,
-  "125": 10.0,
-  "130": 10.0,
-  "135": 10.0,
-  "140": 10.0,
-  "145": 10.0,
-  "150": 10.0,
-  "155": 10.0,
-  "160": 10.0,
-  "165": 10.0,
-  "170": 10.0,
-  "175": 10.0,
-  "180": 10.0,
-  "185": 10.0,
-  "190": 10.0,
-  "195": 10.0,
-  "200": 10.0
- },
- "duct_sea": {
-  "5": 0.5,
-  "6": 2.0,
-  "7": 2.0,
-  "8": 2.0,
-  "9": 5.0,
-  "10": 5.0,
-  "12": 5.0,
-  "14": 10.0,
-  "16": 10.0,
-  "18": 10.0,
-  "20": 10.0,
-  "22": 10.0,
-  "24": 10.0,
-  "26": 10.0,
-  "28": 10.0,
-  "30": 20.0,
-  "32": 20.0,
-  "34": 20.0,
-  "36": 20.0,
-  "38": 20.0,
-  "40": 20.0,
-  "42": 20.0,
-  "44": 20.0,
-  "46": 30.0,
-  "48": 30.0,
-  "50": 30.0,
-  "55": 30.0,
-  "60": 30.0,
-  "65": 30.0,
-  "70": 30.0,
-  "75": 30.0,
-  "80": 30.0,
-  "85": 30.0,
-  "90": 30.0,
-  "95": 30.0,
-  "100": 30.0,
-  "105": 30.0,
-  "110": 30.0,
-  "115": 30.0,
-  "120": 30.0,
-  "125": 30.0,
-  "130": 30.0,
-  "135": 20.0,
-  "140": 20.0,
-  "145": 20.0,
-  "150": 20.0,
-  "155": 20.0,
-  "160": 20.0,
-  "165": 20.0,
-  "170": 20.0,
-  "175": 20.0,
-  "180": 20.0,
-  "185": 20.0,
-  "190": 20.0,
-  "195": 20.0,
-  "200": 20.0
- },
- "clim_min": 276.3,
- "clim_max": 287.0,
- "n0_range": 3.4,
- "enh_meas": 16.6,
- "enh_itm": 21.7,
- "enh_p452": 17.4,
- "enh_p2001": 18.5,
- "thr": {
-  "freq_mhz": 3000.0,
-  "threshold_db": 150.0,
-  "land_itm_km": 38.0,
-  "land_p452_km": 36.0,
-  "land_p2001_km": 36.0,
-  "sea_itm_km": 38.0,
-  "sea_p452_km": 38.0,
-  "sea_p2001_km": 38.0
- },
- "elev": [
-  {
-   "model": "P.452",
-   "mean_abs_diff_deg_tx_rx_1": 0.0365637881554306,
-   "mean_abs_diff_deg_tx_rx_2": 0.0312018427195925
+  "ab_1 single edge": 8.4,
+  "ab_2 no clutter term": 21.6,
+  "ab_3 evaluated at the path": 23.4,
+  "ab_4 all three": -8.7,
+  "ab_ITM as is": 32.8,
+  "arch_Double-horizon diffraction_itm_drop": 15.6,
+  "arch_Double-horizon diffraction_p2001_drop": 3.3,
+  "arch_Line of sight_itm_drop": 4.1,
+  "arch_Line of sight_p2001_drop": 12.8,
+  "arch_Over-sea coastal_itm_drop": 47.2,
+  "arch_Over-sea coastal_p2001_drop": 75,
+  "arch_Single-horizon diffraction_itm_drop": 19.3,
+  "arch_Single-horizon diffraction_p2001_drop": 35.9,
+  "arch_Troposcatter_itm_drop": 34.8,
+  "arch_Troposcatter_p2001_drop": 68.3,
+  "area_0.3-1 GHz_itm": [
+    -15.1,
+    27.1,
+    860
+  ],
+  "area_0.3-1 GHz_p2001": [
+    -17,
+    25.6,
+    860
+  ],
+  "area_0.3-1 GHz_p452": [
+    -17,
+    25.6,
+    860
+  ],
+  "area_100-300 MHz_itm": [
+    -14.4,
+    19.9,
+    524
+  ],
+  "area_100-300 MHz_p2001": [
+    -12.4,
+    18.2,
+    524
+  ],
+  "area_100-300 MHz_p452": [
+    -12.5,
+    18.2,
+    524
+  ],
+  "area_2-3 GHz_itm": [
+    -24.9,
+    30.6,
+    289
+  ],
+  "area_2-3 GHz_p2001": [
+    -27.8,
+    32,
+    289
+  ],
+  "area_2-3 GHz_p452": [
+    -27.9,
+    32,
+    289
+  ],
+  "area_30-100 MHz_itm": [
+    -11.9,
+    18.2,
+    1217
+  ],
+  "area_30-100 MHz_p2001": [
+    -8.3,
+    15.6,
+    1217
+  ],
+  "area_All_itm": [
+    -14.6,
+    22.9,
+    2890
+  ],
+  "area_All_p2001": [
+    -13.6,
+    21.4,
+    2890
+  ],
+  "area_All_p452": [
+    -17.5,
+    24.9,
+    1673
+  ],
+  "area_d_range": [
+    1.1,
+    124.9
+  ],
+  "area_experiments": 14,
+  "area_f_range": [
+    62.3,
+    2180
+  ],
+  "area_n": 2890,
+  "clim_max": 287,
+  "clim_min": 276.3,
+  "dbl_Afo": 15,
+  "dbl_Ak": 91.9,
+  "dbl_Ase": 1330.9,
+  "dbl_dh": 555.2,
+  "dbl_itm_excess": 152.6,
+  "dbl_p2001_excess": 71,
+  "dbl_p452_excess": 70.6,
+  "dbl_w": 0.039,
+  "dep_itm_Diffraction": 1.8,
+  "dep_itm_Line of sight": 0.5,
+  "dep_itm_Troposcatter": 19.8,
+  "dep_p2001_Diffraction": 2.3,
+  "dep_p2001_Line of sight": 3.9,
+  "dep_p2001_Troposcatter": 10.7,
+  "duct_land": {
+    "100": 10,
+    "105": 10,
+    "110": 10,
+    "115": 10,
+    "120": 10,
+    "125": 10,
+    "130": 10,
+    "135": 10,
+    "140": 10,
+    "145": 10,
+    "150": 10,
+    "155": 10,
+    "160": 10,
+    "165": 10,
+    "170": 10,
+    "175": 10,
+    "180": 10,
+    "185": 10,
+    "190": 10,
+    "195": 10,
+    "200": 10,
+    "26": 1,
+    "28": 2,
+    "30": 2,
+    "32": 2,
+    "34": 2,
+    "36": 2,
+    "38": 2,
+    "40": 5,
+    "42": 5,
+    "44": 5,
+    "46": 5,
+    "48": 5,
+    "50": 5,
+    "55": 10,
+    "60": 10,
+    "65": 10,
+    "70": 10,
+    "75": 10,
+    "80": 10,
+    "85": 10,
+    "90": 10,
+    "95": 10
   },
-  {
-   "model": "P.2001",
-   "mean_abs_diff_deg_tx_rx_1": 0.0021091789106013,
-   "mean_abs_diff_deg_tx_rx_2": 0.0013557492140304
-  }
- ],
- "u_Line_of_sight_links_lo": -0.1,
- "u_Line_of_sight_links_hi": -0.0,
- "u_Line_of_sight_links_n3": 18,
- "u_Diffraction_links_lo": 13.6,
- "u_Diffraction_links_hi": 43.7,
- "u_Diffraction_links_n3": 680,
- "u_Troposcatter_links_lo": 2.6,
- "u_Troposcatter_links_hi": 55.8,
- "u_Troposcatter_links_n3": 1177,
- "u_w_under_0.12_lo": 43.4,
- "u_w_under_0.12_hi": 46.5,
- "u_w_under_0.12_n3": null,
- "u_w_0.12_or_more_lo": 4.6,
- "u_w_0.12_or_more_hi": 13.9,
- "u_w_0.12_or_more_n3": null,
- "u_split": 0.1,
- "u_split_lo": 0.04,
- "u_split_hi": 0.205,
- "u_dip": 0.102,
- "u_dip_p": 0.0179,
- "u_B": 10000,
- "um_All_itm": [
-  -2.2,
-  -3.4,
-  -1.0,
-  340
- ],
- "um_All_p452": [
-  -2.9,
-  -4.0,
-  -1.9,
-  237
- ],
- "um_All_p2001": [
-  -2.7,
-  -3.7,
-  -1.8,
-  338
- ],
- "um_30 MHz-1 GHz_itm": [
-  -2.9,
-  -4.1,
-  -1.7,
-  300
- ],
- "um_30 MHz-1 GHz_p452": [
-  -3.4,
-  -4.5,
-  -2.3,
-  196
- ],
- "um_30 MHz-1 GHz_p2001": [
-  -3.3,
-  -4.3,
-  -2.3,
-  298
- ],
- "um_1-10 GHz_itm": [
-  0.5,
-  -2.0,
-  3.0,
-  76
- ],
- "um_1-10 GHz_p452": [
-  -1.8,
-  -4.0,
-  0.4,
-  76
- ],
- "um_1-10 GHz_p2001": [
-  -0.6,
-  -3.1,
-  1.7,
-  76
- ],
- "u_Line_of_sight_links_share": [
-  0,
-  0,
-  0
- ],
- "u_Diffraction_links_share": [
-  56,
-  37,
-  74
- ],
- "u_Troposcatter_links_share": [
-  67,
-  40,
-  87
- ]
+  "duct_sea": {
+    "10": 5,
+    "100": 30,
+    "105": 30,
+    "110": 30,
+    "115": 30,
+    "12": 5,
+    "120": 30,
+    "125": 30,
+    "130": 30,
+    "135": 20,
+    "14": 10,
+    "140": 20,
+    "145": 20,
+    "150": 20,
+    "155": 20,
+    "16": 10,
+    "160": 20,
+    "165": 20,
+    "170": 20,
+    "175": 20,
+    "18": 10,
+    "180": 20,
+    "185": 20,
+    "190": 20,
+    "195": 20,
+    "20": 10,
+    "200": 20,
+    "22": 10,
+    "24": 10,
+    "26": 10,
+    "28": 10,
+    "30": 20,
+    "32": 20,
+    "34": 20,
+    "36": 20,
+    "38": 20,
+    "40": 20,
+    "42": 20,
+    "44": 20,
+    "46": 30,
+    "48": 30,
+    "5": 0.5,
+    "50": 30,
+    "55": 30,
+    "6": 2,
+    "60": 30,
+    "65": 30,
+    "7": 2,
+    "70": 30,
+    "75": 30,
+    "8": 2,
+    "80": 30,
+    "85": 30,
+    "9": 5,
+    "90": 30,
+    "95": 30
+  },
+  "enh_itm": 21.7,
+  "enh_meas": 16.6,
+  "enh_p2001": 18.5,
+  "enh_p452": 17.4,
+  "gap452_Diffraction": 32.7,
+  "gap452_Line of sight": -0.1,
+  "gap452_Troposcatter": 36.8,
+  "gap_Diffraction": 32.7,
+  "gap_Line of sight": -0.1,
+  "gap_Troposcatter": 36.9,
+  "grid_dc_gap_max": 54.4,
+  "grid_dc_gap_median": 14,
+  "grid_dc_gap_p90": 20.4,
+  "grid_dc_itm_140_area": 400,
+  "grid_dc_itm_140_dmax": 25,
+  "grid_dc_itm_150_area": 450,
+  "grid_dc_itm_150_dmax": 25,
+  "grid_dc_itm_160_area": 600,
+  "grid_dc_itm_160_dmax": 35,
+  "grid_dc_n": 440,
+  "grid_dc_p2001_140_area": 450,
+  "grid_dc_p2001_140_dmax": 25,
+  "grid_dc_p2001_150_area": 550,
+  "grid_dc_p2001_150_dmax": 35,
+  "grid_dc_p2001_160_area": 1575,
+  "grid_dc_p2001_160_dmax": 40,
+  "grid_dc_p452_140_area": 450,
+  "grid_dc_p452_140_dmax": 25,
+  "grid_dc_p452_150_area": 550,
+  "grid_dc_p452_150_dmax": 35,
+  "grid_dc_p452_160_area": 1575,
+  "grid_dc_p452_160_dmax": 40,
+  "grid_dc_p452_p2001_maxabs": 4.42,
+  "grid_dc_share_gt20": 11,
+  "grid_la_gap_max": 78.6,
+  "grid_la_gap_median": 24.2,
+  "grid_la_gap_p90": 57.1,
+  "grid_la_itm_140_area": 675,
+  "grid_la_itm_140_dmax": 64,
+  "grid_la_itm_150_area": 975,
+  "grid_la_itm_150_dmax": 64,
+  "grid_la_itm_160_area": 1750,
+  "grid_la_itm_160_dmax": 64,
+  "grid_la_n": 440,
+  "grid_la_p2001_140_area": 975,
+  "grid_la_p2001_140_dmax": 55.9,
+  "grid_la_p2001_150_area": 1600,
+  "grid_la_p2001_150_dmax": 64,
+  "grid_la_p2001_160_area": 3125,
+  "grid_la_p2001_160_dmax": 67.3,
+  "grid_la_p452_140_area": 975,
+  "grid_la_p452_140_dmax": 55.9,
+  "grid_la_p452_150_area": 1600,
+  "grid_la_p452_150_dmax": 64,
+  "grid_la_p452_160_area": 3125,
+  "grid_la_p452_160_dmax": 67.3,
+  "grid_la_p452_p2001_maxabs": 0.09,
+  "grid_la_share_gt20": 57,
+  "los_maxabs": 8.3,
+  "meas150_med": -2.6,
+  "meas150_n": 367,
+  "meas_n": 573,
+  "mwin_big_itm": 9.8,
+  "mwin_big_n": 13,
+  "mwin_big_p2001": -7.8,
+  "mwin_big_paths": 8,
+  "mwin_hi_big_itm": 23.6,
+  "mwin_hi_big_n": 5,
+  "mwin_hi_big_p2001": -0.9,
+  "mwin_hi_big_paths": 3,
+  "mwin_lo_big_itm": 1.2,
+  "mwin_lo_big_n": 8,
+  "mwin_lo_big_p2001": -12.1,
+  "mwin_lo_big_paths": 5,
+  "mwin_los": 31,
+  "mwin_n": 45,
+  "n0_range": 3.4,
+  "n_Diffraction": 27,
+  "n_Line of sight": 18,
+  "n_Troposcatter": 15,
+  "nd": 27,
+  "p2001_p452_maxmed": 0.02,
+  "rad0_max60": 29,
+  "rad0_maxabs80": 55.8,
+  "rad0_med80": 26.9,
+  "rad180_max60": 40,
+  "rad180_maxabs80": 3.9,
+  "rad180_med80": -2.7,
+  "rad270_max60": 54,
+  "rad270_maxabs80": 69.9,
+  "rad270_med80": 43.6,
+  "rad90_max60": 29,
+  "rad90_maxabs80": 3.8,
+  "rad90_med80": -3.1,
+  "ratio": 1.75,
+  "ratio_lt1": 1,
+  "res1k_itm": -5.2,
+  "res1k_p2001": -3.4,
+  "res90_itm": -0.02,
+  "res90_p2001": -0.03,
+  "res_max": 46.5,
+  "res_med1k": 14.2,
+  "res_med30": 32.7,
+  "res_medabs": 1.9,
+  "res_moved10": 7,
+  "res_n": 27,
+  "se_maxabs": 4.8,
+  "sea_below_fs": 2,
+  "sea_fs": 144.1,
+  "sea_itm_0.01": 153.3,
+  "sea_itm_1": 173.3,
+  "sea_itm_50": 200.5,
+  "sea_len": 127,
+  "sea_p2001_0.01": 128.8,
+  "sea_p2001_1": 137.9,
+  "sea_p2001_50": 203.9,
+  "sea_p452_0.01": 135.7,
+  "sea_p452_1": 141.3,
+  "sea_p452_50": 201.7,
+  "sens_base_gap_dif": 32.7,
+  "sens_gap_range": [
+    23.2,
+    42.2
+  ],
+  "sens_itm_N0 280_All": [
+    0.1,
+    11.7,
+    6.6
+  ],
+  "sens_itm_N0 280_Diffraction": [
+    0.4,
+    33.3,
+    4.8
+  ],
+  "sens_itm_N0 280_Line of sight": [
+    0,
+    -0.1,
+    0.8
+  ],
+  "sens_itm_N0 280_Troposcatter": [
+    0,
+    35.8,
+    6.6
+  ],
+  "sens_itm_N0 360_All": [
+    -0.1,
+    10,
+    4.9
+  ],
+  "sens_itm_N0 360_Diffraction": [
+    -0.4,
+    32.2,
+    1.9
+  ],
+  "sens_itm_N0 360_Line of sight": [
+    0,
+    -0.1,
+    0.7
+  ],
+  "sens_itm_N0 360_Troposcatter": [
+    -0,
+    37.9,
+    4.9
+  ],
+  "sens_itm_baseline_All": [
+    0,
+    10.3,
+    0
+  ],
+  "sens_itm_baseline_Diffraction": [
+    0,
+    32.7,
+    0
+  ],
+  "sens_itm_baseline_Line of sight": [
+    0,
+    -0.1,
+    0
+  ],
+  "sens_itm_baseline_Troposcatter": [
+    0,
+    36.9,
+    0
+  ],
+  "sens_itm_climate 1_All": [
+    0.1,
+    10.6,
+    1
+  ],
+  "sens_itm_climate 1_Diffraction": [
+    0.2,
+    32.8,
+    0.6
+  ],
+  "sens_itm_climate 1_Line of sight": [
+    0.2,
+    0.1,
+    0.5
+  ],
+  "sens_itm_climate 1_Troposcatter": [
+    -0.3,
+    36,
+    1
+  ],
+  "sens_itm_climate 2_All": [
+    -0.1,
+    10.3,
+    2.7
+  ],
+  "sens_itm_climate 2_Diffraction": [
+    -0.1,
+    32.7,
+    1.4
+  ],
+  "sens_itm_climate 2_Line of sight": [
+    -0,
+    -0.1,
+    0.1
+  ],
+  "sens_itm_climate 2_Troposcatter": [
+    -1.5,
+    34.8,
+    2.7
+  ],
+  "sens_itm_climate 3_All": [
+    -0.2,
+    10.3,
+    5
+  ],
+  "sens_itm_climate 3_Diffraction": [
+    -0.1,
+    32.7,
+    2.6
+  ],
+  "sens_itm_climate 3_Line of sight": [
+    -0,
+    -0.1,
+    0.2
+  ],
+  "sens_itm_climate 3_Troposcatter": [
+    -2.8,
+    32.8,
+    5
+  ],
+  "sens_itm_climate 4_All": [
+    0.4,
+    10.7,
+    5.1
+  ],
+  "sens_itm_climate 4_Diffraction": [
+    0.3,
+    33,
+    1.5
+  ],
+  "sens_itm_climate 4_Line of sight": [
+    0.3,
+    0.3,
+    0.6
+  ],
+  "sens_itm_climate 4_Troposcatter": [
+    1.7,
+    40.1,
+    5.1
+  ],
+  "sens_itm_climate 5_All": [
+    -0.1,
+    10.3,
+    2.7
+  ],
+  "sens_itm_climate 5_Diffraction": [
+    -0.1,
+    32.7,
+    1.4
+  ],
+  "sens_itm_climate 5_Line of sight": [
+    -0,
+    -0.1,
+    0.1
+  ],
+  "sens_itm_climate 5_Troposcatter": [
+    -1.5,
+    34.8,
+    2.7
+  ],
+  "sens_itm_climate 6_All": [
+    0,
+    10.3,
+    0
+  ],
+  "sens_itm_climate 6_Diffraction": [
+    0,
+    32.7,
+    0
+  ],
+  "sens_itm_climate 6_Line of sight": [
+    0,
+    -0.1,
+    0
+  ],
+  "sens_itm_climate 6_Troposcatter": [
+    0,
+    36.9,
+    0
+  ],
+  "sens_itm_climate 7_All": [
+    -0.1,
+    10.3,
+    5.3
+  ],
+  "sens_itm_climate 7_Diffraction": [
+    -0.1,
+    32.7,
+    2.8
+  ],
+  "sens_itm_climate 7_Line of sight": [
+    -0,
+    -0.1,
+    0.2
+  ],
+  "sens_itm_climate 7_Troposcatter": [
+    -3,
+    32.6,
+    5.3
+  ],
+  "sens_itm_confidence 10 %_All": [
+    -7.4,
+    1.3,
+    9.7
+  ],
+  "sens_itm_confidence 10 %_Diffraction": [
+    -8.9,
+    23.2,
+    9.7
+  ],
+  "sens_itm_confidence 10 %_Line of sight": [
+    -2.9,
+    -3,
+    8.6
+  ],
+  "sens_itm_confidence 10 %_Troposcatter": [
+    -7.3,
+    29.8,
+    7.9
+  ],
+  "sens_itm_confidence 90 %_All": [
+    8.8,
+    19.6,
+    9.7
+  ],
+  "sens_itm_confidence 90 %_Diffraction": [
+    8.9,
+    42.2,
+    9.7
+  ],
+  "sens_itm_confidence 90 %_Line of sight": [
+    9.4,
+    9.4,
+    9.7
+  ],
+  "sens_itm_confidence 90 %_Troposcatter": [
+    7.3,
+    44,
+    7.9
+  ],
+  "sens_itm_ground average_All": [
+    0,
+    10.3,
+    0.2
+  ],
+  "sens_itm_ground average_Diffraction": [
+    0,
+    32.8,
+    0.2
+  ],
+  "sens_itm_ground average_Line of sight": [
+    0,
+    -0.1,
+    0
+  ],
+  "sens_itm_ground average_Troposcatter": [
+    0.1,
+    36.9,
+    0.1
+  ],
+  "sens_itm_ground poor_All": [
+    0,
+    10.3,
+    0.4
+  ],
+  "sens_itm_ground poor_Diffraction": [
+    0.1,
+    32.8,
+    0.4
+  ],
+  "sens_itm_ground poor_Line of sight": [
+    0,
+    -0.1,
+    0.1
+  ],
+  "sens_itm_ground poor_Troposcatter": [
+    0.2,
+    37,
+    0.3
+  ],
+  "sens_itm_horizontal_All": [
+    0.1,
+    10.3,
+    0.8
+  ],
+  "sens_itm_horizontal_Diffraction": [
+    0.2,
+    32.9,
+    0.8
+  ],
+  "sens_itm_horizontal_Line of sight": [
+    0,
+    -0.1,
+    0.1
+  ],
+  "sens_itm_horizontal_Troposcatter": [
+    0.3,
+    37.1,
+    0.6
+  ],
+  "sens_most_case": "confidence 90 %",
+  "sens_most_gap": 42.2,
+  "sens_p2001_baseline_All": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_baseline_Diffraction": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_baseline_Line of sight": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_baseline_Troposcatter": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_horizontal_All": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_horizontal_Diffraction": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_horizontal_Line of sight": [
+    0,
+    0,
+    0
+  ],
+  "sens_p2001_horizontal_Troposcatter": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_baseline_All": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_baseline_Diffraction": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_baseline_Line of sight": [
+    0,
+    -0,
+    0
+  ],
+  "sens_p452_baseline_Troposcatter": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_horizontal_All": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_horizontal_Diffraction": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_horizontal_Line of sight": [
+    0,
+    -0,
+    0
+  ],
+  "sens_p452_horizontal_Troposcatter": [
+    0,
+    0,
+    0
+  ],
+  "sens_p452_surface heights_All": [
+    2,
+    2,
+    37.4
+  ],
+  "sens_p452_surface heights_Diffraction": [
+    1.9,
+    1.9,
+    21.6
+  ],
+  "sens_p452_surface heights_Line of sight": [
+    10.1,
+    10.1,
+    37.4
+  ],
+  "sens_p452_surface heights_Troposcatter": [
+    1.1,
+    1.1,
+    4.9
+  ],
+  "sweep_Double-horizon diffraction_100": 45.8,
+  "sweep_Double-horizon diffraction_1000": 60.6,
+  "sweep_Double-horizon diffraction_10000": 111,
+  "sweep_Double-horizon diffraction_3162": 82.8,
+  "sweep_Double-horizon diffraction_maxabs": 111,
+  "sweep_Line of sight_100": 0.5,
+  "sweep_Line of sight_1000": 0.1,
+  "sweep_Line of sight_10000": 2.1,
+  "sweep_Line of sight_3162": 4.2,
+  "sweep_Line of sight_maxabs": 4.9,
+  "sweep_Single-horizon diffraction_100": 1,
+  "sweep_Single-horizon diffraction_1000": 2.6,
+  "sweep_Single-horizon diffraction_10000": 0.8,
+  "sweep_Single-horizon diffraction_3162": 2,
+  "sweep_Single-horizon diffraction_maxabs": 2.6,
+  "term_bull": 45.4,
+  "term_fo": 12.9,
+  "term_k": 57.4,
+  "term_p452_excess": 0,
+  "term_se": 29.2,
+  "thr_maxdiff_land": 5,
+  "time_Diffraction_0.001": 42,
+  "time_Diffraction_1": 34,
+  "time_Diffraction_50": 33,
+  "time_Diffraction_99": 30,
+  "time_Line of sight_0.001": 11,
+  "time_Line of sight_1": 3,
+  "time_Line of sight_50": -0,
+  "time_Line of sight_99": -3,
+  "time_Troposcatter_0.001": 27,
+  "time_Troposcatter_1": 33,
+  "time_Troposcatter_50": 37,
+  "time_Troposcatter_99": 37,
+  "u_Diffraction_links": [
+    32.7,
+    13.6,
+    43.7
+  ],
+  "u_Diffraction_links_share": [
+    56,
+    37,
+    74
+  ],
+  "u_Line_of_sight_links": [
+    -0.1,
+    -0.1,
+    -0
+  ],
+  "u_Line_of_sight_links_share": [
+    0,
+    0,
+    0
+  ],
+  "u_Troposcatter_links": [
+    36.9,
+    5.8,
+    55.8
+  ],
+  "u_Troposcatter_links_share": [
+    67,
+    40,
+    87
+  ],
+  "u_bc": 0.35,
+  "u_bic": [
+    246.2,
+    245.2
+  ],
+  "u_mix": [
+    8.5,
+    45
+  ],
+  "u_split": [
+    0.1,
+    0.04,
+    0.205
+  ],
+  "u_w_0.12_or_more": [
+    8,
+    4.6,
+    13.9
+  ],
+  "u_w_under_0.12": [
+    44.4,
+    42.7,
+    46.2
+  ],
+  "um_1-10 GHz_itm": [
+    0.5,
+    -1.9,
+    2.9,
+    76
+  ],
+  "um_1-10 GHz_p2001": [
+    -0.6,
+    -3.1,
+    1.7,
+    76
+  ],
+  "um_1-10 GHz_p452": [
+    -1.8,
+    -4,
+    0.3,
+    76
+  ],
+  "um_30 MHz-1 GHz_itm": [
+    -2.9,
+    -4.1,
+    -1.7,
+    300
+  ],
+  "um_30 MHz-1 GHz_p2001": [
+    -3.3,
+    -4.3,
+    -2.3,
+    298
+  ],
+  "um_30 MHz-1 GHz_p452": [
+    -3.4,
+    -4.5,
+    -2.3,
+    196
+  ],
+  "um_All_itm": [
+    -2.2,
+    -3.4,
+    -1,
+    340
+  ],
+  "um_All_p2001": [
+    -2.7,
+    -3.7,
+    -1.8,
+    338
+  ],
+  "um_All_p452": [
+    -2.9,
+    -4,
+    -1.9,
+    237
+  ],
+  "w_ge": 8,
+  "w_ge_n": 12,
+  "w_lt": 44.4,
+  "w_lt_n": 15,
+  "win_gt20": 21,
+  "win_med": 44.6,
+  "win_n": 22,
+  "win_out": 1.2
 }

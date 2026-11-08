@@ -153,7 +153,7 @@ function table(caption, header, rows, widths) {
 
 // ---------- figure numbering by key, in order of appearance ----------
 const ORDER = ["s01", "s02", "s04", "s05", "s06", "s07", "s03", "s08", "s09", "s16", "s13", "s10", "s11", "s12", "s14",
-  "s21", "s15", "s17", "s18", "s19", "s20", "fig25", "fig30", "s23", "s24", "s25", "s22"];
+  "s21", "s15", "s17", "s18", "s19", "s20", "fig25", "fig30", "s23", "s24", "s25", "s31", "s26", "s27", "s28", "s22", "s29", "s30"];
 const FN = (k) => `Figure ${ORDER.indexOf(k) + 1}`;
 function fig(key, file, caption) {
   figN = ORDER.indexOf(key);                    // figure() adds 1
@@ -165,6 +165,9 @@ const PEND = "[pending]";
 const n1 = (k) => (typeof NU[k] === "number" ? r1(NU[k]) : PEND);
 const n0 = (k) => (typeof NU[k] === "number" ? r0(NU[k]) : PEND);
 const g = (c) => n0(`gap_${c}`);
+const A0 = (k, i) => (Array.isArray(NU[k]) ? r0(NU[k][i]) : PEND);
+const A1 = (k, i) => (Array.isArray(NU[k]) ? r1(NU[k][i]) : PEND);
+const Z0 = (x) => (Math.abs(x) < 0.5 ? "0" : r0(x));
 const dbQ = opt("table_dbsg3_quality_survey.csv");
 const dbS = opt("table_dbsg3_summary_survey.csv"), dbC = opt("table_dbsg3_terrain_comparison.csv");
 const DBv = (gr, m, p, k) => { const r = dbS.find((x) => x.group === gr && x.model === m && x.percent === p); return r ? r[k] : NaN; };
@@ -197,6 +200,8 @@ body.push(B({ b: "Line of sight: the models agree. " }, `On ${n0("n_Line of sigh
 body.push(B({ b: "Beyond the horizon: ITM predicts much more loss. " }, `The median gap is ${g("Diffraction")} dB on ${n0("n_Diffraction")} diffraction links and ${g("Troposcatter")} dB on ${n0("n_Troposcatter")} troposcatter links. P.2001 and P.452 agree within ${r2(NU.p2001_p452_maxmed)} dB at the median in every class.`));
 body.push(B({ b: "The cause is ITM's diffraction method, not its knife-edge formula. " }, `ITM adds a knife-edge loss at each of the two horizons, adds a clutter term, and gives a small weight to a smooth-earth loss that can be very large. Removing all three cuts the median gap from ${n0("ab_ITM as is")} dB to ${n0("ab_4 all three")} dB.`));
 body.push(B({ b: "The split is a jump inside a window. " }, `A link is either close (median ${n0("w_ge")} dB) or far apart (median ${n0("w_lt")} dB), depending on ITM's smooth-earth weight. The large gaps fall on rough-terrain paths from about 15 km to 150 km; on longer troposcatter paths the models agree again.`));
+body.push(B({ b: "The gap is robust to ITM's settings, uncertain in size. " }, `No ITM setting tested closes it: on the diffraction links the median gap stays between ${A0("sens_gap_range", 0)} dB and ${A0("sens_gap_range", 1)} dB across ground constants, confidence, radio climate, N₀, and polarization. Its 95% bootstrap interval is ${A0("u_Diffraction_links", 1)} dB to ${A0("u_Diffraction_links", 2)} dB, because the 27 links fall into two groups.`));
+body.push(B({ b: "Separation distance: the ITU models give larger exclusion areas. " }, `For a single transmitter 30 m high around a receiver 10 m high, at a required loss of 160 dB, P.2001 and P.452 exclude ${n0("grid_dc_p2001_160_area")} km² around Washington, DC, against ${n0("grid_dc_itm_160_area")} km² for ITM, and ${n0("grid_la_p2001_160_area")} km² against ${n0("grid_la_itm_160_area")} km² around Los Angeles.`));
 body.push(B({ b: "Ducting: the ITU models add it, ITM doesn't. " }, `On a ${n0("sea_len")} km over-sea path at 1% of time, ITM predicts ${n0("sea_itm_1")} dB and P.2001 ${n0("sea_p2001_1")} dB.`));
 body.push(B({ b: "Measurements from 30 MHz to 10 GHz: all three are close at the median. " }, `On ${DBn("All")} measured datasets, the mean error in the median is ${M3("All", 50, "mean_error_db")}. Few measured paths fall in the window where the models split, and they point both ways: from 1 GHz to 10 GHz ITM predicts too much loss there and P.2001 is close, while below 1 GHz ITM is close and P.2001 predicts too little.`));
 
@@ -314,15 +319,41 @@ body.push(...fig("s24", "s24_error_vs_time.png", "Mean predicted minus measured 
 body.push(P(`Against terrain irregularity (${FN("s25")}), the median errors show no rough-terrain trend comparable to the calculated gap, because most measured paths are long troposcatter paths outside the divergence window.`));
 body.push(...fig("s25", "s25_error_vs_terrain.png", "Median predicted minus measured loss at 50% of time from 30 MHz to 10 GHz against ITM's terrain irregularity Δh."));
 
+body.push(H2("Point-to-area measurements"));
+body.push(P(`The databank also holds VHF and UHF measurements relating to terrestrial broadcasting (Recommendation ITU-R P.311, Tables VI-1 and VI-2), which ITU-R distributes free.`, fn("ITU-R Study Group 3 databank, VHF/UHF measurements relating to terrestrial broadcasting, rsg3-dbsg5-rssdata.zip.", "https://www.itu.int/oth/R0A0400005B/en"), ` Each spatial record is a location median: the field strength exceeded at 50% of the locations measured around a point, for 1 kW e.r.p., which converts to basic transmission loss as 141.45 dB minus the field strength plus 20 log f. Keeping the records with site coordinates, a surveyed profile that matches them, a receiving antenna at least 10 m high, and a path of at least 1 km leaves ${n0("area_n")} records from ${n0("area_experiments")} experiments, from ${A0("area_f_range", 0)} MHz to ${A0("area_f_range", 1)} MHz on paths of ${A1("area_d_range", 0)} km to ${A1("area_d_range", 1)} km. They include ${r0(NU["area_2-3 GHz_itm"][2])} NTIA measurements at 2,180 MHz in Virginia, the closest to 3 GHz in the databank.`));
+body.push(P(`All three models predict much less loss than these measurements (${FN("s31")}): over all records the mean error is ${A1("area_All_itm", 0)} dB for ITM and ${A1("area_All_p2001", 0)} dB for P.2001, and at 2,180 MHz it is ${A1("area_2-3 GHz_itm", 0)} dB for ITM, ${A1("area_2-3 GHz_p452", 0)} dB for P.452, and ${A1("area_2-3 GHz_p2001", 0)} dB for P.2001. The error grows with frequency and is largest on the U.S. experiments in rural Virginia, which used antennas 11 m to 15 m high, so it most likely reflects clutter and vegetation loss near the terminals that none of the three models includes without a clutter model such as Recommendation ITU-R P.2108. On these paths the three models agree with each other within about 3 dB on average, so the data say more about the missing clutter term than about which model to prefer.`));
+body.push(...fig("s31", "s31_area_measurements.png", "Mean predicted minus measured location-median loss on the ITU-R point-to-area records by frequency band."));
+
+// ===== Uncertainty
+body.push(H1("How certain are these numbers?"));
+body.push(P(`The headline numbers come from small samples, so this section puts 95% confidence intervals on them by bootstrap: 10,000 resamples of the links, or of the measured paths, with a fixed seed. Resampling paths rather than datasets matters for the measurements, because datasets on one path share its terrain and its errors.`));
+body.push(P(`The class medians are uncertain (${FN("s26")}). The median gap on the 27 diffraction links is ${A0("u_Diffraction_links", 0)} dB, with an interval of ${A0("u_Diffraction_links", 1)} dB to ${A0("u_Diffraction_links", 2)} dB, and on the 15 troposcatter links ${A0("u_Troposcatter_links", 0)} dB, with an interval of ${A0("u_Troposcatter_links", 1)} dB to ${A0("u_Troposcatter_links", 2)} dB. The intervals are wide because each class mixes two groups of links, and a resample that draws a few more from one group moves the median from one group to the other. The groups themselves are tight: ${A0("u_w_under_0.12", 0)} dB (${A0("u_w_under_0.12", 1)} dB to ${A0("u_w_under_0.12", 2)} dB) where ITM's smooth-earth weight is under 0.12, and ${A0("u_w_0.12_or_more", 0)} dB (${A0("u_w_0.12_or_more", 1)} dB to ${A0("u_w_0.12_or_more", 2)} dB) elsewhere. The share of diffraction links more than 20 dB apart is ${A0("u_Diffraction_links_share", 0)}% (${A0("u_Diffraction_links_share", 1)}% to ${A0("u_Diffraction_links_share", 2)}%), a more stable summary than the median. The weight that best separates the groups is ${NU.u_split[0]}, with an interval of ${NU.u_split[1]} to ${NU.u_split[2]}. With 27 links the formal bimodality tests are inconclusive: a two-group mixture (means of ${A0("u_mix", 0)} dB and ${A0("u_mix", 1)} dB) fits only slightly better than one group by BIC, and Sarle's bimodality coefficient is ${NU.u_bc}, below the 0.555 that suggests two groups. In the line-of-sight class the interval is ${Z0(NU.u_Line_of_sight_links[1])} dB to ${Z0(NU.u_Line_of_sight_links[2])} dB.`));
+body.push(...fig("s26", "s26_uncertainty_gap.png", "Median ITM minus P.2001 at 3 GHz with 95% bootstrap intervals, by ITM's mechanism class and by ITM's smooth-earth weight w on the diffraction links."));
+body.push(P(`Against the measurements (${FN("s27")}), the mean errors over all 573 datasets are ${A1("um_All_itm", 0)} dB for ITM (${A1("um_All_itm", 1)} dB to ${A1("um_All_itm", 2)} dB), ${A1("um_All_p452", 0)} dB for P.452, and ${A1("um_All_p2001", 0)} dB for P.2001, so all three predict slightly too little loss overall, and the intervals overlap. From 1 GHz to 10 GHz, on 76 paths, every interval includes zero: ${A1("um_1-10 GHz_itm", 1)} dB to ${A1("um_1-10 GHz_itm", 2)} dB for ITM and ${A1("um_1-10 GHz_p2001", 1)} dB to ${A1("um_1-10 GHz_p2001", 2)} dB for P.2001. The measurements can't separate the models at the median.`));
+body.push(...fig("s27", "s27_uncertainty_measured.png", "Mean predicted minus measured loss at 50% of time with 95% intervals from resampling measured paths, by group."));
+
+// ===== Sensitivity
+body.push(H1("Sensitivity to model settings"));
+body.push(P(`The results use one set of model settings. To test whether another setting closes the gap, the 60 real-terrain links were rerun at 3 GHz and 50% of time with each ITM setting changed in turn: ground constants (poor and average), confidence (10% and 90%), each of the seven radio climates, N₀ of 280 and 360 N-units, and horizontal polarization. P.452 was also run with surface heights from the Copernicus surface model added to the profile, and P.452 and P.2001 with horizontal polarization.`));
+body.push(P(`No setting closes the gap (${FN("s28")}). On the diffraction links the median ITM minus P.2001 is ${n1("sens_base_gap_dif")} dB with the baseline settings. Confidence moves it most, to ${A1("sens_itm_confidence 10 %_Diffraction", 1)} dB at 10% and ${A1("sens_itm_confidence 90 %_Diffraction", 1)} dB at 90%, because it shifts every ITM prediction by about 9 dB. Ground constants, radio climate, N₀, and polarization each move it by less than 1 dB at the median, although radio climate moves individual links by up to ${A1("sens_itm_climate 7_All", 2)} dB. Adding surface heights raises P.452's loss by a median of ${A1("sens_p452_surface heights_All", 0)} dB and up to ${A1("sens_p452_surface heights_All", 2)} dB on one link; the ITU models' polarization changes their loss by less than 0.01 dB at the median.`));
+body.push(...fig("s28", "s28_sensitivity.png", "Median ITM minus P.2001 on the diffraction links at 3 GHz for each ITM setting tested. The band is the baseline ± 3 dB."));
+
 // ===== Distance
 body.push(H1("What the differences mean in distance"));
 body.push(P(`On smooth land, the models reach each loss threshold from 150 dB to 180 dB within 5 km of each other (${FN("s22")}), because the steep slope beyond the radio horizon makes distance insensitive to a few dB. Over rough terrain, ITM's extra 30 dB to 45 dB of diffraction loss lets it reach a threshold much sooner, so an analysis with ITM computes smaller separation distances there than one with P.452 or P.2001.`));
 body.push(...fig("s22", "s22_distance_threshold.png", "Distance at which the 50% loss first reaches each threshold on smooth land at 3 GHz."));
+body.push(H2("Two real scenarios: Washington, DC, and Los Angeles"));
+body.push(P(`To see what the gap does to an exclusion area, a receiver with a 10 m antenna was placed at the Washington Monument and at Los Angeles City Hall, and a grid of transmitters with 30 m antennas was laid out over 100 km by 100 km around each, at a 5 km step: ${n0("grid_dc_n")} transmitter sites per city. Each transmitter is evaluated alone (single entry) at 3 GHz on its own 30 m terrain profile with all three models.`));
+body.push(P(`Around Washington, DC, ITM predicts more loss than P.2001 at most sites, by a median of ${n1("grid_dc_gap_median")} dB; ${n0("grid_dc_share_gt20")}% of sites differ by more than 20 dB (${FN("s29")}). Around Los Angeles, where the San Gabriel Mountains rise north of the city, the median is ${n1("grid_la_gap_median")} dB and ${n0("grid_la_share_gt20")}% of sites differ by more than 20 dB, up to ${n0("grid_la_gap_max")} dB. P.452 matches P.2001 within ${r2(NU.grid_la_p452_p2001_maxabs)} dB at every Los Angeles site and within ${r2(NU.grid_dc_p452_p2001_maxabs)} dB around DC.`));
+body.push(...fig("s29", "s29_grid_maps.png", "ITM minus P.2001 at 3 GHz and 50% of time from each transmitter site (30 m antenna) to the receiver (star, 10 m antenna), single entry."));
+body.push(P(`A required loss turns these maps into an exclusion area: the sites where one transmitter alone would get less loss than the protection criterion needs. The required loss is the transmitter's e.i.r.p. plus the receiving antenna gain minus the interference threshold, all in decibels; for example, 61 dBm in 10 MHz into a 0 dBi antenna with a threshold of -105 dBm in 10 MHz needs 166 dB. At a required loss of 160 dB (${FN("s30")}), P.2001 and P.452 exclude ${n0("grid_dc_p2001_160_area")} km² around DC and ITM ${n0("grid_dc_itm_160_area")} km²; around Los Angeles the areas are ${n0("grid_la_p2001_160_area")} km² and ${n0("grid_la_itm_160_area")} km². At 140 dB, where the excluded sites are close to the receiver, the models are closer: ${n0("grid_dc_p2001_140_area")} km² against ${n0("grid_dc_itm_140_area")} km² around DC. The grid ends 50 km from the receiver, so areas at the largest required losses are lower bounds.`));
+body.push(...fig("s30", "s30_grid_exclusion.png", "Area of the 100 km by 100 km grid where a single transmitter would get less loss than the required loss, at 50% of time, by model. P.452 matches P.2001."));
 
 // ===== Implications
 body.push(H1("What the comparison means for analyses"));
 body.push(B({ b: "Line of sight: the choice of model matters little. " }, "The three models agree within a fraction of a decibel at the median."));
 body.push(B({ b: "Rough-terrain paths of about 15 km to 150 km: the choice matters most. " }, `ITM predicts a median of ${g("Diffraction")} dB more loss than the ITU models on diffraction links, so it gives smaller separation distances at the median. The gap grows with frequency.`));
+body.push(B({ b: "Exclusion areas can differ by a factor of about two. " }, `In the two city scenarios, the ITU models' exclusion area at a required loss of 160 dB is ${r1(NU.grid_dc_p2001_160_area / NU.grid_dc_itm_160_area)} times ITM's around DC and ${r1(NU.grid_la_p2001_160_area / NU.grid_la_itm_160_area)} times around Los Angeles.`));
 body.push(B({ b: "Small time percentages: the choice matters through ducting. " }, "The ITU models give much less loss than ITM at 1% of time and below over water and on long paths, so they give larger separation distances at those percentages."));
 body.push(B({ b: "Measurements don't settle the rough-terrain question. " }, "Where the models split, the few measured datasets favor P.2001 from 1 GHz to 10 GHz and ITM below 1 GHz."));
 body.push(P("The differences are large enough to change an analysis outcome, so the model choice should be stated, justified, and tested for sensitivity."));
@@ -339,7 +370,8 @@ body.push(N({ b: "How large are the regional effects? " }, "The real-terrain sam
 body.push(H1("Limitations"));
 body.push(B(`The real-terrain sample is small: ${nLinks} links in three mid-Atlantic regions and five archetype paths, at one frequency.`));
 body.push(B("The measurements are old, mostly long trans-horizon paths, sparse above 3 GHz, and used by the models' developers."));
-body.push(B("Each model ran with defaults this paper chose (ITM ground constants, variability mode 13, 50% confidence, no P.452 clutter)."));
+body.push(B("Each model ran with defaults this paper chose; the sensitivity section tests the main ones, but not ITM's variability mode or P.2108 clutter loss."));
+body.push(B("The city scenarios are single entry, on a 100 km grid at a 5 km step, with one antenna height each; aggregate interference and finer grids can change the areas."));
 body.push(B("All results are basic transmission loss with isotropic antennas, without clutter or building entry loss."));
 
 // ===== References
@@ -364,15 +396,15 @@ REFS.forEach((r) => body.push(N(r)));
 
 // ===== Reproducing
 body.push(new Paragraph({ children: [new PageBreak()] }));
-body.push(H1("Appendix: reproducing the figures"));
-body.push(P("The code is in the matlab_itm repository, folder docs/model_comparison. To reproduce the paper, do the following:"));
+body.push(H1("Appendix: reproducing the analysis"));
+body.push(P("All analysis is MATLAB code in the matlab_itm repository, folder docs/model_comparison. MATLAB writes every result to CSV files in the repository, and Python only draws the figures from those files. To reproduce the paper, do the following:"));
 startList();
 body.push(N("Clone matlab_itm, itu_p2001, and matlab_itu_p452 into one folder."));
-body.push(N("In MATLAB R2025b with Mapping Toolbox, run make_wp_figures_rev1(Freqs=3000) and diffraction_decomposition_rev1 (run_3ghz_rev1 does both), and compare_dbsg3_rev1 for the measurements."));
-body.push(N("Run python3 export_deep_dive_data_rev1.py, which writes the CSV files in chart_data/ from figures/wp_results_rev1.mat."));
-body.push(N("Run python3 make_wp_figures_3ghz.py and python3 make_wp_body_figures_rev1.py to draw the figures from those CSV files."));
-body.push(N("Run node build_wp_docx_rev3.js to rebuild this document."));
-body.push(P("Every number in the text comes from figures/numbers_3ghz.json or the CSV tables. The model code cited in the footnotes is pinned to these commits:"));
+body.push(N("In MATLAB R2025b with Mapping and Statistics and Machine Learning Toolboxes, run run_3ghz_rev1. It runs make_wp_figures_rev1 at 3 GHz, diffraction_decomposition_rev1, export_deep_dive_data_rev1, sensitivity_rev1, grid_separation_rev1 for Washington, DC, and Los Angeles, uncertainty_rev1, and paper_numbers_3ghz_rev1."));
+body.push(N("For the measurements, run compare_dbsg3_rev1 (point-to-point, Table III) and compare_dbsg3_area_rev1 (point-to-area, Tables VI-1 and VI-2) before paper_numbers_3ghz_rev1."));
+body.push(N("Run python3 make_wp_figures_3ghz.py and python3 make_wp_body_figures_rev1.py to draw the figures from the CSV files."));
+body.push(N("Run node build_wp_docx_rev3.js to rebuild this document. Every number in the text comes from figures/numbers_3ghz.json, which paper_numbers_3ghz_rev1 writes."));
+body.push(P("The results are in chart_data/ (model results, uncertainty, sensitivity, grids, and measurement summaries) and figures/table_*.csv (model tables and the measurement comparisons). The model code cited in the footnotes is pinned to these commits:"));
 body.push(B({ b: "matlab_itm: " }, SHA.itm));
 body.push(B({ b: "itu_p2001: " }, SHA.p2001));
 body.push(B({ b: "matlab_itu_p452: " }, SHA.p452));
