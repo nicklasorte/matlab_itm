@@ -351,6 +351,11 @@ if isfile(fullfile(CD, 'check_height_swap.csv'))
     N = swap2_numbers(N, CD, r1);
 end
 
+% ---- finished partial items (partials_rev1) ----
+if isfile(fullfile(CD, 'part_horizons.csv'))
+    N = part_numbers(N, CD, r1);
+end
+
 % ---- remaining terms (remaining_terms_rev1) ----
 if isfile(fullfile(CD, 'rem_terms_frequency.csv'))
     N = rem_numbers(N, CD, r1);
@@ -722,6 +727,82 @@ for i = 1:numel(nm)
     q2 = q(q.time_pct >= 0.01 & q.time_pct <= 99, :);
     [~, j2] = max(abs(q2.diff));
     N(key + "max_core") = [r1(q2.diff(j2)), q2.time_pct(j2)];
+end
+end
+
+function N = part_numbers(N, CD, r1)
+% Plan items 1, 4, 13, 15, and 28
+H = readtable(fullfile(CD, 'part_horizons.csv'), 'TextType', 'string');
+t = H(H.p2001_los50 == 0, :);
+dd = [abs(t.itm_d_hzn_tx_km - t.p2001_d_lt_km); abs(t.itm_d_hzn_rx_km - t.p2001_d_lr_km)];
+da = [abs(t.itm_theta_tx_mrad - t.p2001_theta_t_mrad); abs(t.itm_theta_rx_mrad - t.p2001_theta_r_mrad)];
+N("part_hz") = [height(t), round(100 * mean(dd < 0.1)), nnz(dd >= 0.1), r1(max(dd)), round(median(da), 3), r1(max(da))];
+
+A = readtable(fullfile(CD, 'part_earth_radius.csv'), 'TextType', 'string');
+a50 = A(A.time_pct == 50, :);
+N("part_ae") = [round(min(a50.itm_ae_km)), round(max(a50.itm_ae_km)), round(min(a50.p2001_ae50_km)), ...
+    round(max(a50.p2001_ae50_km)), round(median(abs(a50.itm_ae_km - a50.p2001_ae50_km))), ...
+    round(max(abs(a50.itm_ae_km - a50.p2001_ae50_km)))];
+N("part_ae_n") = height(a50);
+for p = [1 0.01]
+    q = A(A.time_pct == p, :);
+    [~, i1] = min(q.p2001_ap_km); [~, i2] = max(q.p2001_ap_km);
+    k = "part_ap_" + replace(string(p), ".", "");
+    N(k) = [round(min(q.p2001_ap_km)), round(max(q.p2001_ap_km))];
+    N(k + "_sites") = [q.site(i1), q.site(i2)];
+end
+
+F = readtable(fullfile(CD, 'part_los_fade.csv'), 'TextType', 'string');
+for d = [1 10 20 40]
+    q = F(F.d_km == d, :);
+    N("part_fade_itm_" + d) = [r1(q.itm_rel_db(q.time_pct == 0.01)), r1(q.itm_rel_db(q.time_pct == 99.99))];
+    N("part_fade_p2001_" + d) = [r1(q.p2001_rel_db(q.time_pct == 0.01)), r1(q.p2001_rel_db(q.time_pct == 99.99))];
+end
+N("part_fade_los_until") = max(F.d_km(F.time_pct == 50 & F.p2001_los50 == 1));
+
+C = readtable(fullfile(CD, 'check_continuity.csv'), 'TextType', 'string');
+q = sortrows(C(C.path == "smooth earth", :), 'd_km');
+d = q.d_km; ei = q.itm_db - q.fs_db; ep = q.p2001_db - q.fs_db;
+w = 10;                                          % 1 km slope windows at 100 m steps
+si = (ei(1 + w:end) - ei(1:end - w)) / (w * 0.1); sp = (ep(1 + w:end) - ep(1:end - w)) / (w * 0.1);
+dm = (d(1 + w:end) + d(1:end - w)) / 2;
+dsml = q.itm_d_sml_km(1); dx = median(q.itm_d_x_km, 'omitnan');
+N("part15_d") = [r1(dsml), r1(dx)];
+md = dm > 40 & dm < 62; ms = dm > 100 & dm < 300;
+N("part15_slope") = [round(median(si(md)), 2), round(median(sp(md)), 2), round(median(si(ms)), 3), round(median(sp(ms)), 3)];
+wid = @(s) dm(find(dm > 45 & s < 0.2, 1)) - dm(find(dm > 45 & s < 1.0, 1));
+N("part15_width") = [r1(wid(si)), r1(wid(sp))];
+N("part15_drop") = [r1(dm(find(dm > 45 & si < 1.0, 1))), r1(dm(find(dm > 45 & sp < 1.0, 1)))];
+
+T = readtable(fullfile(CD, 'part_sensitivity_terms.csv'), 'TextType', 'string');
+B = T(T.case == "baseline", :);
+[tf, loc] = ismember(strcat(T.side, "_", string(T.link), "_", T.model), strcat(B.side, "_", string(B.link), "_", B.model));
+assert(all(tf));
+dl = T.loss_db - B.loss_db(loc);
+cs = unique(T.case(T.case ~= "baseline"));
+for m = ["ITM", "P.2001"]
+    for c = cs'
+        k = T.model == m & T.case == c;
+        if ~any(k), continue, end
+        key = "part28_" + lower(replace(m, ".", "")) + "_" + regexprep(lower(c), '[^a-z0-9]+', '_');
+        N(key) = [round(median(abs(dl(k))), 2), round(prctile(abs(dl(k)), 90), 2), r1(max(abs(dl(k))))];
+    end
+end
+dif = ismember(T.itm_mode_code, [4 5 8 9]);
+for c = ["rx antenna +1 m", "tx antenna +1 m", "N_0 +20"]
+    k = T.model == "ITM" & T.case == c & dif & isfinite(T.itm_a_k3_db) & isfinite(B.itm_a_k3_db(loc));
+    key = "part28_itm_terms_" + regexprep(lower(c), '[^a-z0-9]+', '_');
+    N(key) = [nnz(k), round(median(abs(T.itm_a_k3_db(k) - B.itm_a_k3_db(loc(k)))), 2), ...
+        round(median(abs(T.itm_a_se3_db(k) - B.itm_a_se3_db(loc(k)))), 2), ...
+        round(median(abs(T.itm_a_fo_db(k) - B.itm_a_fo_db(loc(k)))), 2), ...
+        round(median(abs(T.itm_a_d3_db(k) - B.itm_a_d3_db(loc(k)))), 2)];
+end
+for c = ["radius -5 %", "rx antenna +1 m"]
+    k = T.model == "P.2001" & T.case == c & dif;
+    key = "part28_p2001_terms_" + regexprep(lower(c), '[^a-z0-9]+', '_');
+    N(key) = [nnz(k), round(median(abs(T.p2001_ld_db(k) - B.p2001_ld_db(loc(k)))), 2), ...
+        round(median(abs(T.p2001_ldba_db(k) - B.p2001_ldba_db(loc(k)))), 2), ...
+        round(median(abs(T.p2001_lbm3_db(k) - B.p2001_lbm3_db(loc(k)))), 2)];
 end
 end
 
