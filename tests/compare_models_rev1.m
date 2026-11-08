@@ -371,8 +371,9 @@ end
                 else
                     lr_args = {'engine', "pathloss", 'terrain', "gmted2010"};
                 end
-                [L, info] = itm_matlab_lr_rev1(tx(k, :), rx(k, :), f_mhz, rel, confidence=conf, ...
-                    polarization=pol_name, climate=climate(k), N_0=n0(k), epsilon=25, sigma=0.02, lr_args{:});
+                [L, info] = itm_matlab_lr_rev1(tx(k, :), rx(k, :), f_mhz, rel, 'confidence', conf, ...
+                    'polarization', pol_name, 'climate', climate(k), 'N_0', n0(k), 'epsilon', 25, ...
+                    'sigma', 0.02, lr_args{:});
                 el = info.elevation_deg;
                 keep_info(m, info);
         end
