@@ -773,6 +773,10 @@ N("part15_slope") = [round(median(si(md)), 2), round(median(sp(md)), 2), round(m
 wid = @(s) dm(find(dm > 45 & s < 0.2, 1)) - dm(find(dm > 45 & s < 1.0, 1));
 N("part15_width") = [r1(wid(si)), r1(wid(sp))];
 N("part15_drop") = [r1(dm(find(dm > 45 & si < 1.0, 1))), r1(dm(find(dm > 45 & sp < 1.0, 1)))];
+s1 = diff(ei) / 0.1; p1 = diff(ep) / 0.1; d1 = (d(1:end - 1) + d(2:end)) / 2;
+wid1 = @(s) d1(find(d1 > 45 & s < 0.2, 1)) - d1(find(d1 > 45 & s < 1.0, 1));
+N("part15_width100") = [r1(wid1(s1)), r1(wid1(p1))];
+N("part15_drop100") = [r1(d1(find(d1 > 45 & s1 < 1.0, 1))), r1(d1(find(d1 > 45 & p1 < 1.0, 1)))];
 
 T = readtable(fullfile(CD, 'part_sensitivity_terms.csv'), 'TextType', 'string', 'VariableNamingRule', 'preserve');
 B = T(T.("case") == "baseline", :);
@@ -822,6 +826,15 @@ N("rem_fade_3") = [r1(v('a1_db', 50, 3, 0.01)), r1(v('a1_db', 50, 3, 1)), r1(v('
 N("rem_spe_max") = max(abs(T.sporadic_e_effect_db));
 N("rem_spe_lbm4_min") = round(min(T.lbm4_db - T.fs_db));
 N("rem_p_minus_itm_300") = [r1(v('p2001_db', 300, 3, 50) - v('itm_db', 300, 3, 50)), r1(v('p2001_db', 300, 20, 50) - v('itm_db', 300, 20, 50))];
+N("rem_gs_300") = [r1(v('ags_db', 300, 3, 50)), r1(v('ags_db', 300, 20, 50))];
+N("rem_300_is_lbm3") = all(abs([v('p2001_db', 300, 3, 50) - v('lbm3_db', 300, 3, 50), v('p2001_db', 300, 20, 50) - v('lbm3_db', 300, 20, 50)]) < 0.05);
+N("rem_nogas_minus_itm_300") = [r1(v('lbm3_db', 300, 3, 50) - v('ags_db', 300, 3, 50) - v('itm_db', 300, 3, 50)), ...
+    r1(v('lbm3_db', 300, 20, 50) - v('ags_db', 300, 20, 50) - v('itm_db', 300, 20, 50))];
+for d = [50 300]
+    q = sortrows(T(T.d_km == d & abs(T.time_pct - 99.99) < 1e-9, :), 'freq_ghz');
+    i = find(q.a2_db > 1, 1);
+    N("rem_rain_cross_" + d) = [q.freq_ghz(i - 1), q.freq_ghz(i)];
+end
 R = readtable(fullfile(CD, 'rem_polarization.csv'), 'TextType', 'string');
 R.vh = R.vertical_db - R.horizontal_db;
 N("rem_pol_3_max") = [round(max(abs(R.vh(R.model == "ITM" & R.freq_ghz == 3))), 2), round(max(abs(R.vh(R.model == "P.2001" & R.freq_ghz == 3))), 2)];
@@ -830,6 +843,8 @@ s01 = R.freq_ghz == 0.1 & R.ground == "sea water";
 N("rem_pol_sea_01") = [r1(min(R.vh(s01 & R.model == "ITM"))), r1(min(R.vh(s01 & R.model == "P.2001")))];
 s03 = R.freq_ghz == 0.3 & R.ground == "sea water";
 N("rem_pol_sea_03") = [r1(max(abs(R.vh(s03 & R.model == "ITM")))), r1(max(abs(R.vh(s03 & R.model == "P.2001"))))];
+sg = @(x) x(find(abs(x) == max(abs(x)), 1));
+N("rem_pol_sea_03_signed") = [r1(sg(R.vh(s03 & R.model == "ITM"))), r1(sg(R.vh(s03 & R.model == "P.2001")))];
 I = R(R.model == "ITM", :);
 a = I(I.ground == "P.2001 land", :); b = I(I.ground == "dry ground", :);
 a = sortrows(a, {'freq_ghz', 'd_km'}); b = sortrows(b, {'freq_ghz', 'd_km'});
@@ -848,6 +863,8 @@ for c = 1:size(cls, 1)
     N("chk_hs_" + cls{c, 1}) = [nnz(m), r1(median(g0(m))), r1(median(gi(m))), r1(median(gp(m))), nnz(abs(dp(m)) > 0.1)];
 end
 N("chk_hs_change") = [r1(median(di)), r1(max(abs(di))), r1(median(dp)), r1(max(abs(dp)))];
+ms = H.itm_mode_code == 10;
+N("chk_hs_itm_scatter") = [r1(median(di(ms))), r1(median(abs(di(ms))))];
 D = readtable(fullfile(CD, 'check_reciprocity_detail.csv'), 'TextType', 'string');
 as = abs(D.itm_db - D.itm_reversed_db); sp = abs(D.itm_spaced_db - D.itm_spaced_reversed_db);
 dhe = max(abs(D.h_e_tx_m - D.h_e_tx_rev_m), abs(D.h_e_rx_m - D.h_e_rx_rev_m));
@@ -857,6 +874,12 @@ k = as > 0.01;
 N("chk_recd") = [nnz(k), nnz(dhe(k) > 1e-6), round(min(dhe(k)), 2), round(max(dhe(k)), 1), round(max(ddh(k)), 2), max(dhz(k))];
 N("chk_recd_spaced") = [max(sp(k)), nnz(sp > 0.01 & ~k), round(max(sp), 2), round(max(abs(D.itm_spaced_db - D.itm_db)), 2)];
 N("chk_recd_mode_same") = all(D.mode == D.mode_rev);
+dx = 1e3 * D.d_km ./ D.n_intervals;                       % profile spacing (m)
+xt = 0.9 * D.d_hzn_tx_m ./ dx; xr = 0.9 * D.d_hzn_rx_m ./ dx;
+tx_end = abs(D.h_e_tx_m - D.h_e_tx_rev_m) > 1e-6;
+xe = xr; xe(tx_end) = xt(tx_end);
+N("chk_recd_int") = [nnz(k), nnz(abs(xe(k) - round(xe(k))) < 1e-6)];
+N("chk_recd_spaced_stay") = nnz(sp(k) > 0.01);
 end
 
 function N = td_numbers(N, CD, r1)
@@ -879,6 +902,8 @@ N("td_k300") = [r1(ex("ITM", 5, 300, 50)), r1(ex("P.2001 troposcatter", z, 300, 
     r1(ex("P.2001 troposcatter", z, 300, 1)), r1(ex("P.2001 combined", z, 300, 1))];
 dd = unique(T.d_km); g = arrayfun(@(d) ex("ITM", 5, d, 50) - ex("P.2001 troposcatter", z, d, 50), dd);
 N("td_k_gap50") = [r1(min(g)), r1(max(g))];
+gc = arrayfun(@(d) ex("ITM", 5, d, 50) - ex("P.2001 combined", z, d, 50), dd);
+N("td_k_gap50_comb") = [r1(min(gc)), r1(max(gc))];
 
 S = readtable(fullfile(CD, 'td_measured_summary.csv'), 'TextType', 'string');
 for gr = ["All", "1 GHz and above", "Scatter", "Diffraction", "Line of sight"]
@@ -900,6 +925,9 @@ w = X(X.time_pct == 99, :); w0 = X(X.time_pct == 1, :);
 sm = w.meas_db - w0.meas_db; si = w.itm_db - w0.itm_db; sp = w.p2001_db - w0.p2001_db;
 N("td_m_spread_rho") = [round(100 * corr(sm, si, 'Type', 'Spearman')) / 100, round(100 * corr(sm, sp, 'Type', 'Spearman')) / 100];
 N("td_m_spread_within5") = [round(100 * mean(abs(si - sm) <= 5)), round(100 * mean(abs(sp - sm) <= 5))];
+Xe = readtable(fullfile(CD, 'td_measured_examples.csv'), 'TextType', 'string');
+N("td_ex_ghz") = [r1(min(Xe.freq_mhz) / 1000), r1(max(Xe.freq_mhz) / 1000)];
+N("td_m_mhz") = [r1(min(X.freq_mhz)), max(X.freq_mhz)];
 end
 
 function N = check_numbers(N, CD, r1)
@@ -921,6 +949,7 @@ N("chk_he_absdiff") = [round(median(abs(he_itm - he_p))), round(max(abs(he_itm -
 N("chk_he_p_gt_itm") = round(100 * mean(he_p > he_itm + 1));
 N("chk_he_itm_below_hg") = nnz(he_itm < hg - 1e-6); N("chk_he_p_below_hg") = nnz(he_p < hg - 1e-6);
 N("chk_he_n") = numel(he_itm);
+N("chk_he_signed_med") = round(median(he_p - he_itm));
 S = readtable(fullfile(CD, 'check_radius_swap.csv'), 'TextType', 'string');
 N("chk_ae_med") = [round(median(S.itm_ae_km)), round(median(S.p2001_ae50_km))];
 N("chk_ae_range") = [round(min(S.itm_ae_km - S.p2001_ae50_km)), round(max(S.itm_ae_km - S.p2001_ae50_km))];

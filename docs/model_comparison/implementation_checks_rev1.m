@@ -34,8 +34,9 @@ function implementation_checks_rev1(options)
 %     chart_data/check_reciprocity.csv
 %   With item 26, ITM's intermediate values in both directions (Δh, horizon
 %   distances and angles, effective heights, A_ref, mode), and both
-%   directions again with the profile spacing scaled by 1 + 1e-9, which
-%   moves every fit-window end off any profile point it falls on.
+%   directions again with the profile spacing scaled by 1 + 1e-9, a change
+%   that alters only the last digits of the fit-window ends (0.9 d_hzn/dx),
+%   to test how sensitive the result is to their rounding.
 %     chart_data/check_reciprocity_detail.csv
 %
 %   Item 27, continuity. Loss against distance at 100 m steps: smooth earth
