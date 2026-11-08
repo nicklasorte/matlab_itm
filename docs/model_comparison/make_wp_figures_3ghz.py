@@ -59,12 +59,21 @@ def label_end(ax, x, y, text, color, dy=0, **kw):
     ax.text(x, y + dy, " " + text, color=color, va="center", fontsize=9, fontweight="semibold", **kw)
 
 
+def stack_labels(ax, x, items, gap=None):
+    """items: list of (y, text, color); places end labels without overlap."""
+    lo, hi = ax.get_ylim(); gap = gap or (hi - lo) * 0.06
+    last = -1e9
+    for y, t, c in sorted(items):
+        y = max(y, last + gap); last = y
+        label_end(ax, x, y, t, c)
+
+
 # ---------- data ----------
 b = C.bylink[C.bylink.freq_mhz == F0].copy()
 b["apart"] = b.itm_50_db - b.p2001_50_db
 terms = C.terms[C.terms.freq_mhz == F0].copy()
 db = C.db
-db1 = db[db.freq_mhz >= 1000].copy()
+db1 = db.copy()   # all measured datasets, 30 MHz to 10 GHz
 db1["apart"] = db1.itm_50 - db1.p2001_50
 
 
@@ -242,7 +251,7 @@ def s11_window_by_length():
     fig, ax = new(); clean(ax)
     ax.axvspan(15, 150, color="#EEF1FA", zorder=0)
     ax.text(16, 0.95, "Divergence window", transform=ax.get_xaxis_transform(), fontsize=8.5, color=LB, fontweight="semibold")
-    ax.scatter(db1.d_km, db1.apart, s=16, facecolor="none", edgecolor=GR, linewidth=0.7, zorder=2, label="Measured paths, 1-10 GHz")
+    ax.scatter(db1.d_km, db1.apart, s=16, facecolor="none", edgecolor=GR, linewidth=0.7, zorder=2, label="Measured paths, 30 MHz-10 GHz")
     ax.scatter(b.length_km, b.apart, s=24, color=LB, edgecolor="white", linewidth=0.4, zorder=3, label=f"Calculated links, {FT}")
     ax.axhline(0, color=DB, lw=0.8); ax.set_xscale("log"); ax.set_xlim(8, 900)
     ax.set_xticks([10, 30, 100, 300], ["10", "30", "100", "300"])
@@ -274,7 +283,7 @@ def s13_anatomy():
 def s14_where_window_falls():
     fig, ax = new(3.6); clean(ax, None)
     ax.set_xscale("log"); ax.set_yscale("log")
-    ax.scatter(db1.d_km, np.maximum(db1.itm_delta_h_m, 3), s=16, facecolor="none", edgecolor=GR, linewidth=0.7, label="Measured paths, 1-10 GHz")
+    ax.scatter(db1.d_km, np.maximum(db1.itm_delta_h_m, 3), s=16, facecolor="none", edgecolor=GR, linewidth=0.7, label="Measured paths, 30 MHz-10 GHz")
     big = b.apart > 20
     ax.scatter(b.length_km[~big], np.maximum(b.delta_h_m[~big], 3), s=34, color=LG, edgecolor="white", label="Calculated links, under 20 dB apart", zorder=3)
     ax.scatter(b.length_km[big], np.maximum(b.delta_h_m[big], 3), s=34, color=DB, edgecolor="white", label="Calculated links, over 20 dB apart", zorder=3)
@@ -378,14 +387,15 @@ def s20_enhancement_measured():
     d = db1
     ed = np.array([0, 60, 120, 200, 300, 450, 900]); xm = np.sqrt(np.maximum(ed[:-1], 20) * ed[1:])
     bb = np.digitize(d.d_km, ed) - 1
-    fig, ax = new(); clean(ax)
+    fig, ax = new(); clean(ax); ends = []
     for key, col, lab, lw in (("meas", "#222222", "Measured", 3), ("itm", LB, "ITM", 2.2), ("p2001", DB, "P.2001", 2.2)):
         v = (d[f"{key}_50"] - d[f"{key}_01"]).values
         m = np.array([np.nanmedian(v[bb == i]) if (bb == i).sum() >= 3 else np.nan for i in range(len(xm))])
         ok = ~np.isnan(m)
         ax.plot(xm[ok], m[ok], "-o", color=col, lw=lw, ms=5, mec="white")
-        label_end(ax, xm[ok][-1], m[ok][-1], lab, col)
+        ends.append((m[ok][-1], lab, col)); xe = xm[ok][-1]
     ax.set_xscale("log"); ax.set_xlim(20, 1500); ax.set_ylim(0, 35)
+    stack_labels(ax, xe, ends)
     ax.set_xticks([30, 100, 300, 1000], ["30", "100", "300", "1,000"])
     ax.set_xlabel("Path length (km), log scale"); ax.set_ylabel("Median loss at 50 % minus\nloss at 1 % of time (dB)")
     save(fig, "s20_enhancement_measured")
@@ -426,13 +436,14 @@ def s22_distance_threshold():
 # ===================== measurements =====================
 def s23_error_vs_frequency():
     bins = C.BINS
-    fig, ax = new(); clean(ax)
+    fig, ax = new(); clean(ax); ends = []
     for m in ["p452", "p2001", "itm"]:
         v = [C.err(m, "50", db.bin == bn) for bn in bins]
         y = [x.median() if x.size >= 3 else np.nan for x in v]
         ax.plot(range(6), y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
-        label_end(ax, 5, y[-1] + (1.2 if m == "itm" else (-1.2 if m == "p2001" else 0)), ML[m], MC[m])
-    ax.axhline(0, color=DB, lw=0.8); ax.axvspan(2.5, 5.5, color="#F4F6FB", zorder=0)
+        ends.append((y[-1], ML[m], MC[m]))
+    ax.axhline(0, color=DB, lw=0.8)
+    stack_labels(ax, 5, ends)
     ax.set_xticks(range(6), bins); ax.set_xlim(-0.3, 6.1)
     ax.set_ylabel("Median predicted minus\nmeasured loss at 50 % (dB)")
     save(fig, "s23_error_vs_frequency")
@@ -440,16 +451,17 @@ def s23_error_vs_frequency():
 
 def s24_error_vs_time():
     pc, pv = ["01", "10", "50", "90", "99"], [1, 10, 50, 90, 99]
-    fig, ax = new(); clean(ax)
-    hi = db.freq_mhz >= 1000
+    fig, ax = new(); clean(ax); ends = []
+    hi = db.freq_mhz > 0
     for m in ["p452", "p2001", "itm"]:
         y = np.array([C.err(m, p, hi).mean() if C.err(m, p, hi).size else np.nan for p in pc])
         ok = ~np.isnan(y)
         ax.plot(np.array(pv)[ok], y[ok], "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
-        label_end(ax, np.array(pv)[ok][-1], y[ok][-1], ML[m], MC[m])
+        ends.append((y[ok][-1], ML[m], MC[m]))
     ax.axhline(0, color=DB, lw=0.8); ax.set_xscale("log"); ax.set_xlim(0.8, 250)
+    stack_labels(ax, 99, ends)
     ax.set_xticks(pv, ["1 %", "10 %", "50 %", "", "99 %"]); ax.set_xlabel("Percentage of time")
-    ax.set_ylabel("Mean predicted minus\nmeasured loss, 1-10 GHz (dB)")
+    ax.set_ylabel("Mean predicted minus\nmeasured loss (dB)")
     save(fig, "s24_error_vs_time")
 
 
@@ -457,13 +469,14 @@ def s25_error_vs_terrain():
     d = db1
     ed = np.array([0, 25, 50, 100, 200, 400, 3000]); xm = np.sqrt(np.maximum(ed[:-1], 10) * ed[1:])
     bb = np.digitize(d.itm_delta_h_m, ed) - 1
-    fig, ax = new(); clean(ax)
+    fig, ax = new(); clean(ax); ends = []
     for m in ["p452", "p2001", "itm"]:
         v = (d[f"{m}_50"] - d.meas_50).values
         y = np.array([np.nanmedian(v[bb == i]) if (bb == i).sum() >= 3 else np.nan for i in range(len(xm))])
         ax.plot(xm, y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white")
-        label_end(ax, xm[-1], y[-1] + (1 if m == "itm" else 0), ML[m], MC[m])
+        ends.append((y[-1], ML[m], MC[m]))
     ax.axhline(0, color=DB, lw=0.8); ax.set_xscale("log"); ax.set_xlim(10, 3000)
+    stack_labels(ax, xm[-1], ends)
     ax.set_xticks([10, 100, 1000], ["10", "100", "1,000"]); ax.set_xlabel("Terrain irregularity Δh (m), log scale")
     ax.set_ylabel("Median predicted minus\nmeasured loss at 50 % (dB)")
     save(fig, "s25_error_vs_terrain")
