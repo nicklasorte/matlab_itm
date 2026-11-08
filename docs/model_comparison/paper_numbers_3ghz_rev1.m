@@ -338,6 +338,11 @@ if isfile(fullfile(CD, 'fam_two_obstacles.csv'))
     N = fam_numbers(N, CD, r1);
 end
 
+% ---- term splits and Monte Carlo combination (term_splits_rev1) ----
+if isfile(fullfile(CD, 'term_smooth_earth.csv'))
+    N = term_numbers(N, CD, r1);
+end
+
 % ---- western terrain sample (western_terrain_rev1) ----
 fw = fullfile(CD, 'western_links.csv');
 if isfile(fw)
@@ -642,6 +647,62 @@ N("fam24_n") = height(u); N("fam24_total") = height(P);
 N("fam24_gap") = [r1(median(g0)), r1(median(g1))];
 N("fam24_wider") = nnz(g1 > g0);
 N("fam24_closed_half") = nnz(g1 < 0.5 * g0);
+end
+
+function N = term_numbers(N, CD, r1)
+% Plan items 9, 10, 11, 16, and 25
+S = readtable(fullfile(CD, 'term_smooth_earth.csv'), 'TextType', 'string');
+S.dse = S.itm_a_se_db - S.p2001_ldsph_db;
+for pol = ["vertical", "horizontal"]
+    q = S(S.polarization == pol, :);
+    N("term_se_" + pol) = [r1(min(q.dse)), r1(max(q.dse))];
+end
+q = S(S.polarization == "vertical", :);
+N("term_se_v150") = [r1(q.itm_a_se_db(q.d_km == 150)), r1(q.p2001_ldsph_db(q.d_km == 150))];
+D = readtable(fullfile(CD, 'term_diffraction_links.csv'), 'TextType', 'string');
+c = struct('edges', D.itm_wk_path_db - D.p2001_knife_db, 'smooth', D.itm_wse_path_db - D.p2001_sph_excess_db, ...
+    'addon', D.itm_afo_db - D.p2001_empirical_db, 'extension', D.itm_a_ref_db - D.itm_ad_path_db, ...
+    'other', D.p2001_ld_db - D.p2001_excess_db, 'total', D.itm_a_ref_db - D.p2001_excess_db);
+rows = {};
+for k = string(fieldnames(c))'
+    v = c.(k);
+    N("term_gap_" + k) = [r1(mean(v)), r1(median(v))];
+    rows(end + 1, :) = {k, mean(v), median(v)}; %#ok<AGROW>
+end
+writetable(cell2table(rows, 'VariableNames', {'component', 'mean_db', 'median_db'}), fullfile(CD, 'term_gap_components.csv'));
+N("term_n") = height(D); N("term_n_east") = nnz(D.side == "East"); N("term_n_west") = nnz(D.side == "West");
+N("term_itm_med") = [r1(median(D.itm_wse_path_db)), r1(median(D.itm_wk_path_db)), r1(median(D.itm_afo_db)), ...
+    r1(median(D.itm_ad_path_db)), r1(median(D.itm_ad_d3_db)), r1(median(D.itm_a_ref_db))];
+N("term_p2001_med") = [r1(median(D.p2001_knife_db)), r1(median(D.p2001_empirical_db)), r1(median(D.p2001_sph_excess_db)), ...
+    r1(median(D.p2001_excess_db))];
+N("term_afo") = [r1(min(D.itm_afo_db)), r1(median(D.itm_afo_db)), r1(max(D.itm_afo_db))];
+N("term_afo_cap") = nnz(D.itm_afo_db >= 15 - 1e-9);
+N("term_emp") = [r1(min(D.p2001_empirical_db)), r1(median(D.p2001_empirical_db)), r1(max(D.p2001_empirical_db))];
+N("term_emp_r") = round(100 * corr(D.d_km, D.p2001_empirical_db)) / 100;
+T = readtable(fullfile(CD, 'term_ducting_smooth.csv'));
+t = T(T.time_pct == 1, :);
+N("term_duct_aac") = [r1(min(t.aac_db)), r1(max(t.aac_db))];
+for d = [50 125 275 500]
+    q = t(t.d_km == d, :);
+    N(sprintf('term_duct_%d', d)) = [r1(q.aad_db), r1(q.aat_db), r1(q.lbm2_excess_db), r1(q.itm_excess_db), r1(q.lbm1_excess_db)];
+end
+U = readtable(fullfile(CD, 'term_ducting_links.csv'), 'TextType', 'string');
+N("term_duct_links_lbm2_lt_lbm1") = nnz(U.p2001_lbm2_excess_1_db < U.p2001_lbm1_excess_1_db);
+N("term_duct_links_n") = height(U);
+M = readtable(fullfile(CD, 'term_monte_carlo.csv'), 'TextType', 'string');
+M.diff = M.monte_carlo_db - M.blend_db;
+nm = unique(M.path, 'stable'); rows = {};
+for i = 1:numel(nm)
+    q = M(M.path == nm(i), :);
+    [~, j] = max(abs(q.diff));
+    key = sprintf('term_mc%d_', i);
+    N(key + "name") = nm(i);
+    N(key + "max") = [r1(q.diff(j)), q.time_pct(j)];
+    N(key + "p50") = r1(q.diff(q.time_pct == 50)); N(key + "p1") = r1(q.diff(q.time_pct == 1));
+    q2 = q(q.time_pct >= 0.01 & q.time_pct <= 99, :);
+    [~, j2] = max(abs(q2.diff));
+    N(key + "max_core") = [r1(q2.diff(j2)), q2.time_pct(j2)];
+end
 end
 
 function m = km_median(e, cens, w)
