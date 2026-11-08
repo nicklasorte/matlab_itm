@@ -400,6 +400,39 @@ is the largest single piece. The ITM core is about 25%, and the number of
 reliabilities barely matters: 1,000 reliabilities cost about the same as
 one (12.6 ms versus 12.2 ms per link in the same run).
 
+### Many links: reuse the terrain through the matlab_itu_p452 wrapper
+
+Since most of a call is terrain, a study that reruns the same links (new
+antenna heights, frequencies, or confidence) can skip it. The
+model-agnostic wrapper `pathloss_rev1` in
+[matlab_itu_p452](https://github.com/nicklasorte/matlab_itu_p452) reads
+each link's profile once, keeps it in memory for the session, and runs
+this repository's ITM (`itm_p2p_rev1`) on it, with the same climate and
+N₀ lookups as `itm_pathloss_rev1`, so the losses are identical:
+
+```matlab
+rx = [38.8895, -77.0353, 10];                  % one receiver
+tx = [lat(:), lon(:), h(:)];                   % N transmitters
+L  = pathloss_rev1(tx, rx, [700 2700 3500 7000], [1 10 50], model="itm");   % N-by-3-by-4
+L90 = pathloss_rev1(tx, rx, 2700, [1 10 50], model="itm", model_options={'confidence', 90});  % terrain from memory
+```
+
+`tests/demo_wrapper_small_set_rev1.m` times it on 250 transmitters (2.8 to
+42 km) around one receiver, with matlab_itu_p452 next to this repository
+or in `P452Dir`. One run on a MacBook Air, every loss identical:
+
+| Step | `itm_pathloss_rev1` | `pathloss_rev1(model="itm")` | Speedup |
+| --- | --- | --- | --- |
+| First run, terrain read | 0.13 s | 0.21 s | 0.6x |
+| Rerun, new TX heights | 0.13 s | 0.06 s | 2.2x |
+| 4 frequencies | 0.38 s | 0.10 s | 3.7x |
+| Confidence 90 % | 0.09 s | 0.04 s | 2.4x |
+| Study: 2 heights x 4 frequencies x 2 confidences | 1.41 s | 0.48 s | 2.9x |
+
+A single run is slower through the wrapper (it also builds the cache and
+runs ITM per link through `itm_p2p_rev1`); the gain is on every call
+after the first.
+
 ### Compared with ITU-R P.2001 (itu_p2001)
 
 Same link, frequency, and time percentage, each model with its own terrain
