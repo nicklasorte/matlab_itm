@@ -195,6 +195,7 @@ if any(ismember(models, ["matlab_lr", "rfprop_tirem", "itm_on_matlab_terrain"]))
         tiles = [tiles; floor([la, lo])]; %#ok<AGROW> n links
     end
     tiles = unique(tiles, 'rows');
+    tiles = tiles(tiles(:, 1) >= -50 & tiles(:, 1) <= 49, :);   % DTED level 2 has 1" spacing below 50 degrees
     fprintf('Writing %d USGS 1" tiles as DTED for the MATLAB terrain models ...\n', size(tiles, 1));
     dted = itm_dted_tiles_rev1(tiles(:, 1), tiles(:, 2));
     try
