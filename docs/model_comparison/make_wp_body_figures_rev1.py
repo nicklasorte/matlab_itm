@@ -40,7 +40,9 @@ def region_of(lon, lat):
     return "Other"
 
 
-db["region"] = [region_of((a + b) / 2, (c + d) / 2) for a, b, c, d in zip(db.tx_lon, db.rx_lon, db.tx_lat, db.rx_lat)]
+# Regions and counts come from figure_data_3ghz_rev1.m
+REG = pd.read_csv(CD / "figures" / "fig25_measured_regions.csv")
+CNT = pd.read_csv(CD / "figures" / "fig25_region_counts.csv").set_index("region")
 
 
 def save(fig, name):
@@ -200,12 +202,12 @@ def fig25():
     norm = LogNorm(30, 10000); cmap = mpl.colormaps["viridis"]
     for name, ax in axes.items():
         r = REGIONS[name]; basemap(ax, r["lon"], r["lat"], us=r["us"])
-        d = db[db.region == name].sort_values("freq_mhz")
+        d = REG[REG.region == name].sort_values("freq_mhz")
         for _, p in d.iterrows():
             ax.plot([p.tx_lon, p.rx_lon], [p.tx_lat, p.rx_lat], color=cmap(norm(p.freq_mhz)), lw=1.6, solid_capstyle="round", zorder=3)
         ax.scatter(np.r_[d.tx_lon, d.rx_lon], np.r_[d.tx_lat, d.rx_lat], s=5, color=DB, zorder=4, edgecolor="none")
-        n1 = (d.freq_mhz >= 1000).sum()
-        ax.set_title(f"{name}\n{len(d)} datasets, {d.path.nunique()} paths ({n1} at 1-10 GHz)", fontsize=9)
+        k = CNT.loc[name]
+        ax.set_title(f"{name}\n{int(k.datasets)} datasets, {int(k.paths)} paths ({int(k.datasets_1_10_ghz)} at 1-10 GHz)", fontsize=9)
     cax = fig.add_subplot(gs[2, :])
     cb = fig.colorbar(mpl.cm.ScalarMappable(norm, cmap), cax=cax, orientation="horizontal")
     cb.set_ticks([30, 100, 300, 1000, 3000, 10000], labels=["30 MHz", "100 MHz", "300 MHz", "1 GHz", "3 GHz", "10 GHz"])

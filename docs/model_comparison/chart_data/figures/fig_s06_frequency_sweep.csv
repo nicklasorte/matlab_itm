@@ -1,0 +1,64 @@
+path,freq_mhz,itm_minus_p2001_db
+Line of sight,100,0.4579264850457
+Line of sight,126,0.344453663483801
+Line of sight,158,0.201343439739301
+Line of sight,200,0.0122787977739982
+Line of sight,251,-0.219470918176501
+Line of sight,316,-0.578245532114201
+Line of sight,398,-1.021209126941
+Line of sight,501,-0.915053972266501
+Line of sight,631,-0.701980491268401
+Line of sight,794,-0.372520516733411
+Line of sight,1000,0.14917717413053
+Line of sight,1259,1.01698352319562
+Line of sight,1585,2.10539624184463
+Line of sight,1995,2.90739309626846
+Line of sight,2512,3.5243066599983
+Line of sight,3162,4.22858482262421
+Line of sight,3981,4.93421202619623
+Line of sight,5012,4.24955149828056
+Line of sight,6310,3.56626052196929
+Line of sight,7943,2.85075533736068
+Line of sight,10000,2.07216116350144
+Single-horizon diffraction,100,1.0471084872201
+Single-horizon diffraction,126,0.964945977867799
+Single-horizon diffraction,158,1.155690490226
+Single-horizon diffraction,200,1.3687906384406
+Single-horizon diffraction,251,1.594293949489
+Single-horizon diffraction,316,1.8501272051822
+Single-horizon diffraction,398,2.0977667163826
+Single-horizon diffraction,501,2.3161276429454
+Single-horizon diffraction,631,2.4880332814601
+Single-horizon diffraction,794,2.6144404451907
+Single-horizon diffraction,1000,2.5587511390907
+Single-horizon diffraction,1259,2.5510045052236
+Single-horizon diffraction,1585,2.4745374642454
+Single-horizon diffraction,1995,2.3413568476763
+Single-horizon diffraction,2512,2.1789970556788
+Single-horizon diffraction,3162,1.9966859378341
+Single-horizon diffraction,3981,1.8206508156682
+Single-horizon diffraction,5012,1.6580720714304
+Single-horizon diffraction,6310,1.462569469105
+Single-horizon diffraction,7943,1.197118034207
+Single-horizon diffraction,10000,0.8275696784542
+Double-horizon diffraction,100,45.759278495457
+Double-horizon diffraction,126,47.0739534836701
+Double-horizon diffraction,158,48.2319873294554
+Double-horizon diffraction,200,49.2800855894533
+Double-horizon diffraction,251,50.238748267254
+Double-horizon diffraction,316,51.1815842364109
+Double-horizon diffraction,398,52.0950412440037
+Double-horizon diffraction,501,52.9766905236856
+Double-horizon diffraction,631,53.7527429694341
+Double-horizon diffraction,794,56.5459414968476
+Double-horizon diffraction,1000,60.5951304277995
+Double-horizon diffraction,1259,64.8392915574084
+Double-horizon diffraction,1585,69.3006972381366
+Double-horizon diffraction,1995,73.5771031827548
+Double-horizon diffraction,2512,78.0324486120927
+Double-horizon diffraction,3162,82.7521839049319
+Double-horizon diffraction,3981,87.7609997612062
+Double-horizon diffraction,5012,93.0827094048785
+Double-horizon diffraction,6310,98.7243950423114
+Double-horizon diffraction,7943,104.692025024982
+Double-horizon diffraction,10000,110.994695196896

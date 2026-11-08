@@ -536,7 +536,7 @@ def s29_grid_maps():
         piv = lambda c: G.pivot_table(index="dy_km", columns="dx_km", values=c).reindex(index=y, columns=x).values
         ax.pcolormesh(x, y, np.clip(piv("itm_minus_p2001_db"), 0, None), cmap=cmap, norm=norm, shading="nearest", rasterized=True)
         ax.plot(Bm.dx_km, Bm.dy_km, color="white", lw=0.9, alpha=0.9); ax.plot(Bm.dx_km, Bm.dy_km, color=GR, lw=0.5)
-        for c, col, ls in (("p2001_excluded_160", PU, "-"), ("itm_excluded_160", "#FFFFFF", (0, (3, 2)))):
+        for c, col, ls in (("p2001_excluded_160", PU, "-"), ("itm_excluded_160", "#222222", (0, (3, 2)))):
             ax.contour(x, y, piv(c).astype(float), levels=[0.5], colors=[col], linewidths=1.6, linestyles=[ls])
         ax.scatter([0], [0], marker="*", s=150, color=PU, edgecolor="white", zorder=4)
         ax.set_aspect("equal"); ax.set_xlim(-152, 152); ax.set_ylim(-152, 152)
@@ -545,7 +545,7 @@ def s29_grid_maps():
             sp.set_visible(False)
         ax.set_title(title, loc="left"); ax.set_xlabel("km east of the receiver")
     axs[0].set_ylabel("km north of the receiver")
-    axs[1].text(0.02, 0.02, "Purple line: P.2001 exclusion at 160 dB\nWhite dashed line: ITM exclusion at 160 dB", transform=axs[1].transAxes,
+    axs[1].text(0.02, 0.02, "Purple line: P.2001 exclusion at 160 dB\nBlack dashed line: ITM exclusion at 160 dB", transform=axs[1].transAxes,
                 fontsize=7.5, color=DB, va="bottom", bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.85))
     cb = fig.colorbar(mpl.cm.ScalarMappable(norm, cmap), ax=axs, shrink=0.8, pad=0.01)
     cb.outline.set_visible(False); cb.set_label(f"ITM minus P.2001 at {FT}, 50 % (dB)")
