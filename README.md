@@ -132,6 +132,28 @@ single-horizon diffraction, 6 single-horizon troposcatter, 9 double-horizon
 diffraction, 10 double-horizon troposcatter. `info.mode` holds the ITM v1.4
 mode (1 line of sight, 2 diffraction, 3 troposcatter).
 
+### Run MathWorks' Longley-Rice on the same terrain
+
+`itm_matlab_lr_rev1` runs MATLAB's `propagationModel("longley-rice")`
+(Antenna Toolbox or Communications Toolbox) with the same inputs, defaults,
+climate, N₀, and USGS 1" terrain as `itm_pathloss_rev1`, instead of MATLAB's
+built-in GMTED2010 terrain (about 250 m):
+
+```matlab
+itm_matlab_terrain_rev1(region=[36 42 -83 -74]);    % once per study area
+L_mw  = itm_matlab_lr_rev1(tx, rx, 2700, [1 50 99]);
+L_itm = itm_pathloss_rev1(tx, rx, 2700, [1 50 99]);
+```
+
+MATLAB's terrain models read custom terrain only as DTED, so
+`itm_matlab_terrain_rev1` writes the tiles as DTED level 2
+(`itm_dted_tiles_rev1`, 1.3 s and 26 MB per tile) and registers them as the
+custom terrain `"itm_usgs1"`. Registering takes about 30 s per tile, but
+MATLAB keeps it across sessions, so it's a one-time cost per area. Pass
+`Map="itm_usgs1"` to `pathloss`, `coverage`, or `siteviewer` to use it
+anywhere. DTED stores whole meters, so heights are rounded to 1 m, and
+level 2 has 1" spacing only below 50° latitude.
+
 ### Run it without MATLAB
 
 Compile the self-test app or the command-line tool and run it on any
@@ -171,6 +193,9 @@ example `Link 2: ITM error 1001: RX terminal height must be 0.5 to 3000 m.`
 | --- | --- |
 | `itm_pathloss_rev1(tx, rx, f_mhz, reliability)` | Path loss between locations, with everything automatic. Accepts N links. Also returns elevation angles. |
 | `itm_p2p_mechanism_rev1(bs, sim_pt, reliability, confidence, FreqMHz, Tpol)` | Drop-in replacement for the SEADLib `ITMP2P_mechanism_rev4_embed_height`. |
+| `itm_matlab_lr_rev1(tx, rx, f_mhz, reliability)` | MathWorks' `propagationModel("longley-rice")` on this repository's USGS 1" terrain. |
+| `itm_matlab_terrain_rev1(region=[...])` | Registers USGS 1" terrain (as DTED) with MATLAB's terrain models, once per area. |
+| `itm_dted_tiles_rev1(tile_lat, tile_lon)` | Writes USGS 1" tiles as DTED level 2. |
 | `itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability)` | ITM core for a terrain profile you supply. Equivalent to NTIA `ITM_P2P_CR` (and `ITM_P2P_TLS` with the `location` option). |
 | `itm_terrain_profile_rev1(lat1, lon1, lat2, lon2)` | ITM PFL profile(s) along the WGS84 geodesic. |
 | `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached DEM tiles. |
