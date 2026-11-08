@@ -5,8 +5,9 @@ function remaining_terms_rev1(options)
 %   (38.5 N, 100.0 W, due east), 30 m and 10 m antennas.
 %
 %   Item 18, gases, rain, and sporadic-E. P.2001's explicit terms against
-%   frequency, 0.1 GHz to 50 GHz, at 50 km, 150 km, and 300 km and at 50 %,
-%   1 %, and 0.01 % of time, 500 m above sea level, vertical polarization:
+%   frequency, 0.1 GHz to 50 GHz, at 50 km, 150 km, and 300 km and at 0.01 %,
+%   1 %, 50 %, 99 %, and 99.99 % of time (loss not exceeded; rain shows at
+%   the large percentages), 500 m above sea level, vertical polarization:
 %     gaseous absorption on the surface path A_gsur (Attachment F.2, in
 %     sub-models 1 and 2) and on the troposcatter path A_gs (F.3, in
 %     sub-model 3);
@@ -41,7 +42,7 @@ E = wgs84Ellipsoid('km'); tx0 = [38.5, -100.0]; htx = 30; hrx = 10;
 
 % ---- item 18 ----
 if ismember(18, options.Items)
-    F = [0.1 0.2 0.3 0.5 1 2 3 5 7 10 15 20 25 30 40 50]; P = [50 1 0.01];
+    F = [0.1 0.2 0.3 0.5 1 2 3 5 7 10 15 20 25 30 40 50]; P = [0.01 1 50 99 99.99];
     rows = {};
     for d = [50 150 300]
         [pfl, dk, hm, rxp] = flat(d, 500, tx0, E);
