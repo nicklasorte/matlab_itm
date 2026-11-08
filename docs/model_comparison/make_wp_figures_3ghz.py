@@ -609,11 +609,12 @@ def s31_area_measurements():
 
 # ===================== ITS Phase 2 measurements and western terrain =====================
 def s33_its_error_by_distance():
-    """Censoring-aware median error near 3 GHz (1.8-4.8 GHz) by path length, ITS Phase 2."""
+    """Censoring-aware median error near 3 GHz (1.8 GHz and 4.6 GHz), ITS Phase 2 Colorado open sites, by path length."""
     f = CD / "its_phase2_error_by_distance.csv"
     if not f.exists():
         return
     t = pd.read_csv(f)
+    t = t[t.group == "colorado_open"]                  # open sites in Colorado (R1-R3)
     q0 = t[t.model == "itm"].reset_index(drop=True)
     lab = [f"{a:g}-{b:g} km" for a, b in q0[["d_low_km", "d_high_km"]].values]
     fig, ax = new(); clean(ax); ends = []
@@ -625,7 +626,7 @@ def s33_its_error_by_distance():
         ok = ~np.isnan(y); ends.append((y[ok][-1], ML[m], MC[m])); xe = x[ok][-1]
     ax.axhline(0, color=DB, lw=0.8)
     stack_labels(ax, xe, ends)
-    ax.set_xticks(x, [f"{l}\n{100 * c:.0f}% below\nsensitivity" for l, c in zip(lab, q0.censored_share)])
+    ax.set_xticks(x, [f"{l}\n{k} links, {100 * c:.0f}%\nbelow sensitivity" for l, k, c in zip(lab, q0.links, q0.censored_share)])
     ax.set_xlim(-0.3, len(lab) + 0.2)
     ax.set_ylabel("Median predicted minus\nmeasured loss (dB)")
     save(fig, "s33_its_error_by_distance")

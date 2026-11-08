@@ -383,46 +383,60 @@ end
 % median handles that. NaN when more than half the results are censored
 % below the median (the median is then only a bound).
 Rw = T(use & ismember(T.freq_mhz, [1846 2180 4595 4820]), :);
+[gw, ~] = findgroups(Rw(:, {'set', 'path', 'siting', 'freq_mhz', 'group'}));
+cnt = accumarray(gw, 1);
+Rw.w = 1 ./ cnt(gw);                               % each link counts once, whatever its number of heights
+Rw.colorado_open = Rw.set ~= "VA" & Rw.siting == "O";
+Rw.virginia_open = Rw.set == "VA" & Rw.siting == "O" & endsWith(Rw.group, "-hi");
+Q.colorado_open = Q.set ~= "VA" & Q.siting == "O";
+Q.virginia_open = Q.set == "VA" & Q.siting == "O" & endsWith(Q.group, "-hi");
 ed = [0 5 15 50 150]; rows = {};
-for i = 1:numel(ed) - 1
-    s = Q.d_km >= ed(i) & Q.d_km < ed(i + 1);
-    sr = Rw.d_km >= ed(i) & Rw.d_km < ed(i + 1);
-    for m = M
-        e = Q.("err_" + m)(s);
-        km = km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr));
-        rows(end + 1, :) = {ed(i), ed(i + 1), m, numel(e), mean(e), median(e), prctile(e, 25), prctile(e, 75), ...
-            km, mean(Rw.censored(sr))}; %#ok<AGROW>
-        N(sprintf('its3_d%d_%s', ed(i), m)) = [r1(median(e)), r1(mean(e)), numel(e), r1(km)];
+for grp = ["colorado_open", "virginia_open"]
+    for i = 1:numel(ed) - 1
+        s = Q.(grp) & Q.d_km >= ed(i) & Q.d_km < ed(i + 1);
+        sr = Rw.(grp) & Rw.d_km >= ed(i) & Rw.d_km < ed(i + 1);
+        cs = sum(Rw.w(sr) .* Rw.censored(sr)) / sum(Rw.w(sr));
+        for m = M
+            e = Q.("err_" + m)(s);
+            km = km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr), Rw.w(sr));
+            rows(end + 1, :) = {grp, ed(i), ed(i + 1), m, numel(unique(gw(sr))), median(e), km, cs}; %#ok<AGROW>
+            N(sprintf('its3_%s_d%d_%s', grp, ed(i), m)) = [r1(km), r1(median(e)), numel(unique(gw(sr)))];
+        end
+        N(sprintf('its3_%s_d%d_cens', grp, ed(i))) = round(100 * cs);
     end
-    N(sprintf('its3_d%d_cens', ed(i))) = round(100 * mean(Rw.censored(sr)));
+    sr = Rw.(grp);
+    N("its3_" + grp + "_links") = numel(unique(gw(sr)));
+    for m = M
+        N("its3_" + grp + "_" + m) = r1(km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr), Rw.w(sr)));
+    end
 end
-writetable(cell2table(rows, 'VariableNames', {'d_low_km', 'd_high_km', 'model', 'n', 'mean_error_db', 'median_error_db', ...
-    'p25_error_db', 'p75_error_db', 'km_median_error_db', 'censored_share'}), fullfile(CD, 'its_phase2_error_by_distance.csv'));
+writetable(cell2table(rows, 'VariableNames', {'group', 'd_low_km', 'd_high_km', 'model', 'links', ...
+    'median_error_uncensored_db', 'km_median_error_db', 'censored_share'}), fullfile(CD, 'its_phase2_error_by_distance.csv'));
 % by set, censoring-aware
 for st = ["R1", "R2", "R3", "VA"]
     sr = Rw.set == st;
-    N("its3_" + st + "_cens") = round(100 * mean(Rw.censored(sr)));
+    N("its3_" + st + "_cens") = round(100 * sum(Rw.w(sr) .* Rw.censored(sr)) / sum(Rw.w(sr)));
     for m = M
-        N("its3_" + st + "_" + m + "_km") = r1(km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr)));
+        N("its3_" + st + "_" + m + "_km") = r1(km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr), Rw.w(sr)));
     end
 end
 % Colorado mountains (R2) beyond 15 km: the divergence window in measured data
 sr = Rw.set == "R2" & Rw.d_km >= 15;
-N("its3_r2far_rows") = nnz(sr); N("its3_r2far_cens") = round(100 * mean(Rw.censored(sr)));
+N("its3_r2far_links") = numel(unique(gw(sr))); N("its3_r2far_cens") = round(100 * sum(Rw.w(sr) .* Rw.censored(sr)) / sum(Rw.w(sr)));
 N("its3_r2far_dh") = round(median(Rw.delta_h_m(sr)));
 for m = M
     e = Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr); c = logical(Rw.censored(sr));
-    N("its3_r2far_" + m) = [r1(median(e(~c))), r1(km_median(e, c))];
+    N("its3_r2far_" + m) = [r1(median(e(~c))), r1(km_median(e, c, Rw.w(sr)))];
     N("its3_r2far_below_" + m) = round(100 * mean(e(c) < 0));   % censored: model below the bound
 end
 % the divergence window: rough terrain at 15 to 150 km
 w = Q.d_km >= 15 & Q.delta_h_m > 150;
 N("its3_win_n") = nnz(w);
 wr = Rw.d_km >= 15 & Rw.delta_h_m > 150;
-N("its3_win_cens") = round(100 * mean(Rw.censored(wr)));
+N("its3_win_cens") = round(100 * sum(Rw.w(wr) .* Rw.censored(wr)) / sum(Rw.w(wr)));
 for m = M
     N("its3_win_" + m) = [r1(median(Q.("err_" + m)(w))), r1(mean(Q.("err_" + m)(w))), ...
-        r1(km_median(Rw.(m + "_50")(wr) - Rw.meas_lb_db(wr), Rw.censored(wr)))];
+        r1(km_median(Rw.(m + "_50")(wr) - Rw.meas_lb_db(wr), Rw.censored(wr), Rw.w(wr)))];
     N("its3_nowin_" + m) = [r1(median(Q.("err_" + m)(~w))), r1(mean(Q.("err_" + m)(~w)))];
 end
 % which model is closer, link by link, in the window
@@ -452,13 +466,15 @@ N("its_pairs_3") = [r1(median(q.meas_c_minus_o_db)), r1(prctile(q.meas_c_minus_o
     r1(median(q.itm_c_minus_o_db)), r1(median(q.p2001_c_minus_o_db)), height(q)];
 end
 
-function m = km_median(e, cens)
+function m = km_median(e, cens, w)
 % Kaplan-Meier median of errors e (model minus measured) when some are
-% upper bounds (cens true). With x = -e, the bounds are right-censored.
-cens = logical(cens); ok = isfinite(e); e = e(ok); cens = cens(ok);
+% upper bounds (cens true), with weights w. With x = -e, the bounds are
+% right-censored.
+if nargin < 3, w = ones(size(e)); end
+cens = logical(cens); ok = isfinite(e); e = e(ok); cens = cens(ok); w = w(ok);
 m = NaN;
 if isempty(e), return, end
-[f, x] = ecdf(-e, 'Censoring', cens);
+[f, x] = ecdf(-e, 'Censoring', cens, 'Frequency', w);
 k = find(f >= 0.5, 1);
 if ~isempty(k), m = -x(k); end
 end
