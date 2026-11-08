@@ -35,7 +35,8 @@ function partials_rev1(options)
 %   maps.) The radius changes use temporary copies of the two models with a
 %   one-line override (environment variable WP_AE_OVERRIDE_KM), as in
 %   implementation_checks_rev1. Each run keeps the terms: for ITM, A_ref
-%   and, when wp_itm_terms can rebuild A_ref exactly, the knife-edge term
+%   and, on links ITM classes as diffraction (mode codes 4, 5, 8, 9) when
+%   wp_itm_terms can rebuild A_ref exactly, the knife-edge term
 %   A_k, smooth-earth term A_se, weight w, clutter term A_fo, and A_d at d_3;
 %   for P.2001, L_bm1, L_d, L_dba, L_dsph, L_dbs, L_bm2, and L_bm3.
 %     chart_data/part_sensitivity_terms.csv
@@ -189,7 +190,7 @@ end
 
 function r = itm_row(id, name, L, info, prof, ht, hr, f, n0)
 t = struct('A_k3', NaN, 'A_se3', NaN, 'w3', NaN, 'A_fo', NaN, 'A_d3', NaN);
-if isfinite(n0) && info.mode == 2
+if isfinite(n0) && ismember(info.mode_code, [4 5 8 9])
     pfl = [numel(prof.d_km) - 1; prof.d_km(end) * 1e3 / (numel(prof.d_km) - 1); prof.h_m(:)];
     try
         t = wp_itm_terms(pfl, f, [ht hr], n0, info);
