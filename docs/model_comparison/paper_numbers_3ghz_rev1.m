@@ -347,6 +347,14 @@ end
 if isfile(fullfile(CD, 'check_inputs.csv'))
     N = check_numbers(N, CD, r1);
 end
+if isfile(fullfile(CD, 'check_height_swap.csv'))
+    N = swap2_numbers(N, CD, r1);
+end
+
+% ---- remaining terms (remaining_terms_rev1) ----
+if isfile(fullfile(CD, 'rem_terms_frequency.csv'))
+    N = rem_numbers(N, CD, r1);
+end
 
 % ---- time distributions (timedist_rev1) ----
 if isfile(fullfile(CD, 'td_tropo_climate.csv'))
@@ -715,6 +723,59 @@ for i = 1:numel(nm)
     [~, j2] = max(abs(q2.diff));
     N(key + "max_core") = [r1(q2.diff(j2)), q2.time_pct(j2)];
 end
+end
+
+function N = rem_numbers(N, CD, r1)
+% Plan items 18 and 19
+T = readtable(fullfile(CD, 'rem_terms_frequency.csv'), 'TextType', 'string');
+v = @(col, d, f, p) T.(col)(T.d_km == d & abs(T.freq_ghz - f) < 1e-9 & abs(T.time_pct - p) < 1e-9);
+N("rem_gas_3") = [r1(v('agsur_db', 50, 3, 50)), r1(v('agsur_db', 150, 3, 50)), r1(v('agsur_db', 300, 3, 50))];
+N("rem_gas_300") = [r1(v('agsur_db', 300, 10, 50)), r1(v('agsur_db', 300, 20, 50)), r1(v('agsur_db', 300, 50, 50))];
+N("rem_rain_3") = [r1(v('a2_db', 50, 3, 99.99)), r1(v('a2_db', 300, 3, 99.99))];
+N("rem_rain_10") = [r1(v('a2_db', 50, 10, 99.99)), r1(v('a2_db', 300, 10, 99.99))];
+for d = [50 300]
+    q = T(T.d_km == d & abs(T.time_pct - 99.99) < 1e-9 & T.a2_db > 1, :);
+    N("rem_rain_onset_" + d) = min(q.freq_ghz);
+end
+N("rem_fade_3") = [r1(v('a1_db', 50, 3, 0.01)), r1(v('a1_db', 50, 3, 1)), r1(v('a1_db', 50, 3, 99)), r1(v('a1_db', 50, 3, 99.99))];
+N("rem_spe_max") = max(abs(T.sporadic_e_effect_db));
+N("rem_spe_lbm4_min") = round(min(T.lbm4_db - T.fs_db));
+N("rem_p_minus_itm_300") = [r1(v('p2001_db', 300, 3, 50) - v('itm_db', 300, 3, 50)), r1(v('p2001_db', 300, 20, 50) - v('itm_db', 300, 20, 50))];
+R = readtable(fullfile(CD, 'rem_polarization.csv'), 'TextType', 'string');
+R.vh = R.vertical_db - R.horizontal_db;
+N("rem_pol_3_max") = [round(max(abs(R.vh(R.model == "ITM" & R.freq_ghz == 3))), 2), round(max(abs(R.vh(R.model == "P.2001" & R.freq_ghz == 3))), 2)];
+N("rem_pol_land_max") = [r1(max(abs(R.vh(R.model == "ITM" & R.ground ~= "sea water")))), r1(max(abs(R.vh(R.model == "P.2001" & R.ground ~= "sea water"))))];
+s01 = R.freq_ghz == 0.1 & R.ground == "sea water";
+N("rem_pol_sea_01") = [r1(min(R.vh(s01 & R.model == "ITM"))), r1(min(R.vh(s01 & R.model == "P.2001")))];
+s03 = R.freq_ghz == 0.3 & R.ground == "sea water";
+N("rem_pol_sea_03") = [r1(max(abs(R.vh(s03 & R.model == "ITM")))), r1(max(abs(R.vh(s03 & R.model == "P.2001"))))];
+I = R(R.model == "ITM", :);
+a = I(I.ground == "P.2001 land", :); b = I(I.ground == "dry ground", :);
+a = sortrows(a, {'freq_ghz', 'd_km'}); b = sortrows(b, {'freq_ghz', 'd_km'});
+N("rem_ground_land") = round(max(abs(a.vertical_db - b.vertical_db)), 2);
+end
+
+function N = swap2_numbers(N, CD, r1)
+% Plan item 23 and the reciprocity follow-up to item 26
+H = readtable(fullfile(CD, 'check_height_swap.csv'), 'TextType', 'string');
+g0 = H.itm_db - H.p2001_db; gi = H.itm_at_p2001_he_db - H.p2001_db; gp = H.itm_db - H.p2001_at_itm_he_db;
+N("chk_hs_gap") = [r1(median(g0)), r1(median(gi)), r1(median(gp))];
+cls = {"scatter", H.itm_mode_code == 10; "diffraction", ismember(H.itm_mode_code, [5 9]); "los", H.itm_mode_code == 0};
+dp = H.p2001_at_itm_he_db - H.p2001_db; di = H.itm_at_p2001_he_db - H.itm_db;
+for c = 1:size(cls, 1)
+    m = cls{c, 2};
+    N("chk_hs_" + cls{c, 1}) = [nnz(m), r1(median(g0(m))), r1(median(gi(m))), r1(median(gp(m))), nnz(abs(dp(m)) > 0.1)];
+end
+N("chk_hs_change") = [r1(median(di)), r1(max(abs(di))), r1(median(dp)), r1(max(abs(dp)))];
+D = readtable(fullfile(CD, 'check_reciprocity_detail.csv'), 'TextType', 'string');
+as = abs(D.itm_db - D.itm_reversed_db); sp = abs(D.itm_spaced_db - D.itm_spaced_reversed_db);
+dhe = max(abs(D.h_e_tx_m - D.h_e_tx_rev_m), abs(D.h_e_rx_m - D.h_e_rx_rev_m));
+ddh = abs(D.delta_h_m - D.delta_h_rev_m);
+dhz = max(abs(D.d_hzn_tx_m - D.d_hzn_tx_rev_m), abs(D.d_hzn_rx_m - D.d_hzn_rx_rev_m));
+k = as > 0.01;
+N("chk_recd") = [nnz(k), nnz(dhe(k) > 1e-6), round(min(dhe(k)), 2), round(max(dhe(k)), 1), round(max(ddh(k)), 2), max(dhz(k))];
+N("chk_recd_spaced") = [max(sp(k)), nnz(sp > 0.01 & ~k), round(max(sp), 2), round(max(abs(D.itm_spaced_db - D.itm_db)), 2)];
+N("chk_recd_mode_same") = all(D.mode == D.mode_rev);
 end
 
 function N = td_numbers(N, CD, r1)
