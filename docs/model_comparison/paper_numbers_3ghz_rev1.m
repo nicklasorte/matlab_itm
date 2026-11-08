@@ -348,6 +348,11 @@ if isfile(fullfile(CD, 'check_inputs.csv'))
     N = check_numbers(N, CD, r1);
 end
 
+% ---- time distributions (timedist_rev1) ----
+if isfile(fullfile(CD, 'td_tropo_climate.csv'))
+    N = td_numbers(N, CD, r1);
+end
+
 % ---- western terrain sample (western_terrain_rev1) ----
 fw = fullfile(CD, 'western_links.csv');
 if isfile(fw)
@@ -710,6 +715,49 @@ for i = 1:numel(nm)
     [~, j2] = max(abs(q2.diff));
     N(key + "max_core") = [r1(q2.diff(j2)), q2.time_pct(j2)];
 end
+end
+
+function N = td_numbers(N, CD, r1)
+% Plan items 14, 17, and 29
+T = readtable(fullfile(CD, 'td_tropo_climate.csv'), 'TextType', 'string');
+T.ex = T.loss_db - T.fs_db;
+ex = @(m, c, d, p) T.ex(T.model == m & T.climate == c & T.d_km == d & T.time_pct == p);
+N("td_itm_mode_all_scatter") = all(T.itm_mode(T.model == "ITM") == 3);
+N("td_zone_map") = unique(T.climate(T.model == "P.2001 combined"));
+for d = [150 300 500]
+    I50 = arrayfun(@(c) ex("ITM", c, d, 50), 1:7); P50 = arrayfun(@(z) ex("P.2001 troposcatter", z, d, 50), 0:6);
+    N("td_range50_" + d) = [r1(min(I50)), r1(max(I50)), r1(min(P50)), r1(max(P50))];
+    wI = arrayfun(@(c) ex("ITM", c, d, 99) - ex("ITM", c, d, 1), 1:7);
+    wP = arrayfun(@(z) ex("P.2001 troposcatter", z, d, 99) - ex("P.2001 troposcatter", z, d, 1), 0:6);
+    N("td_spread_itm_" + d) = r1(wI);            % climates 1 to 7
+    N("td_spread_p2001_" + d) = r1(wP);          % zones 0 (sea) to 6
+end
+z = N("td_zone_map");
+N("td_k300") = [r1(ex("ITM", 5, 300, 50)), r1(ex("P.2001 troposcatter", z, 300, 50)), r1(ex("ITM", 5, 300, 1)), ...
+    r1(ex("P.2001 troposcatter", z, 300, 1)), r1(ex("P.2001 combined", z, 300, 1))];
+dd = unique(T.d_km); g = arrayfun(@(d) ex("ITM", 5, d, 50) - ex("P.2001 troposcatter", z, d, 50), dd);
+N("td_k_gap50") = [r1(min(g)), r1(max(g))];
+
+S = readtable(fullfile(CD, 'td_measured_summary.csv'), 'TextType', 'string');
+for gr = ["All", "1 GHz and above", "Scatter", "Diffraction", "Line of sight"]
+    k = "td_m_" + lower(replace(extractBefore(gr + " ", " "), " ", ""));
+    q = S(S.group == gr, :);
+    N(k + "_n") = q.n(1);
+    for p = [1 10 90 99]
+        r = q(q.time_pct == p, :);
+        N(k + "_p" + p) = [r1(r.meas_shape_db), r1(r.itm_abs_err_db), r1(r.p2001_abs_err_db), ...
+            r1(r.itm_shape_err_db), r1(r.p2001_shape_err_db), round(100 * r.frac_p2001_closer), r1(r.p452_abs_err_db)];
+    end
+    r = q(isnan(q.time_pct), :);
+    N(k + "_spread") = [r1(r.meas_shape_db), r1(r.itm_shape_db), r1(r.p2001_shape_db), r1(r.itm_abs_err_db), ...
+        r1(r.p2001_abs_err_db), r1(r.itm_shape_err_db), r1(r.p2001_shape_err_db), round(100 * r.frac_p2001_closer)];
+end
+X = readtable(fullfile(CD, 'td_measured_shape.csv'), 'TextType', 'string');
+q = X(X.time_pct == 1, :); N("td_m_p452_n") = nnz(isfinite(q.p452_shape_db));
+w = X(X.time_pct == 99, :); w0 = X(X.time_pct == 1, :);
+sm = w.meas_db - w0.meas_db; si = w.itm_db - w0.itm_db; sp = w.p2001_db - w0.p2001_db;
+N("td_m_spread_rho") = [round(100 * corr(sm, si, 'Type', 'Spearman')) / 100, round(100 * corr(sm, sp, 'Type', 'Spearman')) / 100];
+N("td_m_spread_within5") = [round(100 * mean(abs(si - sm) <= 5)), round(100 * mean(abs(sp - sm) <= 5))];
 end
 
 function N = check_numbers(N, CD, r1)
