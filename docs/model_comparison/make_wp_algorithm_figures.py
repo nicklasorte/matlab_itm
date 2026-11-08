@@ -645,12 +645,123 @@ def s60_height_swap():
     save(fig, "s60_height_swap")
 
 
+def s61_horizons():
+    """The two models find the same horizons; the angles differ only through the earth radius."""
+    H = rd("part_horizons.csv"); t = H[H.p2001_los50 == 0]
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.0), layout="constrained")
+    a = axs[0]; clean(a, grid=None)
+    x = np.r_[t.itm_d_hzn_tx_km, t.itm_d_hzn_rx_km]; y = np.r_[t.p2001_d_lt_km, t.p2001_d_lr_km]
+    a.scatter(x, y, s=14, color=DB, alpha=0.6, lw=0)
+    a.plot([0.01, 200], [0.01, 200], color=LG2, lw=0.8)
+    a.set_xscale("log"); a.set_yscale("log"); a.set_xlim(0.05, 200); a.set_ylim(0.05, 200)
+    a.minorticks_off()
+    a.set_xlabel("ITM horizon distance (km)"); a.set_ylabel("P.2001 horizon distance (km)")
+    a.set_title("Horizon distance, each terminal", loc="left", fontsize=9, color=DB)
+    b = axs[1]; clean(b, grid="y")
+    da = np.r_[t.itm_theta_tx_mrad - t.p2001_theta_t_mrad, t.itm_theta_rx_mrad - t.p2001_theta_r_mrad]
+    b.hist(da, bins=np.linspace(-0.6, 0.6, 41), color=GR)
+    b.set_xlabel("ITM minus P.2001 horizon angle (mrad)"); b.set_ylabel("Terminals")
+    b.set_title("Horizon elevation angle", loc="left", fontsize=9, color=DB)
+    save(fig, "s61_horizons")
+
+
+def s62_earth_radius():
+    """At the median the radii agree; at small time percentages P.2001's radius grows and ITM's stays fixed."""
+    A = rd("part_earth_radius.csv")
+    sites = A[A.time_pct == 50].sort_values("p2001_ae50_km").site.tolist()
+    fig, ax = new(h=3.4); clean(ax, grid="x")
+    for i, sname in enumerate(sites):
+        q = A[A.site == sname].set_index("time_pct")
+        lo = min(q.itm_ae_km.iloc[0], q.p2001_ae50_km.iloc[0]); hi = q.p2001_ap_km.loc[0.01]
+        ax.plot([lo, hi], [i, i], color=LG2, lw=1.5, zorder=1)
+        ax.scatter([q.itm_ae_km.iloc[0]], [i], s=40, color=LB, marker="D", zorder=3)
+        ax.scatter([q.p2001_ae50_km.iloc[0]], [i], s=40, color=DB, zorder=3)
+        ax.scatter([q.p2001_ap_km.loc[1]], [i], s=30, facecolor="white", edgecolor=DB, zorder=3)
+        ax.scatter([q.p2001_ap_km.loc[0.01]], [i], s=30, facecolor="white", edgecolor=PU, zorder=3)
+    ax.set_yticks(range(len(sites)), sites, fontsize=8)
+    ax.set_xscale("log"); ax.set_xlim(7000, 70000)
+    ax.set_xticks([8000, 10000, 20000, 50000], ["8,000", "10,000", "20,000", "50,000"]); ax.minorticks_off()
+    ax.set_xlabel("Effective earth radius (km)")
+    top = len(sites) - 1
+    q = A[A.site == sites[-1]].set_index("time_pct")
+    ax.text(q.itm_ae_km.iloc[0], top + 0.55, "ITM", color=LB, fontsize=7.5, fontweight="semibold", ha="center")
+    ax.text(q.p2001_ae50_km.iloc[0] * 1.06, top - 0.45, "P.2001, 50%", color=DB, fontsize=7.5, fontweight="semibold", ha="left")
+    ax.text(q.p2001_ap_km.loc[1], top + 0.55, "1%", color=DB, fontsize=7.5, ha="center")
+    ax.text(q.p2001_ap_km.loc[0.01], top + 0.55, "0.01%", color=PU, fontsize=7.5, ha="center")
+    ax.set_ylim(-0.6, top + 1.1)
+    save(fig, "s62_earth_radius")
+
+
+def s63_los_fade():
+    """On short line-of-sight paths ITM has almost no time variability; P.2001's fade term does."""
+    F = rd("part_los_fade.csv")
+    fig, axs = plt.subplots(1, 4, figsize=(W, 2.7), layout="constrained", sharey=True)
+    for a, d in zip(axs, [1, 10, 20, 40]):
+        q = F[F.d_km == d].sort_values("time_pct"); clean(a)
+        from scipy.stats import norm
+        x = norm.ppf(q.time_pct / 100)
+        a.plot(x, q.itm_rel_db, color=LB, lw=1.6); a.plot(x, q.p2001_rel_db, color=DB, lw=1.6)
+        a.axhline(0, color=GR, lw=0.6)
+        tk = [0.01, 1, 50, 99, 99.99]
+        a.set_xticks(norm.ppf(np.array(tk) / 100), ["0.01", "1", "50", "99", "99.99"], fontsize=7)
+        a.set_title(f"{d} km", loc="left", fontsize=9, color=DB)
+    axs[0].set_ylabel("Loss minus its 50% value (dB)")
+    for a in axs:
+        a.set_xlabel("Time %", fontsize=8)
+    q = F[F.d_km == 1].sort_values("time_pct")
+    axs[0].text(-3.6, 6, "P.2001", color=DB, fontsize=7.5, fontweight="semibold")
+    axs[0].text(-3.6, -8, "ITM (flat)", color=LB, fontsize=7.5, fontweight="semibold")
+    save(fig, "s63_los_fade")
+
+
+def s64_transition():
+    """ITM's slope changes in one step at d_x; P.2001's changes over a few kilometres."""
+    C = rd("check_continuity.csv"); q = C[C.path == "smooth earth"].sort_values("d_km")
+    d = q.d_km.values; ei = (q.itm_db - q.fs_db).values; ep = (q.p2001_db - q.fs_db).values
+    w = 10
+    si = (ei[w:] - ei[:-w]) / (w * 0.1); sp = (ep[w:] - ep[:-w]) / (w * 0.1); dm = (d[w:] + d[:-w]) / 2
+    fig, ax = new(h=2.9); clean(ax)
+    ax.plot(dm, sp, color=DB, lw=1.5); ax.plot(dm, si, color=LB, lw=1.5)
+    dsml = q.itm_d_sml_km.iloc[0]; dx = np.nanmedian(q.itm_d_x_km)
+    for x, lab in [(dsml, "d_sML"), (dx, "d_x")]:
+        ax.axvline(x, color=GR, lw=0.8, ls=(0, (3, 2)))
+        ax.text(x + 1.5, 1.6, lab, color=GR, fontsize=8)
+    ax.set_xlim(0, 150); ax.set_ylim(-0.1, 1.8)
+    ax.set_xlabel("Distance (km)"); ax.set_ylabel("Slope of the loss above\nfree space (dB/km)")
+    ax.text(100, 0.13, "P.2001", color=DB, fontsize=8.5, fontweight="semibold")
+    ax.text(120, -0.08, "ITM", color=LB, fontsize=8.5, fontweight="semibold")
+    save(fig, "s64_transition")
+
+
+def s65_tornado():
+    """No single input moves either model by more than a few tenths of a decibel on a typical link."""
+    T = rd("part_sensitivity_terms.csv")
+    B = T[T.case == "baseline"].set_index(["side", "link", "model"]).loss_db
+    T = T[T.case != "baseline"].copy()
+    T["dl"] = (T.loss_db - B.loc[list(zip(T.side, T.link, T.model))].values).abs()
+    fig, axs = plt.subplots(1, 2, figsize=(W, 2.9), layout="constrained", sharex=True)
+    for a, m, col in [(axs[0], "ITM", LB), (axs[1], "P.2001", DB)]:
+        g = T[T.model == m].groupby("case").dl
+        st = pd.DataFrame({"med": g.median(), "p90": g.quantile(0.9)}).sort_values("p90")
+        clean(a, grid="x")
+        y = np.arange(len(st))
+        a.barh(y, st.p90, color=LG2, height=0.6)
+        a.barh(y, st.med, color=col, height=0.6)
+        a.set_yticks(y, st.index, fontsize=8)
+        a.set_title(m, loc="left", fontsize=9, color=DB)
+        a.set_xlabel("Change in loss (dB)")
+    axs[0].text(0.62, 0.2, "90th percentile", color=GR, fontsize=7.5)
+    axs[0].text(0.62, 1.2, "median", color=LB, fontsize=7.5, fontweight="semibold")
+    save(fig, "s65_tornado")
+
+
 ALL = [s38_architecture, s39_smooth_mechanisms, s40_itm_anatomy, s41_line_of_sight, s42_time_mechanisms,
        s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point,
        s47_smooth_earth_terms, s48_gap_waterfall, s49_empirical_terms, s50_ducting_terms, s51_monte_carlo,
        s52_inputs, s53_swaps, s54_continuity,
        s55_tropo_climate, s56_measured_shape, s57_measured_examples,
-       s58_minor_terms, s59_polarization, s60_height_swap]
+       s58_minor_terms, s59_polarization, s60_height_swap,
+       s61_horizons, s62_earth_radius, s63_los_fade, s64_transition, s65_tornado]
 
 if __name__ == "__main__":
     for fn in ALL:

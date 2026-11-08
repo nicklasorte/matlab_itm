@@ -2211,6 +2211,188 @@
   "n_Troposcatter": 15,
   "nd": 27,
   "p2001_p452_maxmed": 0.02,
+  "part15_d": [
+    35.1,
+    68
+  ],
+  "part15_drop": [
+    67.7,
+    63.3
+  ],
+  "part15_slope": [
+    1.23,
+    1.27,
+    0.071,
+    0.073
+  ],
+  "part15_width": [
+    0.7,
+    6
+  ],
+  "part28_itm_dry_ground": [
+    0.12,
+    0.27,
+    0.6
+  ],
+  "part28_itm_n_0_minus20": [
+    0.1,
+    0.53,
+    2.7
+  ],
+  "part28_itm_n_0_plus20": [
+    0.1,
+    0.55,
+    2.8
+  ],
+  "part28_itm_radius_minus5_": [
+    0.16,
+    0.65,
+    1.2
+  ],
+  "part28_itm_radius_plus5_": [
+    0.16,
+    0.64,
+    1.2
+  ],
+  "part28_itm_rx_antenna_plus1_m": [
+    0.16,
+    0.73,
+    12.5
+  ],
+  "part28_itm_spacing_doubled": [
+    0.05,
+    0.72,
+    11.7
+  ],
+  "part28_itm_terms_n_0_plus20": [
+    66,
+    0.02,
+    2.96,
+    0,
+    0.06
+  ],
+  "part28_itm_terms_rx_antenna_plus1_m": [
+    66,
+    0.02,
+    0.84,
+    0.14,
+    0.34
+  ],
+  "part28_itm_terms_tx_antenna_plus1_m": [
+    66,
+    0.03,
+    0.45,
+    0.04,
+    0.1
+  ],
+  "part28_itm_tx_antenna_plus1_m": [
+    0.06,
+    0.24,
+    5.4
+  ],
+  "part28_p2001_radius_minus5_": [
+    0.03,
+    0.9,
+    3.5
+  ],
+  "part28_p2001_radius_plus5_": [
+    0.02,
+    0.92,
+    3
+  ],
+  "part28_p2001_rx_antenna_plus1_m": [
+    0.02,
+    0.56,
+    1.8
+  ],
+  "part28_p2001_spacing_doubled": [
+    0.01,
+    0.16,
+    0.8
+  ],
+  "part28_p2001_terms_radius_minus5_": [
+    66,
+    0.02,
+    0.02,
+    0.11
+  ],
+  "part28_p2001_terms_rx_antenna_plus1_m": [
+    66,
+    0.02,
+    0.02,
+    0.08
+  ],
+  "part28_p2001_tx_antenna_plus1_m": [
+    0.02,
+    0.27,
+    1.5
+  ],
+  "part_ae": [
+    8077,
+    9949,
+    8005,
+    10367,
+    399,
+    1277
+  ],
+  "part_ae_n": 10,
+  "part_ap_001": [
+    14494,
+    54886
+  ],
+  "part_ap_001_sites": [
+    "Denver",
+    "San Diego"
+  ],
+  "part_ap_1": [
+    10077,
+    16524
+  ],
+  "part_ap_1_sites": [
+    "Denver",
+    "San Diego"
+  ],
+  "part_fade_itm_1": [
+    -0,
+    0
+  ],
+  "part_fade_itm_10": [
+    -1.2,
+    1.1
+  ],
+  "part_fade_itm_20": [
+    -2.5,
+    4
+  ],
+  "part_fade_itm_40": [
+    -22.9,
+    12.4
+  ],
+  "part_fade_los_until": 30,
+  "part_fade_p2001_1": [
+    -2.8,
+    3.4
+  ],
+  "part_fade_p2001_10": [
+    -6.5,
+    7.5
+  ],
+  "part_fade_p2001_20": [
+    -10.2,
+    14.5
+  ],
+  "part_fade_p2001_40": [
+    -29.7,
+    19.9
+  ],
+  "part_hz": [
+    96,
+    97,
+    5,
+    16,
+    0.014,
+    0.5
+  ],
   "rad0_max60": 29,
   "rad0_maxabs80": 55.8,
   "rad0_med80": 26.9,
