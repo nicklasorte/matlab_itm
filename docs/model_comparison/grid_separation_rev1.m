@@ -15,7 +15,9 @@ function [T, E] = grid_separation_rev1(options)
 %   E is the exclusion summary: for each required loss L (Thresholds), model,
 %   and time percentage, the number of grid points where the loss is below
 %   L (a transmitter there would exceed the protection criterion), the area
-%   they cover (points times StepKm^2), and the farthest such point. The
+%   they cover (points times StepKm^2), the farthest such point, and how
+%   many of them lie on the grid's outer edge (more than zero means the
+%   excluded area runs past the grid, so the area is a lower bound). The
 %   required loss comes from a link budget: L = EIRP + receive gain -
 %   interference threshold, all in dB; see the working paper for an
 %   example.
@@ -32,6 +34,7 @@ function [T, E] = grid_separation_rev1(options)
 %     OutDir       Folder for grid_<site>.csv and grid_<site>_exclusion.csv
 %     P2001Dir, P452Dir  Model folders (default: siblings of matlab_itm)
 %     Download     Download missing terrain tiles (true)
+%     Tag          Suffix for the output file names (""), such as "_150km_2p5km"
 %
 %   Example:
 %     [T, E] = grid_separation_rev1(Site="la");
@@ -51,6 +54,7 @@ arguments
     options.P2001Dir (1,1) string = ""
     options.P452Dir (1,1) string = ""
     options.Download (1,1) logical = true
+    options.Tag (1,1) string = ""
 end
 sites = struct('dc', [38.8895, -77.0353, 10], 'la', [34.0537, -118.2428, 10]);
 rx = sites.(options.Site);
@@ -104,13 +108,14 @@ for m = models
             ex = T.(col) < Lreq;
             dmax = 0;
             if any(ex), dmax = max(T.d_km(ex)); end
-            rows(end + 1, :) = {options.Site, m, p, Lreq, nnz(ex), nnz(ex) * options.StepKm ^ 2, dmax}; %#ok<AGROW>
+            edge = nnz(ex & (abs(T.dx_km) >= options.HalfWidthKm - 1e-9 | abs(T.dy_km) >= options.HalfWidthKm - 1e-9));
+            rows(end + 1, :) = {options.Site, m, p, Lreq, nnz(ex), nnz(ex) * options.StepKm ^ 2, dmax, edge}; %#ok<AGROW>
         end
     end
 end
-E = cell2table(rows, 'VariableNames', {'site', 'model', 'time_pct', 'required_loss_db', 'points', 'area_km2', 'max_distance_km'});
+E = cell2table(rows, 'VariableNames', {'site', 'model', 'time_pct', 'required_loss_db', 'points', 'area_km2', 'max_distance_km', 'edge_points'});
 
 if ~isfolder(options.OutDir), mkdir(options.OutDir); end
-writetable(T, fullfile(options.OutDir, "grid_" + options.Site + ".csv"));
-writetable(E, fullfile(options.OutDir, "grid_" + options.Site + "_exclusion.csv"));
+writetable(T, fullfile(options.OutDir, "grid_" + options.Site + options.Tag + ".csv"));
+writetable(E, fullfile(options.OutDir, "grid_" + options.Site + options.Tag + "_exclusion.csv"));
 end
