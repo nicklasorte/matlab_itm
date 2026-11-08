@@ -30,14 +30,17 @@ function R = compare_models_rev1(options)
 %                      model or its sampling, not the terrain
 %
 %   Terrain for the MATLAB models (LRTerrain):
-%     "usgs1" (default) USGS 3DEP 1", the terrain matlab_itm uses. MATLAB
-%             reads custom terrain only as DTED, so the tiles the links
-%             cross are written as DTED level 2 and registered as
-%             "itm_usgs1" by itm_matlab_terrain_rev1. The first run in an
-%             area takes about 30 s per tile to register; later runs reuse
-%             it. To prepare a study area in advance:
-%               itm_matlab_terrain_rev1(region=[36 42 -83 -74])
-%     "gmted2010" MATLAB's built-in global terrain (about 250 m)
+%     "usgs1" (default) matlab_lr runs MathWorks' Longley-Rice core on the
+%             same USGS 1" profile matlab_itm uses (itm_matlab_lr_rev1,
+%             engine "profile"), so any difference is the model.
+%             itm_on_matlab_terrain is skipped (it would repeat matlab_itm).
+%             rfprop_tirem needs a terrain map, so it uses the USGS 1"
+%             tiles registered as DTED "itm_usgs1" (itm_matlab_terrain_rev1;
+%             about 30 s per tile the first time in an area).
+%     "usgs1_dted" matlab_lr goes through the documented pathloss function
+%             with Map="itm_usgs1" (MATLAB samples the 1" terrain itself)
+%     "gmted2010" MATLAB's built-in global terrain (about 250 m) for
+%             matlab_lr, rfprop_tirem, and itm_on_matlab_terrain
 %
 %   All models use the same inputs: epsilon 25, sigma 0.02 S/m, vertical
 %   polarization unless Tpol says otherwise, confidence 50 %, and the radio
@@ -76,7 +79,7 @@ function R = compare_models_rev1(options)
 %     SeadlibDir   folder with SEADLib.dll and the USGS tiles ("C:\USGS")
 %     TiremDir     folder with the TIREM library ("C:\USGS\TIREM5")
 %     Models       subset of models to run (all)
-%     LRTerrain    "usgs1" (default) or "gmted2010"; see above
+%     LRTerrain    "usgs1" (default), "usgs1_dted", or "gmted2010"; see above
 %     Prefetch     run every model on every link once, untimed, before
 %                  the timed pass, so downloads and first-use costs aren't
 %                  in the per-link times (true). The untimed pass's times
@@ -108,7 +111,7 @@ arguments
     options.TiremDir (1,1) string = "C:\USGS\TIREM5"
     options.Models (1,:) string = ["matlab_itm", "seadlib_itm", "itm_on_seadlib_profile", ...
         "seadlib_tirem", "rfprop_tirem", "matlab_lr", "itm_on_matlab_terrain"]
-    options.LRTerrain (1,1) string {mustBeMember(options.LRTerrain, ["usgs1", "gmted2010"])} = "usgs1"
+    options.LRTerrain (1,1) string {mustBeMember(options.LRTerrain, ["usgs1", "usgs1_dted", "gmted2010"])} = "usgs1"
     options.Prefetch (1,1) logical = true
     options.ExcelFile (1,1) string = "compare_models_results.xlsx"
     options.SaveFile (1,1) string = ""
@@ -185,11 +188,19 @@ for m = ["matlab_lr", "itm_on_matlab_terrain"]
         why.(m) = "needs Antenna Toolbox or Communications Toolbox";
     end
 end
+if options.LRTerrain == "usgs1" && isfield(avail, "itm_on_matlab_terrain")
+    avail.itm_on_matlab_terrain = false;
+    why.itm_on_matlab_terrain = "LRTerrain=""usgs1"" gives matlab_lr the matlab_itm profile already";
+end
 models = options.Models(arrayfun(@(m) avail.(m), options.Models));
 
 %% Terrain for the MATLAB terrain models
 map_name = options.LRTerrain;
-if any(ismember(models, ["matlab_lr", "rfprop_tirem", "itm_on_matlab_terrain"])) && map_name == "usgs1"
+needs_map = (options.LRTerrain == "usgs1" && ismember("rfprop_tirem", models)) || ...
+    (options.LRTerrain == "usgs1_dted" && any(ismember(models, ["matlab_lr", "rfprop_tirem", "itm_on_matlab_terrain"])));
+if options.LRTerrain == "gmted2010"
+    map_name = "gmted2010";
+elseif needs_map
     tiles = zeros(0, 2);
     for k = 1:n % every 1-degree tile a path crosses
         [la, lo] = track2(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), [], 'degrees', 200);
@@ -353,22 +364,17 @@ end
                 mech_raw = string(info.mode_code);
 
             case "matlab_lr"
-                [txs, rxs] = sites(k);
-                L = NaN(1, n_rel);
-                for j = 1:n_rel % TimeVariabilityTolerance takes one value per model object
-                    pm = propagationModel('longley-rice', 'AntennaPolarization', pol_name, ...
-                        'GroundConductivity', 0.02, 'GroundPermittivity', 25, ...
-                        'AtmosphericRefractivity', n0(k), 'ClimateZone', climate_names(climate(k)), ...
-                        'TimeVariabilityTolerance', min(max(round(rel(j) / 100, 6), 0.001), 0.999), ...
-                        'SituationVariabilityTolerance', round(conf / 100, 6));
-                    if j == 1
-                        [L(j), info] = pathloss(pm, rxs, txs, 'Map', map_name);
-                        el = mw_angles(info);
-                        keep_info(m, info);
-                    else
-                        L(j) = pathloss(pm, rxs, txs, 'Map', map_name);
-                    end
+                if options.LRTerrain == "usgs1"
+                    lr_args = {'engine', "profile"};
+                elseif options.LRTerrain == "usgs1_dted"
+                    lr_args = {'engine', "pathloss", 'terrain', "usgs1"};
+                else
+                    lr_args = {'engine', "pathloss", 'terrain', "gmted2010"};
                 end
+                [L, info] = itm_matlab_lr_rev1(tx(k, :), rx(k, :), f_mhz, rel, confidence=conf, ...
+                    polarization=pol_name, climate=climate(k), N_0=n0(k), epsilon=25, sigma=0.02, lr_args{:});
+                el = info.elevation_deg;
+                keep_info(m, info);
         end
     end
 
