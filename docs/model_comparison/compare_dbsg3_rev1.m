@@ -32,10 +32,12 @@ function T = compare_dbsg3_rev1(options)
 %                more than 30 mrad (a sign of a misplaced site)
 %   The models still run on left-out datasets; the tables keep them.
 %
-%   Every model gets the same profile: USGS 3DEP 1" in the U.S. and
-%   Copernicus GLO-30 elsewhere, at 30 m spacing (coarser on paths longer
-%   than 150 km so that a profile has at most 5,000 points). P.452 runs for
-%   100 MHz and above, and for 1, 10, and 50 % only.
+%   The models run through pathloss_rev1 in nicklasorte/matlab_itu_p452,
+%   which reads each link's profile once and shares it across the three
+%   models: USGS 3DEP 1" in the U.S. and Copernicus GLO-30 elsewhere, bare
+%   earth, 30 m spacing, at most 5,000 points per path. P.452 runs for
+%   100 MHz and above, and for 1, 10, and 50 % only; P.2001 for 3 km to
+%   1,000 km paths.
 %
 %   Writes to options.OutDir: table_dbsg3_by_dataset.csv,
 %   table_dbsg3_summary.csv, table_dbsg3_quality.csv, and figures
@@ -53,7 +55,14 @@ arguments
     options.MaxRows (1,1) double = Inf
 end
 
-wp_setup(options.P2001Dir, options.P452Dir);
+itm_root = wp_setup(options.P2001Dir, options.P452Dir);
+if ~exist('pathloss_rev1', 'file')
+    error('wp:dbsg3:wrapper', 'pathloss_rev1 (nicklasorte/matlab_itu_p452, 2026-11-07 or later) is not on the path.');
+end
+old_env = getenv('MATLAB_P452_ITM_DIR');
+restore = onCleanup(@() setenv('MATLAB_P452_ITM_DIR', old_env)); %#ok<NASGU>
+setenv('MATLAB_P452_ITM_DIR', itm_root);           % the wrapper runs this repository's ITM
+p452_addpath_rev1();
 here = fileparts(mfilename('fullpath'));
 out = options.OutDir;
 if ~isfolder(out), mkdir(out); end
@@ -85,38 +94,37 @@ for u = 1:numel(up)
     site(u).tx0 = tx; site(u).rx0 = rx;
 end
 
-% ---- models ----
-itm = NaN(n, 5); p452 = NaN(n, 5); p2001 = NaN(n, 5);
-itm0 = NaN(n, 5); p452_0 = NaN(n, 5); p2001_0 = NaN(n, 5);    % uncorrected sites
-dh = NaN(n, 1); code = NaN(n, 1); obstructed = false(n, 1); gc = NaN(n, 1);
-profs = cell(numel(up), 2);
+% ---- models, through the matlab_itu_p452 wrapper pathloss_rev1 ----
+% The wrapper reads each link's profile once and caches it for the
+% session, so the three models, and the corrected and listed sites, share
+% terrain reads. Links are grouped by frequency. Bare-earth terrain only
+% (surface_source "none"), at most 5,000 profile points per path.
+TXc = zeros(n, 3); RXc = zeros(n, 3); TX0 = zeros(n, 3); RX0 = zeros(n, 3);
 for k = 1:n
     u = iu(k);
-    if isempty(profs{u, 1})
-        d = S.d_km(k);
-        sp = max(30, d * 1000 / 5000);
-        profs{u, 1} = wp_terrain_profile(site(u).tx, site(u).rx, sp);
-        moved = any(site(u).shift_m > 0);
-        if moved
-            profs{u, 2} = wp_terrain_profile(site(u).tx0, site(u).rx0, sp);
-        else
-            profs{u, 2} = profs{u, 1};
-        end
-    end
-    prof = profs{u, 1};
-    gc(k) = prof.d_km(end);
-    r = wp_run3(prof, S.freq_mhz(k), S.htx_m(k), S.hrx_m(k), P);
-    itm(k, :) = r.itm.Lb; p452(k, :) = r.p452.Lb; p2001(k, :) = r.p2001.Lb;
-    dh(k) = r.itm.info.delta_h_m; code(k) = r.itm.mech;
-    obstructed(k) = any(r.itm.info.d_hzn_m < 500 & r.itm.info.theta_hzn_rad > 0.03);
-    if any(site(u).shift_m > 0)
-        r0 = wp_run3(profs{u, 2}, S.freq_mhz(k), S.htx_m(k), S.hrx_m(k), P);
-        itm0(k, :) = r0.itm.Lb; p452_0(k, :) = r0.p452.Lb; p2001_0(k, :) = r0.p2001.Lb;
-    else
-        itm0(k, :) = itm(k, :); p452_0(k, :) = p452(k, :); p2001_0(k, :) = p2001(k, :);
-    end
-    fprintf('%4d/%d %-9s %7.1f MHz %6.1f km meas50 %6.1f ITM %6.1f P452 %6.1f P2001 %6.1f\n', k, n, S.id(k), ...
-        S.freq_mhz(k), S.d_km(k), meas(k, 3), itm(k, 3), p452(k, 3), p2001(k, 3));
+    TXc(k, :) = [site(u).tx S.htx_m(k)]; RXc(k, :) = [site(u).rx S.hrx_m(k)];
+    TX0(k, :) = [site(u).tx0 S.htx_m(k)]; RX0(k, :) = [site(u).rx0 S.hrx_m(k)];
+end
+wopts = {'validity', "off", 'surface_source', "none", 'max_points', 5000};
+[itm, p452, p2001, prof] = run_models(TXc, RXc, S.freq_mhz, S.d_km, P, wopts, true(n, 1));
+movedk = arrayfun(@(u) any(site(u).shift_m > 0), iu);
+[itm0, p452_0, p2001_0] = deal(itm, p452, p2001);
+if any(movedk)
+    [a, b, c] = run_models(TX0, RX0, S.freq_mhz, S.d_km, P, wopts, movedk);
+    itm0(movedk, :) = a(movedk, :); p452_0(movedk, :) = b(movedk, :); p2001_0(movedk, :) = c(movedk, :);
+end
+
+% ITM's terrain parameters on each profile (geometry only; the climate
+% doesn't affect it)
+dh = NaN(n, 1); code = NaN(n, 1); obstructed = false(n, 1); gc = NaN(n, 1);
+for k = 1:n
+    pr = prof{k};
+    np = numel(pr.d_km) - 1;
+    pfl = [np; pr.d_km(end) * 1e3 / np; pr.h_m(:)];
+    [~, inf_k] = itm_p2p_rev1(S.htx_m(k), S.hrx_m(k), pfl, S.freq_mhz(k), 50, validity="off");
+    dh(k) = inf_k.delta_h_m; code(k) = inf_k.mode_code; gc(k) = pr.d_km(end);
+    obstructed(k) = any(inf_k.d_hzn_m < 500 & inf_k.theta_hzn_rad > 0.03);
+    if mod(k, 50) == 0, fprintf('geometry %d of %d\n', k, n); end
 end
 
 % ---- quality screen ----
@@ -347,6 +355,41 @@ wp_save_fig(fig, out, 'fig31_dbsg3_distributions');
 end
 
 %% ------------------------------------------------------------------------
+function [itm, p452, p2001, prof] = run_models(TX, RX, f, d_km, P, wopts, rows)
+% The three models on the selected rows, one wrapper call per model and
+% frequency. P.452 runs from 100 MHz, for P <= 50 %; P.2001 for 3 km to
+% 1,000 km paths (the wrapper's P.2001 range).
+n = size(TX, 1);
+[itm, p452, p2001] = deal(NaN(n, numel(P)));
+prof = cell(n, 1);
+[uf, ~, iq] = unique(f);
+lo = P <= 50;
+for q = 1:numel(uf)
+    idx = find(iq == q & rows);
+    if isempty(idx), continue, end
+    [L, info] = pathloss_rev1(TX(idx, :), RX(idx, :), uf(q), P, model="itm", wopts{:});
+    itm(idx, :) = reshape(L, numel(idx), []);
+    if ~isempty(info.profile)
+        for j = 1:numel(idx), prof{idx(j)} = info.profile(j); end
+    else                                          % ran in blocks: ask again, one link at a time
+        for j = 1:numel(idx)
+            [~, i1] = pathloss_rev1(TX(idx(j), :), RX(idx(j), :), uf(q), 50, model="itm", wopts{:});
+            prof{idx(j)} = i1.profile;
+        end
+    end
+    i2 = idx(d_km(idx) >= 3 & d_km(idx) <= 1000);
+    if ~isempty(i2)
+        L = pathloss_rev1(TX(i2, :), RX(i2, :), uf(q), P, model="p2001", wopts{:});
+        p2001(i2, :) = reshape(L, numel(i2), []);
+    end
+    if uf(q) >= 100
+        L = pathloss_rev1(TX(idx, :), RX(idx, :), uf(q), P(lo), model="p452", wopts{:});
+        p452(idx, lo) = reshape(L, numel(idx), []);
+    end
+    fprintf('%7.1f MHz: %d datasets\n', uf(q), numel(idx));
+end
+end
+
 function [p, shift_m, dz0, dz1] = relocate(p0, z_survey, R)
 % Move a terminal to the 30 m terrain point within R metres whose elevation
 % best matches the surveyed ground elevation; ties go to the nearer point.
