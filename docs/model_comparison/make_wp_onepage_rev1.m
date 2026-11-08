@@ -15,7 +15,8 @@ function make_wp_onepage_rev1(options)
 %   that make_wp_figures_rev1, diffraction_decomposition_rev1, and
 %   compare_dbsg3_rev1 write.
 %
-%   Style: NTIA palette and Times New Roman (slide-design skill). Gray for
+%   Style: NTIA palette and Times New Roman (slide-design skill), with the
+%   plasma colormap for sequential scales (heat tables, frequency). Gray for
 %   context, NTIA light blue for ITM (the model the findings are about),
 %   dark blue for P.2001, gray for P.452 (which tracks P.2001), purple only
 %   for an alert. Every series is labeled directly. The takeaway title,
@@ -124,7 +125,7 @@ end
 imagesc(ax, -M); colormap(ax, ramp(C)); clim(ax, [0 50]);
 for c = 1:3
     for f = 1:numel(F)
-        tc = C.db; if -M(c, f) > 30, tc = [1 1 1]; end
+        tc = [1 1 1]; if -M(c, f) > 30, tc = C.db; end
         text(ax, f, c, sprintf('%.0f dB', -M(c, f)), 'HorizontalAlignment', 'center', 'FontSize', 26, ...
             'FontWeight', 'bold', 'Color', tc, 'FontName', C.font);
         text(ax, f, c + 0.3, sprintf('%d links', N(c, f)), 'HorizontalAlignment', 'center', 'FontSize', 10, ...
@@ -160,7 +161,7 @@ save_page(fig, d, 'op1e_boxes_by_frequency');
 %% ===== Finding 2: the diffraction gap and its causes =====
 % 2a: gap against terrain irregularity with binned medians
 [fig, ax] = page(); hold(ax, 'on');
-seq = ramp(C); fc = seq(round(linspace(90, 256, numel(F))), :);
+seq = ramp(C); fc = seq(round(linspace(20, 175, numel(F))), :);
 ed = [0 25 50 100 200 400 800 2000];
 for f = 1:numel(F)
     sel = cls(f, :) > 0;
@@ -240,7 +241,7 @@ imagesc(ax, -M); colormap(ax, ramp(C)); clim(ax, [0 60]);
 for r = 1:4
     for f = 1:numel(F)
         if N(r, f) == 0, continue, end
-        tc = C.db; if -M(r, f) > 35, tc = [1 1 1]; end
+        tc = [1 1 1]; if -M(r, f) > 35, tc = C.db; end
         text(ax, f, r, sprintf('%.0f dB', -M(r, f)), 'HorizontalAlignment', 'center', 'FontSize', 24, 'FontWeight', 'bold', 'Color', tc, 'FontName', C.font);
         text(ax, f, r + 0.3, sprintf('%d links', N(r, f)), 'HorizontalAlignment', 'center', 'FontSize', 10, 'Color', tc, 'FontName', C.font);
     end
@@ -509,9 +510,11 @@ C.font = 'Times New Roman';
 end
 
 function m = ramp(C) %#ok<INUSD>
-% NTIA sequential ramp, very light blue to dark blue
-k = [228 233 246; 180 194 230; 127 150 211; 63 95 168; 22 51 83] / 255;
-m = interp1(linspace(0, 1, 5), k, linspace(0, 1, 256));
+% Sequential scale: plasma (Nick's preferred colormap; perceptually uniform
+% and colorblind-safe), stopped short of its palest yellow so the top of the
+% scale still shows on white
+m = plasma(256);
+m = m(1:230, :);
 end
 
 function m = diverging(C)
