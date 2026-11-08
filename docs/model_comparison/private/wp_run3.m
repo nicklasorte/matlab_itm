@@ -8,8 +8,8 @@ function r = wp_run3(prof, f_mhz, htx, hrx, p)
 %     p      time percentages (loss not exceeded for p % of the time)
 %   ITM: radio climate and N_0 at the path midpoint (WInnForum rule; the
 %   lower terminal climate when the midpoint is over water), confidence
-%   50 %, validity checks off. P.452 runs for 0.001 % to 50 % only; NaN
-%   elsewhere.
+%   50 %, validity checks off. P.452 runs for 0.001 % to 50 % and for
+%   100 MHz and above only; NaN elsewhere.
 
 pfl = [numel(prof.d_km) - 1; prof.d_km(end) * 1e3 / (numel(prof.d_km) - 1); prof.h_m(:)];
 c = itm_radio_climate_rev1(prof.mid(1), prof.mid(2));
@@ -24,7 +24,7 @@ r.itm.mech = info.mode_code;
 r.itm.climate = c;
 r.itm.N_0 = n0;
 
-ok = p >= 0.001 & p <= 50;
+ok = p >= 0.001 & p <= 50 & f_mhz >= 100;          % P.452-18 starts at 100 MHz
 r.p452.Lb = NaN(size(p));
 r.p452.info = [];
 if any(ok)

@@ -1,11 +1,13 @@
-function prof = wp_terrain_profile(tx, rx)
+function prof = wp_terrain_profile(tx, rx, spacing_m)
 %WP_TERRAIN_PROFILE Terrain profile in the struct form wp_run3 takes.
 %   prof = WP_TERRAIN_PROFILE([lat lon], [lat lon]) samples USGS 3DEP
 %   1-arc-second terrain (Copernicus GLO-30 where 3DEP has no data) at 30 m
 %   along the WGS84 geodesic with itm_terrain_profile_rev1, and adds the
 %   P.2001 radio-climatic zone at each point. Points with no elevation data
-%   are open water (zone 1).
-[pfl, info] = itm_terrain_profile_rev1(tx(1), tx(2), rx(1), rx(2));
+%   are open water (zone 1). spacing_m (optional, default 30) sets the
+%   point spacing; use a larger value to cap the point count on long paths.
+if nargin < 3, spacing_m = 30; end
+[pfl, info] = itm_terrain_profile_rev1(tx(1), tx(2), rx(1), rx(2), spacing_m=spacing_m);
 np = pfl(1);
 prof.d_km = (0:np)' * pfl(2) / 1e3;
 prof.h_m = pfl(3:end);
