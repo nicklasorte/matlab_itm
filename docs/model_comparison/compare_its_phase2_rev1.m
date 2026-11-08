@@ -43,8 +43,10 @@ function T = compare_its_phase2_rev1(options)
 %                             runs, measured attenuation and loss, censored
 %                             flag, free-space loss, and each model's loss
 %     its_phase2_paths.csv    one row per path and siting: profile used,
-%                             lengths, delta h, ITM mode at 3 GHz's nearest
-%                             frequency, and whether the path was kept
+%                             lengths, ITM delta h and ITM region (1 line of sight,
+%                             2 diffraction, 3 troposcatter) at 50 % and
+%                             the frequency nearest 3 GHz, and whether
+%                             the path was kept
 %
 %   Options: OutDir, P2001Dir, P452Dir, Sets (["r1" "r2" "r3" "va"]),
 %   MaxPaths (Inf, for a quick test).
@@ -174,9 +176,9 @@ for s = options.Sets
 end
 T = cell2table(rows, 'VariableNames', {'set', 'path', 'siting', 'd_km', 'profile_km', 'freq_mhz', 'htx_m', 'hrx_m', ...
     'rcvr', 'rht', 'runs', 'meas_excess_db', 'censored', 'meas_lb_db', 'fs_db', 'itm_50', 'p452_50', 'p2001_50', ...
-    'delta_h_m', 'itm_mode'});
+    'delta_h_m', 'itm_region'});
 Pt = cell2table(prow, 'VariableNames', {'set', 'path', 'siting', 'profile', 'd_km', 'profile_km', 'delta_h_m', ...
-    'itm_mode', 'kept', 'reason'});
+    'itm_region', 'kept', 'reason'});
 if ~isfolder(options.OutDir), mkdir(options.OutDir); end
 writetable(T, fullfile(options.OutDir, 'its_phase2_results.csv'));
 writetable(Pt, fullfile(options.OutDir, 'its_phase2_paths.csv'));
