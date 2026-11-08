@@ -29,8 +29,8 @@ formulas.
 | # | Step | ITM v1.4 | P.2001-6 | Same inputs? | Test case | Figure | Status |
 |---|------|----------|----------|--------------|-----------|--------|--------|
 | 1 | Profile preparation | Equally spaced profile; horizons by maximum elevation angle on ITM's effective earth (L245-275); when the horizon distances add to more than 1.5 d, smooth-earth estimates replace them (L224-237) | Equally spaced profile; horizons by maximum elevation angle on the median effective earth a_e50 (sec. 3.7, eqs. 16-25); on a line-of-sight path the "horizon" is the point of largest ν (eqs. 18-20) | No (different a_e; line-of-sight paths handled differently) | 120 links, 30 m and 10 m spacing | Horizon distance and angle, ITM against P.2001, one point per link and terminal | done (resolution study); next (horizon scatter) |
-| 2 | Terrain irregularity | Δh = Δh_d / (1 − 0.8 e^(−(d_end − d_start)/50 km)), Δh_d the interdecile range about a straight-line fit over the span d_start to d_end (L277-330); Δh(d) = Δh (1 − 0.8 e^(−d/50 km)) is applied later (L659-661) | No Δh; roughness h_m for ducting is the highest terrain above the smooth surface between horizons (sec. 3.8) | No | 120 links | Δh against h_m, colored by the ITM minus P.2001 gap | next |
-| 3 | Effective antenna heights | h_e = h_g + max(z − fit, 0), so never below h_g; the fit runs from min(15 h_g, 0.1 d_L) to 0.9 d_L at each end on a transhorizon path (L216, L239-242), over the whole span on a line-of-sight path (L224-227) | Height above a smooth surface fitted to the whole profile, two variants: h_tep, h_rep for diffraction, h_tea, h_rea for ducting (sec. 3.8) | No | 120 links | Dumbbell per link: ITM h_e and P.2001 h_tep for each terminal | next |
+| 2 | Terrain irregularity | Δh = Δh_d / (1 − 0.8 e^(−(d_end − d_start)/50 km)), Δh_d the interdecile range about a straight-line fit over the span d_start to d_end (L277-330); Δh(d) = Δh (1 − 0.8 e^(−d/50 km)) is applied later (L659-661) | No Δh; roughness h_m for ducting is the highest terrain above the smooth surface between horizons (sec. 3.8) | No | 120 links | Δh against h_m, colored by the ITM minus P.2001 gap | done |
+| 3 | Effective antenna heights | h_e = h_g + max(z − fit, 0), so never below h_g; the fit runs from min(15 h_g, 0.1 d_L) to 0.9 d_L at each end on a transhorizon path (L216, L239-242), over the whole span on a line-of-sight path (L224-227) | Height above a smooth surface fitted to the whole profile, two variants: h_tep, h_rep for diffraction, h_tea, h_rea for ducting (sec. 3.8) | No | 120 links | Dumbbell per link: ITM h_e and P.2001 h_tep for each terminal | done |
 | 4 | Earth curvature | γ_e = γ_a(1 − 0.04665 e^(N_s/179.3)); N_s from N_0 and mean elevation; fixed over time (L191-208) | a_e50 = 157 a/(157 + N_d1km50), with N_d1km50 = −S_dN the median refractivity gradient in the lowest 1 km (negative; P.452's ΔN with the sign reversed), from a map; a_p from map slopes (sec. 3.4.1, 3.5, eqs. 9-13) | No (N_0 versus ΔN map) | Smooth earth, 120 km, 10 U.S. midpoints | Effective earth radius against time percentage, both models, 10 locations | done (one location); next (10 locations) |
 | 5 | Region selection and combination | Line of sight if d < d_sML; diffraction up to d_x; scatter beyond (L393-484) | Four sub-models always computed; correlated power sum for 1 and 2 (eq. 58), then a −5 log Σ10^(−0.2 L) blend with 3 and 4 (eq. 59); Monte Carlo alternative (sec. 5.3, eq. 60); Attachment J | No | Smooth earth sweep; 120 links | Architecture diagram; mechanism agreement matrix | done |
 | 6 | Free space | 32.45 + 20 log f + 20 log d (L667-669) | Same, with the slant distance including the height difference (sec. 3.11) | Yes | Any | None needed; difference under 0.01 dB on the paper's paths | done (noted) |
@@ -57,12 +57,12 @@ effect of a single difference can be measured.
 |---|-----------|------------------|-----------|--------|--------|
 | 20 | Two-obstacle family | Item 8: one Bullington edge against two horizon edges | Synthetic profiles with two knife edges of heights h_1, h_2 at 1/3 and 2/3 of a 30 km path, h from 0 to 300 m | Heat map of ITM minus P.2001 over (h_1, h_2), with Epstein-Peterson and Deygout references | done |
 | 21 | Roughness family | Items 2 and 10: how the gap grows with Δh | Random rough profiles (filtered noise) scaled to Δh from 10 m to 1,000 m, 10 km to 150 km, 20 draws each | Heat map of the median gap over (Δh, d); the paper's "divergence window" drawn from synthetic terrain | done |
-| 22 | Earth-radius swap | Item 4 | Smooth earth and 120 links with ITM's curvature set to P.2001's a_e50 directly in a test branch (changing N_0 would also move ITM's troposcatter term and is limited to N_s 150-400), and P.2001's a_e50 and a_p both set to ITM's a_e | Gap before and after the swap | next |
+| 22 | Earth-radius swap | Item 4 | Smooth earth and 120 links with ITM's curvature set to P.2001's a_e50 directly in a test branch (changing N_0 would also move ITM's troposcatter term and is limited to N_s 150-400), and P.2001's a_e50 and a_p both set to ITM's a_e | Gap before and after the swap | done |
 | 23 | Effective-height swap | Item 3 | 120 links with each model given the other's effective heights (code change in a test branch, not in the released functions) | Gap before and after | later |
 | 24 | Evaluation-point swap | Item 12 | ITM evaluated at the path (done in the ablation) and P.2001 evaluated at d_3 and d_4 and extended | Gap before and after | done |
 | 25 | Monte Carlo combination | Item 5: the single-percentage blend of sec. 5.2 against the Monte Carlo method of sec. 5.3 | Five archetypes, 10,000 draws | Loss against time percentage, both combinations, with their difference | done |
-| 26 | Reciprocity | Both models should give the same loss with the terminals swapped; P.2001 states it (sec. 1.2) | 120 links, both directions | Largest asymmetry per model | next |
-| 27 | Continuity | Items 13 and 15 | Smooth earth and 120 radial paths at 100 m steps | Jumps in loss and slope at d_sML, d_x, and the Bullington LoS or NLoS switch | next |
+| 26 | Reciprocity | Both models should give the same loss with the terminals swapped; P.2001 states it (sec. 1.2) | 120 links, both directions | Largest asymmetry per model | done |
+| 27 | Continuity | Items 13 and 15 | Smooth earth and one Piedmont radial at 100 m steps (done); the other radials later | Jumps in loss and slope at d_sML, d_x, and the Bullington LoS or NLoS switch | done |
 | 28 | Input sensitivity per equation | Which inputs each equation is most sensitive to | 120 links, one input at a time (N_0 or ΔN, ε_r, σ, spacing, antenna heights ±1 m) | Tornado chart per model | done (sensitivity section, in part); next (per equation) |
 | 29 | Measured distributions | Item 17 | Databank Table III paths with several time percentages | ITM and P.2001 against the measured distribution per path | next |
 
@@ -99,8 +99,11 @@ MATLAB CSV files; Python draws only.
    terms), and 25 (the Monte Carlo combination): done in revision 4. The term
    split puts three quarters of the mean gap on the two horizon edges and the
    smooth-earth term, and about a fifth on ITM's line extension.
-3. Items 2, 3, 22, 26, 27 (inputs, swaps, reciprocity, continuity): cheap
-   checks that catch implementation differences.
+3. Items 2, 3, 22, 26, 27 (inputs, swaps, reciprocity, continuity): done in
+   revision 4. The models rank roughness alike, the earth-radius swap moves
+   the median gap by less than 0.5 dB, P.2001 is reciprocal, ITM is
+   reciprocal within 0.6 dB, and neither model's formulas are discontinuous.
+   Open: the cause of ITM's small asymmetry.
 4. Items 14, 17, 29 (troposcatter, variability, measured distributions): the
    time-distribution work.
 5. Items 18, 19, 23 (later).

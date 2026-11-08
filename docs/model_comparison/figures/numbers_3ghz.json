@@ -200,6 +200,77 @@
     2180
   ],
   "area_n": 2890,
+  "chk_ae_med": [
+    8596,
+    8424
+  ],
+  "chk_ae_range": [
+    -1349,
+    425
+  ],
+  "chk_cont_Piedmont_itm": [
+    34.2,
+    145
+  ],
+  "chk_cont_Piedmont_itm_modeflips": 50,
+  "chk_cont_Piedmont_p2001": [
+    15.7,
+    57
+  ],
+  "chk_cont_Piedmont_p2001_mechflips": 4,
+  "chk_cont_smooth_itm": [
+    0.2,
+    0
+  ],
+  "chk_cont_smooth_itm_modeflips": 2,
+  "chk_cont_smooth_p2001": [
+    0.1,
+    0
+  ],
+  "chk_cont_smooth_p2001_mechflips": 2,
+  "chk_dh_hm_East": [
+    78,
+    52
+  ],
+  "chk_dh_hm_West": [
+    627,
+    508
+  ],
+  "chk_he_absdiff": [
+    35,
+    953
+  ],
+  "chk_he_itm_below_hg": 0,
+  "chk_he_med": [
+    69,
+    121,
+    50
+  ],
+  "chk_he_n": 240,
+  "chk_he_p_below_hg": 0,
+  "chk_he_p_gt_itm": 60,
+  "chk_n": 120,
+  "chk_rec_itm": [
+    0.59,
+    8
+  ],
+  "chk_rec_p2001": 0.005,
+  "chk_rho_dh_gap": 0.78,
+  "chk_rho_dh_hm": 0.88,
+  "chk_rho_hm_gap": 0.81,
+  "chk_swap_gap": [
+    40.5,
+    40.2,
+    40.4
+  ],
+  "chk_swap_itm": [
+    0.1,
+    1.7
+  ],
+  "chk_swap_p2001": [
+    0,
+    9.1
+  ],
   "clim_max": 287,
   "clim_min": 276.3,
   "conv_dc_itm_150_100_2.5": [

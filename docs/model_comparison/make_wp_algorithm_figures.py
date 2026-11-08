@@ -414,9 +414,75 @@ def s51_monte_carlo():
     save(fig, "s51_monte_carlo")
 
 
+def s52_inputs():
+    """The models describe the same terrain differently: roughness agrees in rank, effective heights don't."""
+    I = rd("check_inputs.csv")
+    I["gap"] = I.itm_db - I.p2001_db
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.3), layout="constrained")
+    a = axs[0]; clean(a, grid=None)
+    sc = a.scatter(np.maximum(I.itm_delta_h_m, 1), np.maximum(I.p2001_hm_m, 1), c=I.gap.clip(0, 80), cmap="Purples", vmin=0,
+                   vmax=80, s=26, edgecolor="#9a9a9a", lw=0.3)
+    a.set_xscale("log"); a.set_yscale("log"); a.set_xlim(3, 3000); a.set_ylim(1, 3000)
+    a.plot([1, 3000], [1, 3000], color=LG2, lw=0.8)
+    a.set_xlabel("ITM terrain irregularity Δh (m)"); a.set_ylabel("P.2001 roughness h_m (m)")
+    a.set_title("Roughness, colored by ITM minus P.2001", loc="left", fontsize=9, color=DB)
+    cb = fig.colorbar(sc, ax=a, shrink=0.7, pad=0.02); cb.set_label("dB", fontsize=8); cb.outline.set_visible(False)
+    b = axs[1]; clean(b, grid=None)
+    he_i = np.r_[I.itm_he_tx_m, I.itm_he_rx_m]; he_p = np.r_[I.p2001_htep_m, I.p2001_hrep_m]
+    b.scatter(he_i, he_p, s=18, color=DB, alpha=0.6, edgecolor="white", lw=0.3)
+    b.plot([5, 3000], [5, 3000], color=LG2, lw=0.8)
+    b.set_xscale("log"); b.set_yscale("log"); b.set_xlim(5, 3000); b.set_ylim(5, 3000)
+    b.set_xlabel("ITM effective height h_e (m)"); b.set_ylabel("P.2001 effective height h_tep, h_rep (m)")
+    b.set_title("Effective heights, both ends", loc="left", fontsize=9, color=DB)
+    b.text(1500, 1000, "equal", color=GR, fontsize=7.5, rotation=45, ha="center")
+    save(fig, "s52_inputs")
+
+
+def s53_swaps():
+    """Neither the earth radius nor the terminal order explains the gap."""
+    S = rd("check_radius_swap.csv"); R = rd("check_reciprocity.csv")
+    rows = [("ITM with P.2001's earth radius", (S.itm_at_p2001_ae_db - S.itm_db).abs()),
+            ("P.2001 with ITM's earth radius", (S.p2001_at_itm_ae_db - S.p2001_db).abs()),
+            ("ITM, terminals swapped", (R.itm_db - R.itm_reversed_db).abs()),
+            ("P.2001, terminals swapped", (R.p2001_db - R.p2001_reversed_db).abs())]
+    fig, ax = new(h=2.7); clean(ax, grid="x")
+    rng = np.random.default_rng(3)
+    for i, (lab, v) in enumerate(rows):
+        y = len(rows) - 1 - i
+        ax.scatter(v, y + rng.uniform(-0.15, 0.15, len(v)), s=12, color=GR, alpha=0.5, lw=0)
+        ax.plot([v.median()] * 2, [y - 0.25, y + 0.25], color=PU, lw=2.4)
+    gap = (S.itm_db - S.p2001_db).median()
+    ax.axvline(gap, color=PU, lw=1, ls=(0, (3, 2)))
+    ax.text(gap - 0.8, len(rows) - 0.75, f"Median ITM minus P.2001: {gap:.0f} dB", color=PU, fontsize=8, ha="right", va="bottom")
+    ax.set_yticks(range(len(rows)), [l for l, _ in rows][::-1], fontsize=8.5)
+    ax.set_xlim(-1, 45); ax.set_xlabel("Change in loss (dB), one point per link; bar: median")
+    save(fig, "s53_swaps")
+
+
+def s54_continuity():
+    """Along a real radial, both models step where new obstacles appear; ITM's steps are larger."""
+    C = rd("check_continuity.csv")
+    q = C[C.path == "Piedmont radial, east"].sort_values("d_km")
+    fig, axs = plt.subplots(2, 1, figsize=(W, 4.0), layout="constrained", sharex=True, height_ratios=[2, 1])
+    a = axs[0]; clean(a)
+    a.plot(q.d_km, q.p2001_db - q.fs_db, color=DB, lw=1.4)
+    a.plot(q.d_km, q.itm_db - q.fs_db, color=LB, lw=1.4)
+    a.set_ylabel("Loss above\nfree space (dB)")
+    a.text(148, (q.itm_db - q.fs_db).iloc[-1] + 4, "ITM", color=LB, fontsize=8.5, fontweight="semibold", ha="right")
+    a.text(148, (q.p2001_db - q.fs_db).iloc[-1] - 6, "P.2001", color=DB, fontsize=8.5, fontweight="semibold", ha="right", va="top")
+    b = axs[1]; clean(b)
+    d = q.d_km.values[1:]
+    b.plot(d, np.abs(np.diff((q.itm_db - q.fs_db).values)), color=LB, lw=1.0)
+    b.plot(d, np.abs(np.diff((q.p2001_db - q.fs_db).values)), color=DB, lw=1.0)
+    b.set_ylabel("Step per\n100 m (dB)"); b.set_xlabel("Distance along the radial (km)")
+    b.set_xlim(0, 150)
+    save(fig, "s54_continuity")
+
+
 ALL = [s38_architecture, s39_smooth_mechanisms, s40_itm_anatomy, s41_line_of_sight, s42_time_mechanisms,
        s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point,
-       s47_smooth_earth_terms, s48_gap_waterfall, s49_empirical_terms, s50_ducting_terms, s51_monte_carlo]
+       s47_smooth_earth_terms, s48_gap_waterfall, s49_empirical_terms, s50_ducting_terms, s51_monte_carlo,
+       s52_inputs, s53_swaps, s54_continuity]
 
 if __name__ == "__main__":
     for fn in ALL:
