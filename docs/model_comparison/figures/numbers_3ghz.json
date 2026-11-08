@@ -249,12 +249,59 @@
   "chk_he_n": 240,
   "chk_he_p_below_hg": 0,
   "chk_he_p_gt_itm": 60,
+  "chk_hs_change": [
+    0,
+    16.8,
+    0,
+    60.7
+  ],
+  "chk_hs_diffraction": [
+    66,
+    43.7,
+    45,
+    43.7,
+    10
+  ],
+  "chk_hs_gap": [
+    40.5,
+    41.3,
+    25.8
+  ],
+  "chk_hs_los": [
+    24,
+    -0,
+    -0,
+    -0,
+    0
+  ],
+  "chk_hs_scatter": [
+    30,
+    45.3,
+    50.8,
+    17.6,
+    27
+  ],
   "chk_n": 120,
   "chk_rec_itm": [
     0.59,
     8
   ],
   "chk_rec_p2001": 0.005,
+  "chk_recd": [
+    8,
+    8,
+    0.51,
+    13.3,
+    0,
+    5.8599880503606983E-9
+  ],
+  "chk_recd_mode_same": true,
+  "chk_recd_spaced": [
+    0.092289731071019787,
+    4,
+    0.26,
+    0.48
+  ],
   "chk_rho_dh_gap": 0.78,
   "chk_rho_dh_hm": 0.88,
   "chk_rho_hm_gap": 0.81,
@@ -2178,6 +2225,55 @@
   "rad90_med80": -3.1,
   "ratio": 1.75,
   "ratio_lt1": 1,
+  "rem_fade_3": [
+    -7.4,
+    -2.3,
+    3.2,
+    10.7
+  ],
+  "rem_gas_3": [
+    0.3,
+    1,
+    2
+  ],
+  "rem_gas_300": [
+    3.9,
+    29.1,
+    106.5
+  ],
+  "rem_ground_land": 0.22,
+  "rem_p_minus_itm_300": [
+    1.9,
+    13
+  ],
+  "rem_pol_3_max": [
+    0.29,
+    0.01
+  ],
+  "rem_pol_land_max": [
+    0.6,
+    0.1
+  ],
+  "rem_pol_sea_01": [
+    -7.4,
+    -2.9
+  ],
+  "rem_pol_sea_03": [
+    2.8,
+    0.2
+  ],
+  "rem_rain_10": [
+    15.4,
+    30.8
+  ],
+  "rem_rain_3": [
+    0.2,
+    0.3
+  ],
+  "rem_rain_onset_300": 5,
+  "rem_rain_onset_50": 7,
+  "rem_spe_lbm4_min": 506,
+  "rem_spe_max": 1.13686837721616E-13,
   "res1k_itm": -5.2,
   "res1k_p2001": -3.4,
   "res90_itm": -0.02,

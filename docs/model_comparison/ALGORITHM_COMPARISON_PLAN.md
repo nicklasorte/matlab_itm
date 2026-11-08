@@ -45,8 +45,8 @@ formulas.
 | 15 | Diffraction to scatter transition | Crossover d_x where the scatter line meets the diffraction line; scatter line joined there (L456-482) | None: the power sum lets the lower loss dominate smoothly | No | Smooth earth; 120 links | dL/dd against distance, both models, to show ITM's slope change at d_x and d_sML | next |
 | 16 | Ducting and layer reflection | None | L_ba = A_ac + A_ad + A_at: coupling (site shielding, sea), angular distance, and time term from β (Attachment D, eqs. D.1 to D.25) | Not applicable | Smooth earth at 1%; over-sea archetype; 120 links at 0.1%, 1%, 10% | P.2001's three ducting terms against distance; ITM minus P.2001 against β | done |
 | 17 | Time variability | Effective distance d_e; climate curves for time, location, and situation; A_ref + V(p) (L674-795) | Each mechanism's own statistics: a_e(p) for diffraction, β and A_at(p) for ducting, Y_p for troposcatter, Q_caf and Q_rain for fading (sec. 4, Attachments B, C, D, E) | No | Five archetypes; smooth 120 km; rough link | Loss against time percentage with P.2001 sub-models (done); the same against measured distributions from the databank (done) | done |
-| 18 | Gases, rain, sporadic-E | None explicit | Attachments F, C, G | Not applicable | Smooth earth at 3 GHz and 10 GHz | Size of each term against frequency, to show where they start to matter | later |
-| 19 | Polarization and ground | ε_r, σ enter Z_g for the two-ray and smooth-earth terms (L191-208) | Fixed land and sea ε_r, σ (Table 2), weighted by ω, enter K in the spherical-earth term only; polarization selects K_H or K_V (eqs. A.7, A.8) | No | Smooth earth, both polarizations, three grounds | Loss difference between polarizations, both models | later |
+| 18 | Gases, rain, sporadic-E | None explicit | Attachments F, C, G | Not applicable | Smooth earth at 3 GHz and 10 GHz | Size of each term against frequency, to show where they start to matter | done |
+| 19 | Polarization and ground | ε_r, σ enter Z_g for the two-ray and smooth-earth terms (L191-208) | Fixed land and sea ε_r, σ (Table 2), weighted by ω, enter K in the spherical-earth term only; polarization selects K_H or K_V (eqs. A.7, A.8) | No | Smooth earth, both polarizations, three grounds | Loss difference between polarizations, both models | done |
 
 ## 2. Experiments that isolate one equation at a time
 
@@ -58,7 +58,7 @@ effect of a single difference can be measured.
 | 20 | Two-obstacle family | Item 8: one Bullington edge against two horizon edges | Synthetic profiles with two knife edges of heights h_1, h_2 at 1/3 and 2/3 of a 30 km path, h from 0 to 300 m | Heat map of ITM minus P.2001 over (h_1, h_2), with Epstein-Peterson and Deygout references | done |
 | 21 | Roughness family | Items 2 and 10: how the gap grows with Δh | Random rough profiles (filtered noise) scaled to Δh from 10 m to 1,000 m, 10 km to 150 km, 20 draws each | Heat map of the median gap over (Δh, d); the paper's "divergence window" drawn from synthetic terrain | done |
 | 22 | Earth-radius swap | Item 4 | Smooth earth and 120 links with ITM's curvature set to P.2001's a_e50 directly in a test branch (changing N_0 would also move ITM's troposcatter term and is limited to N_s 150-400), and P.2001's a_e50 and a_p both set to ITM's a_e | Gap before and after the swap | done |
-| 23 | Effective-height swap | Item 3 | 120 links with each model given the other's effective heights (code change in a test branch, not in the released functions) | Gap before and after | later |
+| 23 | Effective-height swap | Item 3 | 120 links with each model given the other's effective heights (code change in a test branch, not in the released functions) | Gap before and after | done |
 | 24 | Evaluation-point swap | Item 12 | ITM evaluated at the path (done in the ablation) and P.2001 evaluated at d_3 and d_4 and extended | Gap before and after | done |
 | 25 | Monte Carlo combination | Item 5: the single-percentage blend of sec. 5.2 against the Monte Carlo method of sec. 5.3 | Five archetypes, 10,000 draws | Loss against time percentage, both combinations, with their difference | done |
 | 26 | Reciprocity | Both models should give the same loss with the terminals swapped; P.2001 states it (sec. 1.2) | 120 links, both directions | Largest asymmetry per model | done |
@@ -103,14 +103,23 @@ MATLAB CSV files; Python draws only.
    revision 4. The models rank roughness alike, the earth-radius swap moves
    the median gap by less than 0.5 dB, P.2001 is reciprocal, ITM is
    reciprocal within 0.6 dB, and neither model's formulas are discontinuous.
-   Open: the cause of ITM's small asymmetry.
+   ITM's small asymmetry comes from its effective-height fit (see item 5 of
+   this list).
 4. Items 14, 17, 29 (troposcatter, variability, measured distributions): done
    in revision 4. The two climate classifications move the troposcatter
    loss by similar amounts but don't map one to one; against the databank,
    neither model's time-variability equations predict a single path's
    distribution shape better than the other at small percentages, and
    P.2001 follows the deep fades somewhat better.
-5. Items 18, 19, 23 (later).
+5. Items 18, 19, 23 and the cause of ITM's asymmetry: done in revision 4.
+   At 3 GHz, P.2001's gas, rain, and sporadic-E terms and the polarization
+   and ground inputs of both models are too small to matter; gases and rain
+   grow fast above 10 GHz. Given ITM's effective heights, P.2001 closes most
+   of the gap on the troposcatter-class links (median 45 dB to 18 dB). ITM's
+   asymmetry on 8 links comes from one effective height, set by a fit whose
+   window ends are truncated to profile points; the NTIA C++ reference shows
+   the same asymmetry on NTIA's second example profile (0.12 dB at 3 GHz,
+   10 m and 3 m antennas), checked on 2026-11-08.
 
 ## 5. Checks
 

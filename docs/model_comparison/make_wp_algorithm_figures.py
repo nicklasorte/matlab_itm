@@ -572,11 +572,85 @@ def s57_measured_examples():
     save(fig, "s57_measured_examples")
 
 
+def s58_minor_terms():
+    """At 3 GHz P.2001's gas and rain terms are a few decibels at most; they grow fast above 10 GHz."""
+    T = rd("rem_terms_frequency.csv")
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.2), layout="constrained", sharey=True)
+    for a, d in zip(axs, [50, 300]):
+        clean(a)
+        g = T[(T.d_km == d) & (T.time_pct == 50)].sort_values("freq_ghz")
+        r = T[(T.d_km == d) & (T.time_pct == 99.99)].sort_values("freq_ghz")
+        a.plot(g.freq_ghz, g.agsur_db, color=DB, lw=1.6)
+        a.plot(r.freq_ghz, r.a2_db.clip(lower=0.01), color=PU, lw=1.6)
+        a.set_xscale("log"); a.set_yscale("log"); a.set_ylim(0.01, 1000); a.set_xlim(0.1, 50)
+        a.set_xticks([0.1, 0.3, 1, 3, 10, 30], ["0.1", "0.3", "1", "3", "10", "30"]); a.minorticks_off()
+        a.axvline(3, color=LG2, lw=1, ls=(0, (3, 2)))
+        a.set_title(f"{d} km of smooth earth", loc="left", fontsize=9, color=DB)
+        a.set_xlabel("Frequency (GHz)")
+        i = g.freq_ghz.searchsorted(1.0)
+        a.text(0.12, g.agsur_db.iloc[2] * 5, "Gases, 50% of time", color=DB, fontsize=7.5, fontweight="semibold")
+        a.text(9.5, 400, "Rain, 99.99%\nof time", color=PU, fontsize=7.5, fontweight="semibold", ha="right", va="top")
+    axs[0].set_ylabel("Attenuation (dB)")
+    save(fig, "s58_minor_terms")
+
+
+def s59_polarization():
+    """Polarization matters only at low frequency over sea, and more in ITM than in P.2001."""
+    R = rd("rem_polarization.csv"); R["vh"] = R.vertical_db - R.horizontal_db
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.0), layout="constrained", sharey=True)
+    for a, f in zip(axs, [0.1, 3]):
+        clean(a)
+        for (m, g), q in R[R.freq_ghz == f].groupby(["model", "ground"]):
+            q = q.sort_values("d_km")
+            sea = g == "sea water"
+            col = (LB if m == "ITM" else DB) if sea else LG2
+            a.plot(q.d_km, q.vh, color=col, lw=1.5 if sea else 0.9, zorder=3 if sea else 2)
+        a.axhline(0, color=GR, lw=0.6)
+        a.set_title(f"{f:g} GHz", loc="left", fontsize=9, color=DB); a.set_xlabel("Distance (km)"); a.set_xlim(0, 150)
+    q = R[(R.freq_ghz == 0.1) & (R.ground == "sea water")]
+    qi = q[q.model == "ITM"]; qp = q[q.model == "P.2001"]
+    axs[0].text(qi.d_km.iloc[qi.vh.values.argmin()] + 3, qi.vh.min(), "ITM, sea", color=LB, fontsize=7.5, fontweight="semibold", va="center")
+    axs[0].text(55, qp.vh.min() + 0.8, "P.2001, sea", color=DB, fontsize=7.5, fontweight="semibold")
+    axs[0].text(100, 0.6, "land (gray)", color=GR, fontsize=7.5)
+    axs[0].set_ylabel("Vertical minus horizontal (dB)")
+    save(fig, "s59_polarization")
+
+
+def s60_height_swap():
+    """Given ITM's effective heights, P.2001 closes much of the gap on the longer links."""
+    H = rd("check_height_swap.csv")
+    cls = [("Troposcatter class", H.itm_mode_code == 10), ("Diffraction class", H.itm_mode_code.isin([5, 9])),
+           ("Line of sight", H.itm_mode_code == 0)]
+    fig, ax = new(h=2.8); clean(ax, grid="x")
+    rows = []
+    for name, m in cls:
+        q = H[m]
+        rows.append((name, (q.itm_db - q.p2001_db).median(), (q.itm_at_p2001_he_db - q.p2001_db).median(),
+                     (q.itm_db - q.p2001_at_itm_he_db).median(), int(m.sum())))
+    for i, (name, g0, gi, gp, n) in enumerate(rows):
+        y = len(rows) - 1 - i
+        ax.plot([min(g0, gi, gp), max(g0, gi, gp)], [y, y], color=LG2, lw=2, zorder=1)
+        ax.scatter([g0], [y], s=55, color=GR, zorder=3)
+        ax.scatter([gi], [y], s=55, color=LB, zorder=3, marker="D")
+        ax.scatter([gp], [y], s=55, color=PU, zorder=3, marker="s")
+        ax.text(-3, y, f"{name} ({n})", ha="right", va="center", fontsize=8.5)
+    y0 = len(rows) - 1
+    g0, gi, gp = rows[0][1:4]
+    ax.text(g0, y0 + 0.28, "as run", color=GR, fontsize=7.5, ha="center")
+    ax.text(gi + 1, y0 - 0.32, "ITM with P.2001's heights", color=LB, fontsize=7.5, ha="left")
+    ax.text(gp, y0 + 0.28, "P.2001 with ITM's heights", color=PU, fontsize=7.5, ha="center")
+    ax.set_yticks([]); ax.spines["left"].set_visible(False)
+    ax.set_xlim(-5, 60); ax.set_ylim(-0.6, len(rows) - 0.4)
+    ax.set_xlabel("Median ITM minus P.2001 (dB), 3 GHz, 50% of time")
+    save(fig, "s60_height_swap")
+
+
 ALL = [s38_architecture, s39_smooth_mechanisms, s40_itm_anatomy, s41_line_of_sight, s42_time_mechanisms,
        s43_mechanism_agreement, s44_two_obstacles, s45_roughness_grid, s46_evaluation_point,
        s47_smooth_earth_terms, s48_gap_waterfall, s49_empirical_terms, s50_ducting_terms, s51_monte_carlo,
        s52_inputs, s53_swaps, s54_continuity,
-       s55_tropo_climate, s56_measured_shape, s57_measured_examples]
+       s55_tropo_climate, s56_measured_shape, s57_measured_examples,
+       s58_minor_terms, s59_polarization, s60_height_swap]
 
 if __name__ == "__main__":
     for fn in ALL:
