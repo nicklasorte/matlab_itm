@@ -40,7 +40,7 @@ formulas.
 | 10 | Blending the diffraction terms | A_d = w A_se + (1 − w) A_k + A_fo; w from Δh, f, and the horizon geometry; A_fo ≤ 15 dB (L486-501) | L_d = L_dba + max(L_dsph − L_dbs, 0): the smooth-earth excess over a smooth Bullington path is added to the actual Bullington loss (A.1, eq. A.1) | No | 120 links | Term stack per model on the diffraction links (ITM: w A_se, (1 − w) A_k, A_fo; P.2001: J(ν), the empirical term, the spherical excess) | done |
 | 11 | Empirical additions | A_fo = min(15, 5 log(1 + 10⁻⁵ h_g1 h_g2 f σ_h)), σ_h from Δh(d_sML), f in MHz, h_g in metres (L489-491) | (1 − e^(−J/6))(10 + 0.02 d) (A.4, eq. A.23) | No | 120 links | Both terms against path length | done |
 | 12 | Where diffraction is evaluated | At d_3 = max(d_sML, d_L + 5X) and d_4 = d_3 + 10X, X = (a_e²/f)^(1/3); straight line to the path (L393-398) | At the path's distance | No | Smooth 120 km; rough western link; 120 links | ITM construction lines (done); ITM evaluated at the path instead of extended, against P.2001 (ablation, done) | done |
-| 13 | Line of sight | Two-ray with complex reflection coefficient and roughness, weighted with the diffraction line by 1/(1 + f Δh/max(10 km, d_sML)); two-ray values at d_0 and d_1 and the diffraction-line value at d_sML, fitted by A_o + k_1 d + k_2 ln d (L412-453, L562-581) | L_bm1 = L_bfs + L_d + A_1 + gas terms (eq. 47): free space, the diffraction loss L_d of eq. A.1 always (near zero until terrain enters the Fresnel zone), gases, and A_1, the combined clear-air and rain fade (eq. 46; Attachments B and C) | No | Smooth earth 1 km to 40 km; the 24 line-of-sight links | Both against a two-ray reference (done); fade depth against time percentage at 1 km to 40 km (next) | done |
+| 13 | Line of sight | Two-ray with complex reflection coefficient and roughness, weighted with the diffraction line by 1/(1 + f Δh/max(10 km, d_sML)); two-ray values at d_0 and d_1 and the diffraction-line value at d_sML, fitted by A_o + k_1 d + k_2 ln d (L412-453, L562-581) | L_bm1 = L_bfs + L_d + A_1 + gas terms (eq. 47): free space, the diffraction loss L_d of eq. A.1 always (near zero until terrain enters the Fresnel zone), gases, and A_1, the combined clear-air and rain fade (eq. 46; Attachments B and C) | No | Smooth earth 1 km to 40 km; the 24 line-of-sight links | Both against a two-ray reference (done); fade depth against time percentage at 1 km to 40 km (done) | done |
 | 14 | Troposcatter | A_s = F(θd) + 10 log(k H θ⁴) − 0.1(N_s − 301) e^(−θd/40 km) + H_0, at d_L + 200 km and d_L + 400 km (L583-657) | L_bs = M + L_freq + L_dist + L_coup − Y_p, climate zone from a map at the common volume, floored at free space (Attachment E, eqs. E.16, E.17) | No | Smooth earth 70 km to 700 km; ITM's 7 radio climates and P.2001's 6 land zones plus the sea-path zone | Both against distance (done); troposcatter loss by climate, ITM climates 1 to 7 against P.2001 zones 1 to 6 and sea (Table E.1) (done) | done |
 | 15 | Diffraction to scatter transition | Crossover d_x where the scatter line meets the diffraction line; scatter line joined there (L456-482) | None: the power sum lets the lower loss dominate smoothly | No | Smooth earth; 120 links | dL/dd against distance, both models, to show ITM's slope change at d_x and d_sML | done |
 | 16 | Ducting and layer reflection | None | L_ba = A_ac + A_ad + A_at: coupling (site shielding, sea), angular distance, and time term from β (Attachment D, eqs. D.1 to D.25) | Not applicable | Smooth earth at 1%; over-sea archetype; 120 links at 0.1%, 1%, 10% | P.2001's three ducting terms against distance; ITM minus P.2001 against β | done |
@@ -77,7 +77,7 @@ MATLAB CSV files; Python draws only.
 |--------|------|----------------|-----------------|
 | Equation map | Two-column flow diagram (done as the architecture figure); next version adds the equation numbers and code lines in each box | Boxes per step, arrows for data flow | Where the two columns stop matching |
 | Horizon scatter (item 1) | Scatter with the equal line | ITM horizon distance against P.2001's, one point per terminal | Points off the line are the links where the horizons differ |
-| Roughness measures (item 2) | Scatter | Δh against h_m, log axes, colored by gap | The gap follows Δh, not h_m |
+| Roughness measures (item 2) | Scatter | Δh against h_m, log axes, colored by gap | The gap follows both roughness measures about equally |
 | Effective heights (item 3) | Dumbbell | One row per link; ITM h_e and P.2001 h_tep as two dots joined by a line | Links where ITM's effective height is tens of metres above P.2001's |
 | Earth radius (item 4) | Small multiples, 10 locations | Radius against time percentage, log x | ITM flat; P.2001 rising to the left |
 | Smooth-earth diffraction (item 9) | Two lines and a difference band | Loss against distance | The two methods agree within a stated tolerance |
@@ -129,6 +129,13 @@ MATLAB CSV files; Python draws only.
    by more than a few tenths of a decibel on a typical link.
 
 ## 5. Checks
+
+A second independent review on 2026-11-08 covered the revision 4 sections
+added after this plan (checks on inputs and implementations through
+sensitivity). It found no wrong numbers; its five interpretation errors
+(the gas term used at 300 km, the A_1 label, the height-swap wording, the
+transition width, a caption frequency range) and its imprecisions are
+corrected in the paper.
 
 The ledger was checked against both codebases and the Recommendation by an
 independent review on 2026-11-08; its six errors and nine imprecisions are

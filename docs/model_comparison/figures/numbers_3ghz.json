@@ -249,6 +249,7 @@
   "chk_he_n": 240,
   "chk_he_p_below_hg": 0,
   "chk_he_p_gt_itm": 60,
+  "chk_he_signed_med": 20,
   "chk_hs_change": [
     0,
     16.8,
@@ -266,6 +267,10 @@
     40.5,
     41.3,
     25.8
+  ],
+  "chk_hs_itm_scatter": [
+    3.5,
+    4.1
   ],
   "chk_hs_los": [
     24,
@@ -295,6 +300,10 @@
     0,
     5.8599880503606983E-9
   ],
+  "chk_recd_int": [
+    8,
+    8
+  ],
   "chk_recd_mode_same": true,
   "chk_recd_spaced": [
     0.092289731071019787,
@@ -302,6 +311,7 @@
     0.26,
     0.48
   ],
+  "chk_recd_spaced_stay": 2,
   "chk_rho_dh_gap": 0.78,
   "chk_rho_dh_hm": 0.88,
   "chk_rho_hm_gap": 0.81,
@@ -2219,6 +2229,10 @@
     67.7,
     63.3
   ],
+  "part15_drop100": [
+    68,
+    63.4
+  ],
   "part15_slope": [
     1.23,
     1.27,
@@ -2228,6 +2242,10 @@
   "part15_width": [
     0.7,
     6
+  ],
+  "part15_width100": [
+    0.1,
+    5.9
   ],
   "part28_itm_dry_ground": [
     0.12,
@@ -2407,6 +2425,7 @@
   "rad90_med80": -3.1,
   "ratio": 1.75,
   "ratio_lt1": 1,
+  "rem_300_is_lbm3": true,
   "rem_fade_3": [
     -7.4,
     -2.3,
@@ -2424,6 +2443,14 @@
     106.5
   ],
   "rem_ground_land": 0.22,
+  "rem_gs_300": [
+    1.5,
+    19.2
+  ],
+  "rem_nogas_minus_itm_300": [
+    0.3,
+    -6.2
+  ],
   "rem_p_minus_itm_300": [
     1.9,
     13
@@ -2444,6 +2471,10 @@
     2.8,
     0.2
   ],
+  "rem_pol_sea_03_signed": [
+    2.8,
+    0.2
+  ],
   "rem_rain_10": [
     15.4,
     30.8
@@ -2451,6 +2482,14 @@
   "rem_rain_3": [
     0.2,
     0.3
+  ],
+  "rem_rain_cross_300": [
+    3,
+    5
+  ],
+  "rem_rain_cross_50": [
+    5,
+    7
   ],
   "rem_rain_onset_300": 5,
   "rem_rain_onset_50": 7,
@@ -3131,6 +3170,10 @@
   "sweep_Single-horizon diffraction_10000": 0.8,
   "sweep_Single-horizon diffraction_3162": 2,
   "sweep_Single-horizon diffraction_maxabs": 2.6,
+  "td_ex_ghz": [
+    1.8,
+    2.5
+  ],
   "td_itm_mode_all_scatter": true,
   "td_k300": [
     71,
@@ -3142,6 +3185,10 @@
   "td_k_gap50": [
     -1.2,
     2
+  ],
+  "td_k_gap50_comb": [
+    -3.6,
+    1.8
   ],
   "td_m_1_n": 82,
   "td_m_1_p1": [
@@ -3330,6 +3377,10 @@
     -6.6,
     -2.2,
     65
+  ],
+  "td_m_mhz": [
+    40.5,
+    9640
   ],
   "td_m_p452_n": 283,
   "td_m_scatter_n": 207,

@@ -422,7 +422,7 @@ def s52_inputs():
     a = axs[0]; clean(a, grid=None)
     sc = a.scatter(np.maximum(I.itm_delta_h_m, 1), np.maximum(I.p2001_hm_m, 1), c=I.gap.clip(0, 80), cmap="Purples", vmin=0,
                    vmax=80, s=26, edgecolor="#9a9a9a", lw=0.3)
-    a.set_xscale("log"); a.set_yscale("log"); a.set_xlim(3, 3000); a.set_ylim(1, 3000)
+    a.set_xscale("log"); a.set_yscale("log"); a.set_xlim(1, 3000); a.set_ylim(1, 3000)
     a.plot([1, 3000], [1, 3000], color=LG2, lw=0.8)
     a.set_xlabel("ITM terrain irregularity Δh (m)"); a.set_ylabel("P.2001 roughness h_m (m)")
     a.set_title("Roughness, colored by ITM minus P.2001", loc="left", fontsize=9, color=DB)
@@ -468,8 +468,8 @@ def s54_continuity():
     a.plot(q.d_km, q.p2001_db - q.fs_db, color=DB, lw=1.4)
     a.plot(q.d_km, q.itm_db - q.fs_db, color=LB, lw=1.4)
     a.set_ylabel("Loss above\nfree space (dB)")
-    a.text(148, (q.itm_db - q.fs_db).iloc[-1] + 4, "ITM", color=LB, fontsize=8.5, fontweight="semibold", ha="right")
-    a.text(148, (q.p2001_db - q.fs_db).iloc[-1] - 6, "P.2001", color=DB, fontsize=8.5, fontweight="semibold", ha="right", va="top")
+    a.text(148, (q.itm_db - q.fs_db).iloc[-1] - 3, "ITM", color=LB, fontsize=8.5, fontweight="semibold", ha="right", va="top")
+    a.text(148, (q.p2001_db - q.fs_db).iloc[-1] + 2, "P.2001", color=DB, fontsize=8.5, fontweight="semibold", ha="right", va="bottom")
     b = axs[1]; clean(b)
     d = q.d_km.values[1:]
     b.plot(d, np.abs(np.diff((q.itm_db - q.fs_db).values)), color=LB, lw=1.0)
@@ -507,6 +507,9 @@ def s55_tropo_climate():
             y = max(np.mean(ys), last + 2.6); last = y
             names = ["sea" if c == 0 else str(c) for c in sorted(cs)]
             lab = (pre + ("s " if len(cs) > 1 else " ") + ", ".join(names)) if names != ["sea"] else "sea path"
+            if hi in cs and len(cs) > 1:
+                others = ", ".join(n for c2, n in zip(sorted(cs), names) if c2 != hi)
+                lab = f"{pre} {hi} (same as {others})"
             on = hi in cs
             a.text(705, y, lab, color=col if on else GR, fontsize=7.5, va="center", fontweight="semibold" if on else "normal")
         a.set_xlim(70, 700); a.set_title(ttl, loc="left", fontsize=9, color=DB)
@@ -581,7 +584,7 @@ def s58_minor_terms():
         g = T[(T.d_km == d) & (T.time_pct == 50)].sort_values("freq_ghz")
         r = T[(T.d_km == d) & (T.time_pct == 99.99)].sort_values("freq_ghz")
         a.plot(g.freq_ghz, g.agsur_db, color=DB, lw=1.6)
-        a.plot(r.freq_ghz, r.a2_db.clip(lower=0.01), color=PU, lw=1.6)
+        a.plot(r.freq_ghz, r.a2_db.clip(lower=0.01), color=DB, lw=1.6, ls=(0, (4, 2)))
         a.set_xscale("log"); a.set_yscale("log"); a.set_ylim(0.01, 1000); a.set_xlim(0.1, 50)
         a.set_xticks([0.1, 0.3, 1, 3, 10, 30], ["0.1", "0.3", "1", "3", "10", "30"]); a.minorticks_off()
         a.axvline(3, color=LG2, lw=1, ls=(0, (3, 2)))
@@ -589,7 +592,7 @@ def s58_minor_terms():
         a.set_xlabel("Frequency (GHz)")
         i = g.freq_ghz.searchsorted(1.0)
         a.text(0.12, g.agsur_db.iloc[2] * 5, "Gases, 50% of time", color=DB, fontsize=7.5, fontweight="semibold")
-        a.text(9.5, 400, "Rain, 99.99%\nof time", color=PU, fontsize=7.5, fontweight="semibold", ha="right", va="top")
+        a.text(9.5, 400, "Rain, 99.99%\nof time (dashed)", color=DB, fontsize=7.5, fontweight="semibold", ha="right", va="top")
     axs[0].set_ylabel("Attenuation (dB)")
     save(fig, "s58_minor_terms")
 
@@ -630,15 +633,15 @@ def s60_height_swap():
     for i, (name, g0, gi, gp, n) in enumerate(rows):
         y = len(rows) - 1 - i
         ax.plot([min(g0, gi, gp), max(g0, gi, gp)], [y, y], color=LG2, lw=2, zorder=1)
-        ax.scatter([g0], [y], s=55, color=GR, zorder=3)
+        ax.scatter([g0], [y], s=55, color=GR, zorder=5, edgecolor="white", lw=0.8)
         ax.scatter([gi], [y], s=55, color=LB, zorder=3, marker="D")
-        ax.scatter([gp], [y], s=55, color=PU, zorder=3, marker="s")
+        ax.scatter([gp], [y], s=55, color=DB, zorder=3, marker="s")
         ax.text(-3, y, f"{name} ({n})", ha="right", va="center", fontsize=8.5)
     y0 = len(rows) - 1
     g0, gi, gp = rows[0][1:4]
     ax.text(g0, y0 + 0.28, "as run", color=GR, fontsize=7.5, ha="center")
     ax.text(gi + 1, y0 - 0.32, "ITM with P.2001's heights", color=LB, fontsize=7.5, ha="left")
-    ax.text(gp, y0 + 0.28, "P.2001 with ITM's heights", color=PU, fontsize=7.5, ha="center")
+    ax.text(gp, y0 + 0.28, "P.2001 with ITM's heights", color=DB, fontsize=7.5, ha="center")
     ax.set_yticks([]); ax.spines["left"].set_visible(False)
     ax.set_xlim(-5, 60); ax.set_ylim(-0.6, len(rows) - 0.4)
     ax.set_xlabel("Median ITM minus P.2001 (dB), 3 GHz, 50% of time")
@@ -677,7 +680,7 @@ def s62_earth_radius():
         ax.scatter([q.itm_ae_km.iloc[0]], [i], s=40, color=LB, marker="D", zorder=3)
         ax.scatter([q.p2001_ae50_km.iloc[0]], [i], s=40, color=DB, zorder=3)
         ax.scatter([q.p2001_ap_km.loc[1]], [i], s=30, facecolor="white", edgecolor=DB, zorder=3)
-        ax.scatter([q.p2001_ap_km.loc[0.01]], [i], s=30, facecolor="white", edgecolor=PU, zorder=3)
+        ax.scatter([q.p2001_ap_km.loc[0.01]], [i], s=30, facecolor="white", edgecolor=DB, zorder=3, lw=1.6)
     ax.set_yticks(range(len(sites)), sites, fontsize=8)
     ax.set_xscale("log"); ax.set_xlim(7000, 70000)
     ax.set_xticks([8000, 10000, 20000, 50000], ["8,000", "10,000", "20,000", "50,000"]); ax.minorticks_off()
@@ -687,7 +690,7 @@ def s62_earth_radius():
     ax.text(q.itm_ae_km.iloc[0], top + 0.55, "ITM", color=LB, fontsize=7.5, fontweight="semibold", ha="center")
     ax.text(q.p2001_ae50_km.iloc[0] * 1.06, top - 0.45, "P.2001, 50%", color=DB, fontsize=7.5, fontweight="semibold", ha="left")
     ax.text(q.p2001_ap_km.loc[1], top + 0.55, "1%", color=DB, fontsize=7.5, ha="center")
-    ax.text(q.p2001_ap_km.loc[0.01], top + 0.55, "0.01%", color=PU, fontsize=7.5, ha="center")
+    ax.text(q.p2001_ap_km.loc[0.01], top + 0.55, "0.01%", color=DB, fontsize=7.5, ha="center")
     ax.set_ylim(-0.6, top + 1.1)
     save(fig, "s62_earth_radius")
 
