@@ -32,9 +32,11 @@ function R = compare_models_rev1(options)
 %   Terrain for the MATLAB models (LRTerrain):
 %     "usgs1" (default) USGS 3DEP 1", the terrain matlab_itm uses. MATLAB
 %             reads custom terrain only as DTED, so the tiles the links
-%             cross are written once as DTED level 2 with
-%             itm_dted_tiles_rev1 (about 1.3 s and 26 MB per tile, cached)
-%             and registered with addCustomTerrain as "itm_usgs1".
+%             cross are written as DTED level 2 and registered as
+%             "itm_usgs1" by itm_matlab_terrain_rev1. The first run in an
+%             area takes about 30 s per tile to register; later runs reuse
+%             it. To prepare a study area in advance:
+%               itm_matlab_terrain_rev1(region=[36 42 -83 -74])
 %     "gmted2010" MATLAB's built-in global terrain (about 250 m)
 %
 %   All models use the same inputs: epsilon 25, sigma 0.02 S/m, vertical
@@ -188,7 +190,6 @@ models = options.Models(arrayfun(@(m) avail.(m), options.Models));
 %% Terrain for the MATLAB terrain models
 map_name = options.LRTerrain;
 if any(ismember(models, ["matlab_lr", "rfprop_tirem", "itm_on_matlab_terrain"])) && map_name == "usgs1"
-    map_name = "itm_usgs1";
     tiles = zeros(0, 2);
     for k = 1:n % every 1-degree tile a path crosses
         [la, lo] = track2(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), [], 'degrees', 200);
@@ -196,13 +197,7 @@ if any(ismember(models, ["matlab_lr", "rfprop_tirem", "itm_on_matlab_terrain"]))
     end
     tiles = unique(tiles, 'rows');
     tiles = tiles(tiles(:, 1) >= -50 & tiles(:, 1) <= 49, :);   % DTED level 2 has 1" spacing below 50 degrees
-    fprintf('Writing %d USGS 1" tiles as DTED for the MATLAB terrain models ...\n', size(tiles, 1));
-    dted = itm_dted_tiles_rev1(tiles(:, 1), tiles(:, 2));
-    try
-        removeCustomTerrain(map_name);
-    catch
-    end
-    addCustomTerrain(map_name, cellstr(dted), 'FillMissing', true, 'Attribution', 'USGS 3DEP 1 arc-second');
+    map_name = itm_matlab_terrain_rev1(tiles(:, 1), tiles(:, 2));   % once per tile set; MATLAB keeps it
 end
 
 %% Storage: loss (n x n_rel), angles (n x 2), mechanism class, seconds per link

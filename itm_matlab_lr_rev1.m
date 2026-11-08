@@ -17,10 +17,11 @@ function [loss_db, info] = itm_matlab_lr_rev1(tx, rx, f_mhz, reliability, option
 %
 %   How the terrain gets in: MATLAB terrain models read custom terrain
 %   only as DTED, through addCustomTerrain. The 1-degree tiles the paths
-%   cross are written once as DTED level 2 (itm_dted_tiles_rev1, about
-%   1.3 s and 26 MB per tile, cached) and registered as the custom
-%   terrain "itm_usgs1". Later calls in the same area reuse them.
-%   DTED stores whole meters, so heights are rounded to 1 m.
+%   cross are written as DTED level 2 and registered as the custom terrain
+%   "itm_usgs1" by itm_matlab_terrain_rev1. Registering takes about 30 s
+%   per tile, once: MATLAB keeps it across sessions. For a study area, run
+%   itm_matlab_terrain_rev1(region=[lat_min lat_max lon_min lon_max])
+%   first. DTED stores whole meters, so heights are rounded to 1 m.
 %
 %   Defaults, as in itm_pathloss_rev1: confidence 50 %, vertical
 %   polarization, epsilon 25, sigma 0.02 S/m, the ITU-R P.617 climate and
@@ -137,32 +138,12 @@ end
 end
 
 function map = register_tiles(tx, rx, n, folder)
-% Write the DTED tiles these paths cross and register them, all together,
-% as custom terrain "itm_usgs1". Re-registers only when new tiles appear.
-persistent registered
-map = "itm_usgs1";
+% The 1-degree tiles these paths cross, registered as "itm_usgs1"
 tiles = zeros(0, 2);
-for k = 1:n % every 1-degree tile a path crosses
+for k = 1:n % every tile a path crosses
     [la, lo] = track2(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), [], 'degrees', 200);
     tiles = [tiles; floor([la, lo])]; %#ok<AGROW> n links
 end
 tiles = unique(tiles, 'rows');
-if any(tiles(:, 1) < -50 | tiles(:, 1) > 49)
-    error('itm:matlablr:Latitude', ['terrain="usgs1" covers latitudes -50 to 50 degrees ' ...
-        '(DTED level 2 has 1" spacing only there). Use terrain="gmted2010".']);
-end
-if isempty(registered)
-    registered = zeros(0, 2);
-end
-if all(ismember(tiles, registered, 'rows'))
-    return
-end
-all_tiles = unique([registered; tiles], 'rows');
-files = itm_dted_tiles_rev1(all_tiles(:, 1), all_tiles(:, 2), folder=folder);
-try
-    removeCustomTerrain(map);
-catch
-end
-addCustomTerrain(map, cellstr(files), 'FillMissing', true, 'Attribution', 'USGS 3DEP 1 arc-second');
-registered = all_tiles;
+map = itm_matlab_terrain_rev1(tiles(:, 1), tiles(:, 2), folder=folder);
 end
