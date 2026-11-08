@@ -308,6 +308,26 @@ if isfile(fi)
     N = its_numbers(N, readtable(fi, 'TextType', 'string'), rd('its_phase2_paths.csv'), CD, r1);
 end
 
+% ---- ITS Phase 1 and low-antenna spot measurements (compare_its_spot_rev1) ----
+fs2 = fullfile(CD, 'its_spot_results.csv');
+if isfile(fs2)
+    N = spot_numbers(N, readtable(fs2, 'TextType', 'string'), CD, r1);
+end
+
+% ---- P.2108 clutter on the grids (grid_clutter_rev1) ----
+fg = fullfile(CD, 'grid_clutter.csv');
+if isfile(fg)
+    Gc = readtable(fg, 'TextType', 'string');
+    for i = 1:height(Gc)
+        if ~ismember(Gc.required_loss_db(i), [150 160 170 180 190 200]) || Gc.clutter(i) == "none", continue, end
+        N(sprintf('gclut_%s_%s_%s_%d', Gc.site(i), Gc.model(i), Gc.clutter(i), Gc.required_loss_db(i))) = ...
+            [Gc.area_km2(i), r1(Gc.max_distance_km(i))];
+    end
+    N("gclut_loss") = r1(unique(Gc.median_clutter_loss_db(Gc.clutter == "rx_p50")));
+    N("gclut_loss_p10") = r1(unique(Gc.median_clutter_loss_db(Gc.clutter == "rx_p10")));
+    N("gclut_loss_p90") = r1(unique(Gc.median_clutter_loss_db(Gc.clutter == "rx_p90")));
+end
+
 % ---- western terrain sample (western_terrain_rev1) ----
 fw = fullfile(CD, 'western_links.csv');
 if isfile(fw)
@@ -466,6 +486,49 @@ end
 q = Pp(ismember(Pp.freq_mhz, [1846 2180 4595 4820]), :);
 N("its_pairs_3") = [r1(median(q.meas_c_minus_o_db)), r1(prctile(q.meas_c_minus_o_db, 25)), r1(prctile(q.meas_c_minus_o_db, 75)), ...
     r1(median(q.itm_c_minus_o_db)), r1(median(q.p2001_c_minus_o_db)), height(q)];
+end
+
+function N = spot_numbers(N, T, CD, r1)
+% Per measurement set: censoring-aware median error (each path counts once)
+M = ["itm", "p452", "p2001"];
+labels = struct('PL', "Colorado plains", 'MT', "Colorado mountains", 'OH', "Ohio hills", ...
+    'WY', "Laramie Mountains, Wyoming", 'ID', "Snake River Plateau, Idaho", 'WA', "Columbia Plateau, Washington");
+[g, ~] = findgroups(T(:, {'set', 'path', 'terrain', 'freq_mhz'}));
+cnt = accumarray(g, 1); T.w = 1 ./ cnt(g);
+T.band = repmat("UHF", height(T), 1); T.band(T.freq_mhz < 75) = "50 MHz"; T.band(T.freq_mhz >= 75 & T.freq_mhz < 150) = "100 MHz";
+T.band(T.freq_mhz >= 200 & T.freq_mhz < 300) = "230 MHz"; T.band(T.freq_mhz >= 300) = "416 MHz";
+rows = {};
+for st = unique(T.set, 'stable')'
+    for tr = unique(T.terrain(T.set == st), 'stable')'
+        for bn = unique(T.band(T.set == st), 'stable')'
+            s = T.set == st & T.terrain == tr & T.band == bn;
+            cs = sum(T.w(s) .* T.censored(s)) / sum(T.w(s));
+            for m = M
+                e = T.(m + "_50")(s) - T.meas_lb_db(s);
+                km = km_median(e, T.censored(s), T.w(s));
+                rows(end + 1, :) = {st, labels.(st), tr, bn, m, numel(unique(T.path(s))), km, cs, median(T.delta_h_m(s))}; %#ok<AGROW>
+                N(sprintf('spot_%s_%s_%s_%s', st, tr, replace(bn, " ", ""), m)) = [r1(km), numel(unique(T.path(s)))];
+            end
+        end
+    end
+end
+S = cell2table(rows, 'VariableNames', {'set', 'label', 'terrain', 'band', 'model', 'paths', 'km_median_error_db', ...
+    'censored_share', 'median_delta_h_m'});
+writetable(S, fullfile(CD, 'its_spot_summary.csv'));
+N("spot_paths") = numel(unique(T.set + T.path)); N("spot_rows") = height(T);
+for grp = ["phase1", "lowant"]
+    if grp == "phase1", s = ismember(T.set, ["PL", "MT", "OH"]); else, s = ~ismember(T.set, ["PL", "MT", "OH"]) & T.terrain == "dem"; end
+    N("spot_" + grp + "_paths") = numel(unique(T.set(s) + T.path(s)));
+    for m = M
+        N("spot_" + grp + "_" + m) = r1(km_median(T.(m + "_50")(s) - T.meas_lb_db(s), T.censored(s), T.w(s)));
+    end
+    N("spot_" + grp + "_cens") = round(100 * sum(T.w(s) .* T.censored(s)) / sum(T.w(s)));
+end
+% the gap between the models on the measured paths, and the site shift
+q = T(T.terrain ~= "dem_high", :);
+N("spot_gap_med") = r1(median(q.itm_50 - q.p2001_50, 'omitnan'));
+a = T(T.terrain == "dem", :); b = T(T.terrain == "dem_high", :);
+N("spot_shift_itm") = r1(median(b.itm_50 - a.itm_50, 'omitnan'));
 end
 
 function m = km_median(e, cens, w)

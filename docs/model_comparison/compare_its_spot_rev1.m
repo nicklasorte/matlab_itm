@@ -90,7 +90,7 @@ for s = options.Sets
             [dh, reg] = itm_info(prof, t1, r1);
             for j = 1:height(C)
                 f = C.freq(j);
-                if f < 30, continue, end                       % 20 MHz: below the models' range
+                if f < 30 || startsWith(C.name(j), "KLIR"), continue, end   % 20 MHz; second transmitter (no profile)
                 if phase1
                     hrx = C.rht(j) * ones(height(R), 1); a = R.A(:, j);
                 else

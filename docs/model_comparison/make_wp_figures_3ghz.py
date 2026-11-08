@@ -675,12 +675,67 @@ def s35_east_west():
     save(fig, "s35_east_west")
 
 
+def s36_grid_clutter():
+    """Exclusion area against required loss, with and without P.2108 clutter at the receiver."""
+    f = CD / "grid_clutter.csv"
+    if not f.exists():
+        return
+    t = pd.read_csv(f)
+    fig, axs = plt.subplots(1, 2, figsize=(W, 3.0), layout="constrained", sharey=True)
+    for ax, site, name in zip(axs, ["dc", "la"], ["Washington, DC", "Los Angeles"]):
+        clean(ax)
+        ends = []
+        for m in ["itm", "p2001"]:
+            for c, ls, lw, al in [("none", (0, (3, 2)), 1.4, 0.7), ("rx_p50", "-", 2.4, 1.0)]:
+                q = t[(t.site == site) & (t.model == m) & (t.clutter == c)]
+                ax.plot(q.required_loss_db, q.area_km2 / 1000, color=MC[m], ls=ls, lw=lw, alpha=al)
+                lab = ML[m] + (" with clutter" if c == "rx_p50" else "")
+                ends.append((q.area_km2.iloc[-1] / 1000, lab, MC[m]))
+        ax.set_title(name, loc="left", fontsize=9.5, color=DB)
+        ax.set_xlabel("Required loss (dB)")
+        ax.set_xlim(140, 200)
+    axs[0].set_ylabel("Exclusion area (thousand km²)")
+    ax = axs[1]
+    for y, lab, c in [(0.88, "Dashed: no clutter", GR), (0.80, "Solid: P.2108 at the receiver", GR)]:
+        ax.text(0.03, y, lab, transform=ax.transAxes, fontsize=8, color=c)
+    axs[0].text(0.03, 0.88, "ITM", transform=axs[0].transAxes, fontsize=8.5, color=LB, fontweight="semibold")
+    axs[0].text(0.03, 0.80, "P.2001", transform=axs[0].transAxes, fontsize=8.5, color=DB, fontweight="semibold")
+    save(fig, "s36_grid_clutter")
+
+
+def s37_spot_sets():
+    """Median error by ITS measurement set: low antennas and low frequencies."""
+    f = CD / "its_spot_summary.csv"
+    if not f.exists():
+        return
+    t = pd.read_csv(f)
+    t = t[t.terrain != "dem_high"]
+    t["row"] = t.label + ", " + t.band
+    order = t[t.model == "itm"].sort_values("km_median_error_db").row.tolist()
+    fig, ax = new(h=3.6); clean(ax, grid="x")
+    for i, r in enumerate(order):
+        q = t[t.row == r].set_index("model")
+        v = q.km_median_error_db
+        ax.plot([v.min(), v.max()], [i, i], color="#DDDDDD", lw=3, zorder=1, solid_capstyle="round")
+        for m in ["p452", "p2001", "itm"]:
+            if m in v and np.isfinite(v[m]):
+                ax.scatter(v[m], i, s=36, color=MC[m], zorder=3, edgecolor="white", lw=0.5)
+    ax.axvline(0, color=DB, lw=0.8)
+    ax.set_yticks(range(len(order)), order, fontsize=8)
+    ax.set_xlabel("Median predicted minus measured loss (dB)")
+    ax.text(0.99, 0.04, "ITM", transform=ax.transAxes, ha="right", color=LB, fontsize=8.5, fontweight="semibold")
+    ax.text(0.99, 0.11, "P.2001", transform=ax.transAxes, ha="right", color=DB, fontsize=8.5, fontweight="semibold")
+    ax.text(0.99, 0.18, "P.452", transform=ax.transAxes, ha="right", color=GR, fontsize=8.5, fontweight="semibold")
+    save(fig, "s37_spot_sets")
+
+
 ALL = [s01_smooth_earth, s02_knife_edge, s03_knife_edge_function, s04_gap_by_mechanism, s05_gap_vs_terrain, s06_frequency_sweep,
        s07_terrain_resolution, s08_diffraction_terms, s09_ablation, s10_radials, s11_window_by_length, s12_the_jump, s13_anatomy,
        s14_where_window_falls, s15_window_over_time, s16_itm_vs_p452, s17_over_sea, s18_ducting_takeover, s19_enhancement_real,
        s20_enhancement_measured, s21_archetypes, s22_distance_threshold, s23_error_vs_frequency, s24_error_vs_time, s25_error_vs_terrain,
        s26_uncertainty_gap, s27_uncertainty_measured, s28_sensitivity, s29_grid_maps, s30_grid_exclusion, s31_area_measurements, s32_grid_convergence,
-       s33_its_error_by_distance, s34_its_concealed, s35_east_west]
+       s33_its_error_by_distance, s34_its_concealed, s35_east_west,
+       s36_grid_clutter, s37_spot_sets]
 
 if __name__ == "__main__":
     for fn in ALL:
