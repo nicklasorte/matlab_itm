@@ -23,6 +23,14 @@ function R = compare_models_rev1(options)
 %                      library; terrain from LRTerrain)
 %     matlab_lr        propagationModel("longley-rice") + pathloss, one call
 %                      per time percentage (terrain from LRTerrain)
+%     p452             ITU-R P.452-18, nicklasorte/matlab_itu_p452
+%                      (p452_p2p_rev1) on the matlab_itm terrain profile,
+%                      bare earth (g = h), so terrain matches matlab_itm.
+%                      P.452 is defined for 0.001 to 50 % only: columns
+%                      above 50 % are NaN.
+%     p452_clutter     The same with P.452's ground-cover profile g from
+%                      Copernicus GLO-30 (p452_terrain_profiles_rev1), as
+%                      the model is meant to be run
 %     itm_on_matlab_terrain
 %                      itm_p2p_rev1 on a profile read through MATLAB's
 %                      terrain (elevation with the same Map as matlab_lr,
@@ -76,6 +84,9 @@ function R = compare_models_rev1(options)
 %     RxHeightM    [min max] RX height above ground ([2 30])
 %     Tpol         0 horizontal, 1 vertical (1)
 %     Reliability  time percentages (0.1 to 99.9, 45 values, dense at the tails)
+%     P452Dir      folder with matlab_itu_p452 (""; if empty, it must be
+%                  on the path, or in a matlab_itu_p452 folder next to this
+%                  repository)
 %     SeadlibDir   folder with SEADLib.dll and the USGS tiles ("C:\USGS")
 %     TiremDir     folder with the TIREM library ("C:\USGS\TIREM5")
 %     Models       subset of models to run (all)
@@ -107,10 +118,11 @@ arguments
     options.RxHeightM (1,2) double {mustBePositive} = [2 30]
     options.Tpol (1,1) double {mustBeMember(options.Tpol, [0 1])} = 1
     options.Reliability (1,:) double = [0.1:0.1:0.9, 1:9, 10:10:90, 91:99, 99.1:0.1:99.9]
+    options.P452Dir (1,1) string = ""
     options.SeadlibDir (1,1) string = "C:\USGS"
     options.TiremDir (1,1) string = "C:\USGS\TIREM5"
     options.Models (1,:) string = ["matlab_itm", "seadlib_itm", "itm_on_seadlib_profile", ...
-        "seadlib_tirem", "rfprop_tirem", "matlab_lr", "itm_on_matlab_terrain"]
+        "seadlib_tirem", "rfprop_tirem", "matlab_lr", "p452", "p452_clutter", "itm_on_matlab_terrain"]
     options.LRTerrain (1,1) string {mustBeMember(options.LRTerrain, ["usgs1", "usgs1_dted", "gmted2010"])} = "usgs1"
     options.Prefetch (1,1) logical = true
     options.ExcelFile (1,1) string = "compare_models_results.xlsx"
@@ -186,6 +198,22 @@ for m = ["matlab_lr", "itm_on_matlab_terrain"]
     if isfield(avail, m) && ~exist('propagationModel', 'file')
         avail.(m) = false;
         why.(m) = "needs Antenna Toolbox or Communications Toolbox";
+    end
+end
+% P.452: on the path, in P452Dir, or next to this repository
+if any(isfield(avail, ["p452", "p452_clutter"]))
+    p452_dir = options.P452Dir;
+    if strlength(p452_dir) == 0
+        p452_dir = fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), "matlab_itu_p452");
+    end
+    if ~exist('p452_p2p_rev1', 'file') && isfile(fullfile(p452_dir, "p452_p2p_rev1.m"))
+        addpath(char(p452_dir));     % its terrain comes from this repository, already on the path
+    end
+    for m = ["p452", "p452_clutter"]
+        if isfield(avail, m) && ~exist('p452_p2p_rev1', 'file')
+            avail.(m) = false;
+            why.(m) = "matlab_itu_p452 not found (set P452Dir)";
+        end
     end
 end
 if options.LRTerrain == "usgs1" && isfield(avail, "itm_on_matlab_terrain")
@@ -355,6 +383,21 @@ end
                 [L, info] = pathloss(pm, rxs, txs, 'Map', map_name);
                 el = mw_angles(info);
                 [~, mech_raw] = tirem_info(info);
+                keep_info(m, info);
+
+            case {"p452", "p452_clutter"}
+                if m == "p452"
+                    surf = "none";
+                else
+                    surf = "copernicus";
+                end
+                prof = p452_terrain_profiles_rev1(tx(k, 1), tx(k, 2), rx(k, 1), rx(k, 2), surface_source=surf);
+                ok = rel >= 0.001 & rel <= 50;           % P.452-18 range
+                L = NaN(1, n_rel);
+                [L(ok), info] = p452_p2p_rev1(prof.d_km, prof.h_m, prof.g_m, prof.zone, tx(k, 3), rx(k, 3), ...
+                    f_mhz / 1000, rel(ok), tx_deg=tx(k, 1:2), rx_deg=rx(k, 1:2), polarization=pol_name);
+                el = rad2deg([info.theta_t, info.theta_r] / 1000);   % mrad to degrees
+                mech_raw = p452_mechanism(info, rel(ok));
                 keep_info(m, info);
 
             case "itm_on_matlab_terrain"
@@ -574,5 +617,23 @@ names = matlab.lang.makeValidName("p_" + compose("%g", R.reliability));
 for m = models
     T = [R.links(:, {'link', 'length_km'}), array2table(out.(m).loss_db, 'VariableNames', cellstr(names))];
     writetable(T, file, 'Sheet', char(strip(extractBefore("Loss_" + m + blanks(31), 32))));   % Excel caps names at 31
+end
+end
+
+function mech = p452_mechanism(info, p)
+% Dominant P.452 mechanism at 50 % (or the nearest percentage computed):
+% the lowest of the diffraction-path loss (Lb0p + Ldp), troposcatter
+% (Lbs), and ducting/layer reflection (Lba)
+[~, j] = min(abs(p - 50));
+L = [info.Lb0p(j) + info.Ldp(j), info.Lbs(j), info.Lba(j)];
+[~, k] = min(L);
+if k == 1 && info.pathtype == 1
+    mech = "LOS";
+elseif k == 1
+    mech = "Diffraction";
+elseif k == 2
+    mech = "Troposcatter";
+else
+    mech = "Anomalous (ducting)";
 end
 end
