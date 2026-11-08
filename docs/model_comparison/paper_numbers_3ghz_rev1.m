@@ -15,6 +15,11 @@ function N = paper_numbers_3ghz_rev1(options)
 %     chart_data/grid_summary.csv      per site and model: exclusion area
 %                                      and farthest point at each
 %                                      required loss, 50 % of time
+%     chart_data/its_phase2_link_errors.csv, its_phase2_error_by_freq.csv,
+%       its_phase2_error_by_distance.csv, its_phase2_pairs.csv  ITS Phase 2
+%       measurements (when compare_its_phase2_rev1 has run)
+%     chart_data/terrain_east_west.csv  the eastern and western link gaps
+%       (when western_terrain_rev1 has run)
 %   Run it after export_deep_dive_data_rev1, uncertainty_rev1,
 %   sensitivity_rev1, and grid_separation_rev1. No model runs.
 
@@ -30,7 +35,7 @@ CLS = ["Line of sight", "Diffraction", "Troposcatter"];
 
 links = rd('real_terrain_links.csv');
 b = rd('real_terrain_by_link.csv');
-b = join(b, links(:, {'link', 'delta_h_m', 'length_km'}));
+b = join(b, links(:, {'link', 'region', 'delta_h_m', 'length_km'}));
 b.apart = b.itm_50_db - b.p2001_50_db;
 F0 = b.freq_mhz(1);
 for c = CLS
@@ -297,6 +302,18 @@ if isfile(fa)
     N("area_f_range") = [min(Ar.freq_mhz), max(Ar.freq_mhz)];
 end
 
+% ---- ITS Phase 2 irregular-terrain measurements (compare_its_phase2_rev1) ----
+fi = fullfile(CD, 'its_phase2_results.csv');
+if isfile(fi)
+    N = its_numbers(N, readtable(fi, 'TextType', 'string'), rd('its_phase2_paths.csv'), CD, r1);
+end
+
+% ---- western terrain sample (western_terrain_rev1) ----
+fw = fullfile(CD, 'western_links.csv');
+if isfile(fw)
+    N = west_numbers(N, rd('western_links.csv'), b, FIG, CD, r1, CLS);
+end
+
 % ---- smooth-earth distance to threshold ----
 th = readtable(fullfile(FIG, 'table_distance_to_threshold.csv'));
 N("thr_maxdiff_land") = max(abs([th.land_itm_km - th.land_p2001_km; th.land_itm_km - th.land_p452_km]));
@@ -305,6 +322,193 @@ fid = fopen(fullfile(FIG, 'numbers_3ghz.json'), 'w');
 fprintf(fid, '%s', jsonencode(N, 'PrettyPrint', true));
 fclose(fid);
 fprintf('wrote %d numbers to numbers_3ghz.json\n', N.Count);
+end
+
+function N = its_numbers(N, T, Pt, CD, r1)
+% ITS Phase 2: link-level errors (median over each link's receiver heights),
+% summaries by frequency and distance, censored results, and open versus
+% concealed pairs. Error = model minus measured basic transmission loss.
+M = ["itm", "p452", "p2001"];
+T.group = T.rcvr + "-" + T.rht;
+T.group(T.rcvr == 0) = "h3-13";
+use = ~(T.rcvr == 0 & T.hrx_m < 3);                % Colorado: heights of 3 m and up
+U = T(use & ~T.censored, :);
+for m = M, U.("e_" + m) = U.(m + "_50") - U.meas_lb_db; end
+[g, K] = findgroups(U(:, {'set', 'path', 'siting', 'freq_mhz', 'group'}));
+K.d_km = splitapply(@(x) x(1), U.d_km, g);
+K.delta_h_m = splitapply(@(x) x(1), U.delta_h_m, g);
+K.itm_region = splitapply(@(x) x(1), U.itm_region, g);
+K.n_heights = splitapply(@numel, U.d_km, g);
+K.meas_excess_db = splitapply(@median, U.meas_excess_db, g);
+K.meas_lb_db = splitapply(@median, U.meas_lb_db, g);
+for m = M
+    K.(m + "_50") = splitapply(@(x) median(x, 'omitnan'), U.(m + "_50"), g);
+    K.("err_" + m) = splitapply(@(x) median(x, 'omitnan'), U.("e_" + m), g);
+end
+K.near3 = ismember(K.freq_mhz, [1846 2180 4595 4820]);
+writetable(K, fullfile(CD, 'its_phase2_link_errors.csv'));
+
+all3 = all(isfinite(K{:, "err_" + M}), 2);
+C = K(all3, :);
+N("its_paths") = nnz(Pt.kept); N("its_paths_out") = nnz(~Pt.kept);
+N("its_rows") = height(T); N("its_links") = height(C);
+N("its_d_range") = [r1(min(C.d_km)), r1(max(C.d_km))];
+rows = {};
+for s = ["All", "R1", "R2", "R3", "VA"]
+    for f = unique(C.freq_mhz)'
+        q = C((s == "All" | C.set == s) & C.freq_mhz == f, :);
+        if isempty(q), continue, end
+        for m = M
+            e = q.("err_" + m);
+            rows(end + 1, :) = {s, f, m, numel(e), mean(e), median(e), rms(e)}; %#ok<AGROW>
+        end
+    end
+end
+writetable(cell2table(rows, 'VariableNames', {'set', 'freq_mhz', 'model', 'n', 'mean_error_db', 'median_error_db', 'rms_error_db'}), ...
+    fullfile(CD, 'its_phase2_error_by_freq.csv'));
+Q = C(C.near3, :);
+N("its3_n") = height(Q); N("its3_paths") = numel(unique(Q.set + Q.path + Q.siting));
+for m = M
+    e = Q.("err_" + m);
+    N("its3_" + m) = [r1(mean(e)), r1(median(e)), r1(rms(e))];
+    for s = ["R1", "R2", "R3", "VA"]
+        e = Q.("err_" + m)(Q.set == s);
+        N("its3_" + s + "_" + m) = [r1(mean(e)), r1(median(e)), numel(e)];
+    end
+end
+% Censoring-aware medians: every receiver height near 3 GHz, censored results
+% included. A censored result's measured loss is a lower bound, so its error
+% (model minus measured) is an upper bound; the Kaplan-Meier estimate of the
+% median handles that. NaN when more than half the results are censored
+% below the median (the median is then only a bound).
+Rw = T(use & ismember(T.freq_mhz, [1846 2180 4595 4820]), :);
+ed = [0 5 15 50 150]; rows = {};
+for i = 1:numel(ed) - 1
+    s = Q.d_km >= ed(i) & Q.d_km < ed(i + 1);
+    sr = Rw.d_km >= ed(i) & Rw.d_km < ed(i + 1);
+    for m = M
+        e = Q.("err_" + m)(s);
+        km = km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr));
+        rows(end + 1, :) = {ed(i), ed(i + 1), m, numel(e), mean(e), median(e), prctile(e, 25), prctile(e, 75), ...
+            km, mean(Rw.censored(sr))}; %#ok<AGROW>
+        N(sprintf('its3_d%d_%s', ed(i), m)) = [r1(median(e)), r1(mean(e)), numel(e), r1(km)];
+    end
+    N(sprintf('its3_d%d_cens', ed(i))) = round(100 * mean(Rw.censored(sr)));
+end
+writetable(cell2table(rows, 'VariableNames', {'d_low_km', 'd_high_km', 'model', 'n', 'mean_error_db', 'median_error_db', ...
+    'p25_error_db', 'p75_error_db', 'km_median_error_db', 'censored_share'}), fullfile(CD, 'its_phase2_error_by_distance.csv'));
+% by set, censoring-aware
+for st = ["R1", "R2", "R3", "VA"]
+    sr = Rw.set == st;
+    N("its3_" + st + "_cens") = round(100 * mean(Rw.censored(sr)));
+    for m = M
+        N("its3_" + st + "_" + m + "_km") = r1(km_median(Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr), Rw.censored(sr)));
+    end
+end
+% Colorado mountains (R2) beyond 15 km: the divergence window in measured data
+sr = Rw.set == "R2" & Rw.d_km >= 15;
+N("its3_r2far_rows") = nnz(sr); N("its3_r2far_cens") = round(100 * mean(Rw.censored(sr)));
+N("its3_r2far_dh") = round(median(Rw.delta_h_m(sr)));
+for m = M
+    e = Rw.(m + "_50")(sr) - Rw.meas_lb_db(sr); c = logical(Rw.censored(sr));
+    N("its3_r2far_" + m) = [r1(median(e(~c))), r1(km_median(e, c))];
+    N("its3_r2far_below_" + m) = round(100 * mean(e(c) < 0));   % censored: model below the bound
+end
+% the divergence window: rough terrain at 15 to 150 km
+w = Q.d_km >= 15 & Q.delta_h_m > 150;
+N("its3_win_n") = nnz(w);
+wr = Rw.d_km >= 15 & Rw.delta_h_m > 150;
+N("its3_win_cens") = round(100 * mean(Rw.censored(wr)));
+for m = M
+    N("its3_win_" + m) = [r1(median(Q.("err_" + m)(w))), r1(mean(Q.("err_" + m)(w))), ...
+        r1(km_median(Rw.(m + "_50")(wr) - Rw.meas_lb_db(wr), Rw.censored(wr)))];
+    N("its3_nowin_" + m) = [r1(median(Q.("err_" + m)(~w))), r1(mean(Q.("err_" + m)(~w)))];
+end
+% which model is closer, link by link, in the window
+N("its3_win_itm_closer") = nnz(abs(Q.err_itm(w)) < abs(Q.err_p2001(w)));
+% censored results near 3 GHz: share where the model predicts less loss than the lower bound
+Z = T(use & T.censored & ismember(T.freq_mhz, [1846 2180 4595 4820]), :);
+N("its3_cens_n") = height(Z); N("its3_cens_links") = numel(unique(Z.set + Z.path + Z.siting + Z.freq_mhz));
+for m = M
+    N("its3_cens_below_" + m) = round(100 * mean(Z.(m + "_50") < Z.meas_lb_db));
+end
+% open versus concealed pairs: same path, frequency, and receiver configuration
+O = K(K.siting == "O", :); Cn = K(K.siting == "C", :);
+[~, io, ic] = intersect(O(:, {'set', 'path', 'freq_mhz', 'group'}), Cn(:, {'set', 'path', 'freq_mhz', 'group'}));
+Pp = O(io, {'set', 'path', 'freq_mhz', 'group', 'd_km'});
+Pp.meas_c_minus_o_db = Cn.meas_lb_db(ic) - O.meas_lb_db(io);
+for m = M, Pp.(m + "_c_minus_o_db") = Cn.(m + "_50")(ic) - O.(m + "_50")(io); end
+writetable(Pp, fullfile(CD, 'its_phase2_pairs.csv'));
+N("its_pairs_n") = height(Pp); N("its_pairs_paths") = numel(unique(Pp.set + Pp.path));
+bands = {"lo", Pp.freq_mhz < 1000; "mid", Pp.freq_mhz >= 1000 & Pp.freq_mhz < 3000; "hi", Pp.freq_mhz >= 3000};
+for i = 1:3
+    q = Pp(bands{i, 2}, :);
+    N("its_pairs_" + bands{i, 1}) = [r1(median(q.meas_c_minus_o_db)), r1(median(q.itm_c_minus_o_db)), ...
+        r1(median(q.p2001_c_minus_o_db)), height(q)];
+end
+q = Pp(ismember(Pp.freq_mhz, [1846 2180 4595 4820]), :);
+N("its_pairs_3") = [r1(median(q.meas_c_minus_o_db)), r1(prctile(q.meas_c_minus_o_db, 25)), r1(prctile(q.meas_c_minus_o_db, 75)), ...
+    r1(median(q.itm_c_minus_o_db)), r1(median(q.p2001_c_minus_o_db)), height(q)];
+end
+
+function m = km_median(e, cens)
+% Kaplan-Meier median of errors e (model minus measured) when some are
+% upper bounds (cens true). With x = -e, the bounds are right-censored.
+cens = logical(cens); ok = isfinite(e); e = e(ok); cens = cens(ok);
+m = NaN;
+if isempty(e), return, end
+[f, x] = ecdf(-e, 'Censoring', cens);
+k = find(f >= 0.5, 1);
+if ~isempty(k), m = -x(k); end
+end
+
+function N = west_numbers(N, W, b, FIG, CD, r1, CLS)
+% Western links against the eastern 60: the ITM minus P.2001 gap by class,
+% by region, and in the divergence window.
+W.apart = W.itm_50 - W.p2001_50; W.apart452 = W.itm_50 - W.p452_50;
+N("west_n") = height(W);
+N("west_regions") = unique(W.region, 'stable')';
+for c = CLS
+    q = W(W.itm_class == c, :);
+    N("west_n_" + c) = height(q);
+    if height(q), N("west_gap_" + c) = r1(median(q.apart)); end
+end
+for rg = unique(W.region, 'stable')'
+    q = W(W.region == rg, :); k = replace(rg, " ", "_");
+    N("west_" + k + "_dh") = round(median(q.delta_h_m));
+    N("west_" + k + "_gap") = r1(median(q.apart));
+    N("west_" + k + "_gt20") = nnz(q.apart > 20);
+end
+N("west_dh_med") = round(median(W.delta_h_m)); N("east_dh_med") = round(median(b.delta_h_m));
+N("west_gap_med") = r1(median(W.apart)); N("east_gap_med") = r1(median(b.apart));
+N("west_gt20") = nnz(W.apart > 20); N("east_gt20") = nnz(b.apart > 20);
+N("west_gap_max") = r1(max(W.apart));
+N("west_p2001_p452_maxabs") = r1(max(abs(W.p2001_50 - W.p452_50)));
+win = W.delta_h_m > 150 & W.length_km < 150;
+N("west_win_n") = nnz(win); N("west_win_med") = r1(median(W.apart(win)));
+if any(~win), N("west_out_med") = r1(median(W.apart(~win))); end
+% time distribution: does the gap close at 1 %?
+for p = [1 10]
+    N(sprintf('west_gap_%d', p)) = r1(median(W.(sprintf('itm_%d', p)) - W.(sprintf('p2001_%d', p))));
+end
+% ITM's smooth-earth weight on the western diffraction links
+ft = fullfile(FIG, 'table_diffraction_terms_west.csv');
+if isfile(ft)
+    t = readtable(ft, 'TextType', 'string'); gd = t.itm_excess_50 - t.p2001_excess_50;
+    N("west_nd") = height(t);
+    N("west_w_lt") = r1(median(gd(t.w_d3 < 0.12))); N("west_w_lt_n") = nnz(t.w_d3 < 0.12);
+    if any(t.w_d3 >= 0.12), N("west_w_ge") = r1(median(gd(t.w_d3 >= 0.12))); end
+    N("west_w_ge_n") = nnz(t.w_d3 >= 0.12);
+    N("west_term_k") = r1(median((1 - t.w_d3) .* t.A_k_d3)); N("west_term_fo") = r1(median(t.A_fo));
+    N("west_term_bull") = r1(median(t.Lbulla));
+end
+% one table for the east-west figure
+E = table(repmat("East", height(b), 1), b.link, b.delta_h_m, b.length_km, b.itm_class, b.apart, b.itm_50_db - b.p452_50_db, ...
+    'VariableNames', {'side', 'link', 'delta_h_m', 'length_km', 'itm_class', 'itm_minus_p2001_db', 'itm_minus_p452_db'});
+Wt = table(repmat("West", height(W), 1), (1:height(W))', W.delta_h_m, W.length_km, W.itm_class, W.apart, W.apart452, ...
+    'VariableNames', E.Properties.VariableNames);
+Wt.region = W.region; E.region = b.region;
+writetable([E; Wt], fullfile(CD, 'terrain_east_west.csv'));
 end
 
 function c = classof(code)

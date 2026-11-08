@@ -10,7 +10,9 @@ figure_data_3ghz_rev1; chart_data/ from export_deep_dive_data_rev1,
 uncertainty_rev1, sensitivity_rev1, grid_separation_rev1,
 grid_convergence_rev1, and paper_numbers_3ghz_rev1;
 figures/table_*.csv from make_wp_figures_rev1, diffraction_decomposition_rev1,
-compare_dbsg3_rev1, and compare_dbsg3_area_rev1). The study frequency
+compare_dbsg3_rev1, and compare_dbsg3_area_rev1; chart_data/its_phase2_*.csv and
+terrain_east_west.csv from compare_its_phase2_rev1, western_terrain_rev1, and
+paper_numbers_3ghz_rev1). The study frequency
 is read from the data (3000 MHz after run_3ghz_rev1). Writes figures/sNN_*.png.
 
 Run:  run_3ghz_rev1 in MATLAB, then python3 make_wp_figures_3ghz.py
@@ -605,11 +607,82 @@ def s31_area_measurements():
     save(fig, "s31_area_measurements")
 
 
+# ===================== ITS Phase 2 measurements and western terrain =====================
+def s33_its_error_by_distance():
+    """Censoring-aware median error near 3 GHz (1.8-4.8 GHz) by path length, ITS Phase 2."""
+    f = CD / "its_phase2_error_by_distance.csv"
+    if not f.exists():
+        return
+    t = pd.read_csv(f)
+    q0 = t[t.model == "itm"].reset_index(drop=True)
+    lab = [f"{a:g}-{b:g} km" for a, b in q0[["d_low_km", "d_high_km"]].values]
+    fig, ax = new(); clean(ax); ends = []
+    x = np.arange(len(q0))
+    for m in ["p452", "p2001", "itm"]:
+        q = t[t.model == m].reset_index(drop=True)
+        y = q.km_median_error_db.values
+        ax.plot(x, y, "-o", color=MC[m], lw=2.4 if m == "itm" else 1.8, ms=6, mec="white", zorder=3)
+        ok = ~np.isnan(y); ends.append((y[ok][-1], ML[m], MC[m])); xe = x[ok][-1]
+    ax.axhline(0, color=DB, lw=0.8)
+    stack_labels(ax, xe, ends)
+    ax.set_xticks(x, [f"{l}\n{100 * c:.0f}% below\nsensitivity" for l, c in zip(lab, q0.censored_share)])
+    ax.set_xlim(-0.3, len(lab) + 0.2)
+    ax.set_ylabel("Median predicted minus\nmeasured loss (dB)")
+    save(fig, "s33_its_error_by_distance")
+
+
+def s34_its_concealed():
+    """Measured loss at the concealed site minus the open site, against the models."""
+    f = CD / "its_phase2_pairs.csv"
+    if not f.exists():
+        return
+    t = pd.read_csv(f)
+    fr = sorted(t.freq_mhz.unique())
+    fig, ax = new(); clean(ax)
+    rng = np.random.default_rng(1)
+    for i, fq in enumerate(fr):
+        q = t[t.freq_mhz == fq].meas_c_minus_o_db.values
+        ax.scatter(i + rng.uniform(-0.18, 0.18, len(q)), q, s=12, color=GR, alpha=0.45, lw=0, zorder=2)
+        ax.plot([i - 0.28, i + 0.28], [np.median(q)] * 2, color=PU, lw=2.4, zorder=3)
+        mm = np.median(t[t.freq_mhz == fq].p2001_c_minus_o_db)
+        ax.plot([i - 0.28, i + 0.28], [mm] * 2, color=DB, lw=1.4, ls=(0, (3, 2)), zorder=3)
+    ax.axhline(0, color=DB, lw=0.8)
+    ax.set_xticks(range(len(fr)), [f"{x:g}" for x in fr]); ax.set_xlabel("Frequency (MHz)")
+    ax.set_ylabel("Concealed minus open site,\nmeasured loss (dB)")
+    ax.text(len(fr) - 0.6, np.median(t[t.freq_mhz == fr[-1]].meas_c_minus_o_db), " Measured median", color=PU, fontsize=8.5,
+            fontweight="semibold", va="bottom")
+    ax.text(len(fr) - 0.6, np.median(t[t.freq_mhz == fr[-1]].p2001_c_minus_o_db), " Models (no clutter)", color=DB, fontsize=8.5,
+            va="top")
+    ax.set_xlim(-0.5, len(fr) + 1.3)
+    save(fig, "s34_its_concealed")
+
+
+def s35_east_west():
+    """ITM minus P.2001 against terrain irregularity, eastern and western links."""
+    f = CD / "terrain_east_west.csv"
+    if not f.exists():
+        return
+    t = pd.read_csv(f)
+    fig, ax = new(); clean(ax)
+    e = t[t.side == "East"]; w = t[t.side == "West"]
+    ax.scatter(np.maximum(e.delta_h_m, 3), e.itm_minus_p2001_db, s=22, color="#C9CCD1", edgecolor="white", lw=0.4, zorder=2)
+    ax.scatter(np.maximum(w.delta_h_m, 3), w.itm_minus_p2001_db, s=30, color=PU, edgecolor="white", lw=0.4, zorder=3)
+    ax.axhline(0, color=DB, lw=0.8); ax.set_xscale("log"); ax.set_xlim(3, 3000)
+    ax.set_xticks([10, 100, 1000], ["10", "100", "1,000"])
+    ax.set_xlabel("ITM terrain irregularity Δh (m), log scale"); ax.set_ylabel(YL)
+    ax.text(5, e.itm_minus_p2001_db.max() * 0.15 + 3, "Eastern links (60)", color=GR, fontsize=9, fontweight="semibold")
+    k = w.delta_h_m.idxmax()
+    ax.text(0.98, 0.96, f"Western links ({len(w)})", transform=ax.transAxes, ha="right", va="top", color=PU, fontsize=9,
+            fontweight="semibold")
+    save(fig, "s35_east_west")
+
+
 ALL = [s01_smooth_earth, s02_knife_edge, s03_knife_edge_function, s04_gap_by_mechanism, s05_gap_vs_terrain, s06_frequency_sweep,
        s07_terrain_resolution, s08_diffraction_terms, s09_ablation, s10_radials, s11_window_by_length, s12_the_jump, s13_anatomy,
        s14_where_window_falls, s15_window_over_time, s16_itm_vs_p452, s17_over_sea, s18_ducting_takeover, s19_enhancement_real,
        s20_enhancement_measured, s21_archetypes, s22_distance_threshold, s23_error_vs_frequency, s24_error_vs_time, s25_error_vs_terrain,
-       s26_uncertainty_gap, s27_uncertainty_measured, s28_sensitivity, s29_grid_maps, s30_grid_exclusion, s31_area_measurements, s32_grid_convergence]
+       s26_uncertainty_gap, s27_uncertainty_measured, s28_sensitivity, s29_grid_maps, s30_grid_exclusion, s31_area_measurements, s32_grid_convergence,
+       s33_its_error_by_distance, s34_its_concealed, s35_east_west]
 
 if __name__ == "__main__":
     for fn in ALL:
