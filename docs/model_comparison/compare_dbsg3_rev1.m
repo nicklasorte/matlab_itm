@@ -404,7 +404,7 @@ pr = cell(numel(idx), 1);
 po = {};
 if ~isempty(profs), po = {'profile', profs(idx)}; end
 try
-    [x, info] = pathloss_rev1(TX(idx, :), RX(idx, :), f, P, model=model, wopts{:}, po{:});
+    [x, info] = pathloss_rev1(TX(idx, :), RX(idx, :), f, P, 'model', model, wopts{:}, po{:});
     L = reshape(x, numel(idx), []);
     if ~isempty(info.profile)
         for j = 1:numel(idx), pr{j} = info.profile(j); end
