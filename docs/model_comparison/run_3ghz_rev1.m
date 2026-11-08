@@ -25,14 +25,14 @@ arguments
 end
 d = {'P2001Dir', options.P2001Dir, 'P452Dir', options.P452Dir};
 if options.Models
-    make_wp_figures_rev1(Freqs=3000, d{:});
+    make_wp_figures_rev1('Freqs', 3000, d{:});
     diffraction_decomposition_rev1(d{:});
 end
 export_deep_dive_data_rev1();
 sensitivity_rev1(d{:});
 if options.Grid
-    grid_separation_rev1(Site="dc", d{:});
-    grid_separation_rev1(Site="la", d{:});
+    grid_separation_rev1('Site', "dc", d{:});
+    grid_separation_rev1('Site', "la", d{:});
 end
 uncertainty_rev1();
 paper_numbers_3ghz_rev1();
