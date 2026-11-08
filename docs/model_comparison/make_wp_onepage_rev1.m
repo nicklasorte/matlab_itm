@@ -104,7 +104,7 @@ save_page(fig, d, 'op1b_dumbbell_excess_loss');
 cm = ramp(C);
 for f = 1:numel(F)
     gx = geoaxes(tl); gx.Layout.Tile = f;
-    try, geobasemap(gx, 'grayland'); catch, geobasemap(gx, 'none'); end
+    geobasemap(gx, 'none');                       % no tile download in batch runs
     hold(gx, 'on');
     v = abs(gap(f, :));
     for k = 1:numel(v)
@@ -396,7 +396,9 @@ for m = 1:3
     for k = o(:)'
         if ~isfinite(e(k)), continue, end
         ci = 1 + round(min(e(k), 20) / 20 * (size(cm, 1) - 1));
-        geoplot(gx, [Db.tx_lat(k) Db.rx_lat(k)], [Db.tx_lon(k) Db.rx_lon(k)], '-', 'Color', cm(ci, :), 'LineWidth', 2);
+        geoplot(gx, [Db.tx_lat(k) Db.rx_lat(k)], [Db.tx_lon(k) Db.rx_lon(k)], '-', 'Color', cm(ci, :), 'LineWidth', 1.5);
+        geoscatter(gx, (Db.tx_lat(k) + Db.rx_lat(k)) / 2, (Db.tx_lon(k) + Db.rx_lon(k)) / 2, 28, cm(ci, :), 'filled', ...
+            'MarkerEdgeColor', 'w', 'LineWidth', 0.3);
     end
     geolimits(gx, [20 62], [-125 145]);
     gx.FontName = C.font; gx.FontSize = 9;
@@ -501,7 +503,7 @@ save_page(fig, d, 'op4d_enhancement_depth');
 for f = 1:numel(F)
     v = arrayfun(@(j) median(E7.p2001(f, :, j) - E7.itm(f, :, j)), 1:numel(P));
     plot(ax, P, v, '-', 'Color', fc(f, :), 'LineWidth', 3);
-    text(ax, 0.0012, v(1) + 1.2 * (f - 2), fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
+    text(ax, 0.0012, v(1) + [1.5 0 -1.5] * (f == 1:3)', fl(f), 'Color', fc(f, :), 'FontWeight', 'bold', 'FontSize', 11, 'FontName', C.font);
 end
 yline(ax, 0, '-', 'Color', C.db);
 set(ax, 'XScale', 'log', 'XTick', [0.001 0.01 0.1 1 10 50]); xlim(ax, [0.001 100]);
