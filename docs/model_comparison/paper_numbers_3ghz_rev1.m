@@ -333,6 +333,11 @@ if isfile(fullfile(CD, 'alg_smooth_sweep.csv'))
     N = alg_numbers(N, CD, r1);
 end
 
+% ---- synthetic diffraction families (diffraction_families_rev1) ----
+if isfile(fullfile(CD, 'fam_two_obstacles.csv'))
+    N = fam_numbers(N, CD, r1);
+end
+
 % ---- western terrain sample (western_terrain_rev1) ----
 fw = fullfile(CD, 'western_links.csv');
 if isfile(fw)
@@ -598,6 +603,45 @@ for p = [50 1]
         (ismember(m.itm_mode_code, [4 5 8 9]) & m.p2001_mech == 1) | (tro & m.p2001_mech == 3));
     N(sprintf('alg_m%d_n', p)) = height(m);
 end
+end
+
+function N = fam_numbers(N, CD, r1)
+% Plan items 20, 21, and 24
+T = readtable(fullfile(CD, 'fam_two_obstacles.csv'));
+T.itm = T.itm_db - T.fs_db; T.p = T.p2001_db - T.fs_db;
+for h = [100 200 280]
+    q = T(T.h1_m == h & T.h2_m == h, :);
+    N(sprintf('fam2_eq%d', h)) = [r1(q.itm), r1(q.p), r1(q.epstein_peterson_db), r1(q.deygout_db)];
+    q = T(T.h1_m == h & T.h2_m == 0, :);
+    N(sprintf('fam2_one%d', h)) = [r1(q.itm), r1(q.p), r1(q.epstein_peterson_db), r1(q.deygout_db)];
+end
+ref = 0.5 * (T.epstein_peterson_db + T.deygout_db);
+N("fam2_n") = height(T);
+N("fam2_itm_vs_ref") = [r1(median(T.itm - ref)), r1(prctile(T.itm - ref, 25)), r1(prctile(T.itm - ref, 75))];
+N("fam2_p_vs_ref") = [r1(median(T.p - ref)), r1(prctile(T.p - ref, 25)), r1(prctile(T.p - ref, 75))];
+N("fam2_p_within10") = round(100 * mean(abs(T.p - ref) <= 10));
+N("fam2_itm_within10") = round(100 * mean(abs(T.itm - ref) <= 10));
+N("fam2_gap_max") = r1(max(T.itm - T.p));
+N("fam2_itm_dh_max") = r1(max(T.itm_delta_h_m));
+N("fam2_itm_mode_los") = nnz(T.itm_mode == 1);
+G = readtable(fullfile(CD, 'fam_roughness_grid.csv'));
+g = @(dh, d) G.median_gap_db(G.target_delta_h_m == dh & G.d_km == d);
+for dh = [10 50 100 200 500 1000]
+    N(sprintf('fam21_dh%d', dh)) = [r1(min(G.median_gap_db(G.target_delta_h_m == dh))), r1(max(G.median_gap_db(G.target_delta_h_m == dh)))];
+end
+N("fam21_150_le200") = r1(max(G.median_gap_db(G.d_km == 150 & G.target_delta_h_m <= 200)));
+N("fam21_10km_10") = r1(g(10, 10)); N("fam21_50km_100") = r1(g(100, 50)); N("fam21_50km_500") = r1(g(500, 50));
+N("fam21_ratio10") = r1(median(G.median_itm_delta_h_m(G.d_km == 10) ./ G.target_delta_h_m(G.d_km == 10)));
+N("fam21_ratio150") = r1(median(G.median_itm_delta_h_m(G.d_km == 150) ./ G.target_delta_h_m(G.d_km == 150)));
+R = readtable(fullfile(CD, 'fam_roughness_runs.csv'));
+N("fam21_runs") = height(R); N("fam21_flagged") = round(100 * mean(R.itm_horizon_flag));
+P = readtable(fullfile(CD, 'fam_evaluation_point.csv'), 'TextType', 'string');
+u = P(P.used == 1, :);
+g0 = u.itm_excess_db - u.p2001_excess_db; g1 = u.itm_excess_db - u.p2001_line_at_path_db;
+N("fam24_n") = height(u); N("fam24_total") = height(P);
+N("fam24_gap") = [r1(median(g0)), r1(median(g1))];
+N("fam24_wider") = nnz(g1 > g0);
+N("fam24_closed_half") = nnz(g1 < 0.5 * g0);
 end
 
 function m = km_median(e, cens, w)
