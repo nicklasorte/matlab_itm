@@ -29,6 +29,8 @@ function T = compare_trer16_rev1(options)
 %     fig12_trer16_median_error.png predicted minus measured median, by path
 %     fig13_trer16_distributions.png measured and predicted distributions on
 %                                   the six paths nearest the study bands
+%     fig16_trer16_path_map.png     map of the paths
+%     fig20_trer16_error_vs_delta_h.png median error against ITM's Delta h
 %
 %   Name-value options:
 %     OutDir             output folder (figures/ next to this file)
@@ -119,7 +121,7 @@ Sm = cell2table(rows, 'VariableNames', {'group', 'model', 'percent', 'n_paths', 
 writetable(Sm, fullfile(out, 'table_trer16_summary.csv'));
 
 % Fig. 12: median error by path
-[~, ord] = sortrows([S.freq_mhz, S.d_km]);
+[~, ord] = sortrows([S.heights_assumed, S.freq_mhz, S.d_km]);   % assumed-height paths last
 fig = figure('Visible', 'off', 'Position', [0 0 1300 460]);
 ax = axes(fig); hold(ax, 'on');
 x = 1:n;
@@ -133,7 +135,7 @@ xlim(ax, [0.5 n + 0.5]);
 ylabel(ax, 'Predicted minus measured median (dB)');
 xlabel(ax, 'OT/TRER 16 path number (frequency, MHz), sorted by frequency and distance');
 title(ax, sprintf('Median basic transmission loss, %d measured U.S. paths from 1 GHz to 10 GHz', n));
-xline(ax, find(~listed(ord)) - 0.5, ':', 'Color', [0.6 0.6 0.6], 'HandleVisibility', 'off');
+xline(ax, nnz(listed) + 0.5, 'k--', 'Heights assumed', 'LabelVerticalAlignment', 'bottom', 'HandleVisibility', 'off');
 legend(ax, 'Location', 'northwest'); grid(ax, 'on');
 wp_save_fig(fig, out, 'fig12_trer16_median_error');
 
@@ -158,6 +160,28 @@ for kk = 1:numel(key)
     grid(ax, 'on');
 end
 wp_save_fig(fig, out, 'fig13_trer16_distributions');
+
+% Fig. 20: median error against terrain irregularity
+fig = figure('Visible', 'off', 'Position', [0 0 1200 400]);
+tl = tiledlayout(fig, 1, 3, 'TileSpacing', 'compact');
+mods = {itm, p452, p2001}; mn = ["ITM v1.4", "P.452-18", "P.2001-6"];
+mc = [0 0.447 0.698; 0.835 0.369 0; 0 0.620 0.451];
+for m = 1:3
+    ax = nexttile(tl); hold(ax, 'on');
+    e = mods{m}(:, 3) - meas(:, 3);
+    trans = itm_code > 0;
+    scatter(ax, max(itm_dh(listed & trans), 5), e(listed & trans), 36, mc(m, :), 'filled', 'DisplayName', 'Beyond line of sight');
+    scatter(ax, max(itm_dh(listed & ~trans), 5), e(listed & ~trans), 36, mc(m, :), 'DisplayName', 'Line of sight');
+    for k = find(S.path == "321" | S.path == "1712")'
+        text(ax, max(itm_dh(k), 5), e(k), "  " + S.path(k), 'FontSize', 8);
+    end
+    yline(ax, 0, 'k:', 'HandleVisibility', 'off');
+    set(ax, 'XScale', 'log'); ylim(ax, [-30 40]);
+    title(ax, mn(m)); xlabel(ax, 'ITM terrain irregularity \Deltah (m)');
+    if m == 1, ylabel(ax, 'Predicted minus measured median (dB)'); legend(ax, 'Location', 'northwest'); end
+    grid(ax, 'on');
+end
+wp_save_fig(fig, out, 'fig20_trer16_error_vs_delta_h');
 
 % Fig. 16: where the measured paths are
 fig = figure('Visible', 'off', 'Position', [0 0 1100 560]);
