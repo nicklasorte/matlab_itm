@@ -28,7 +28,7 @@ function T = compare_trer16_rev1(options)
 %                                   group, and percentage
 %     fig12_trer16_median_error.png predicted minus measured median, by path
 %     fig13_trer16_distributions.png measured and predicted distributions on
-%                                   the six paths nearest the study bands
+%                                   six paths from 2.3 GHz to 4.1 GHz
 %     fig16_trer16_path_map.png     map of the paths
 %     fig20_trer16_error_vs_delta_h.png median error against ITM's Delta h
 %
@@ -139,7 +139,7 @@ xline(ax, nnz(listed) + 0.5, 'k--', 'Heights assumed', 'LabelVerticalAlignment',
 legend(ax, 'Location', 'northwest'); grid(ax, 'on');
 wp_save_fig(fig, out, 'fig12_trer16_median_error');
 
-% Fig. 13: distributions on the paths nearest the study bands
+% Fig. 13: distributions on six paths from 2.3 GHz to 4.1 GHz
 key = ["590", "591", "1609", "1712", "904", "1124A"];
 fig = figure('Visible', 'off', 'Position', [0 0 1200 700]);
 tl = tiledlayout(fig, 2, 3, 'TileSpacing', 'compact');
