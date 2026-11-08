@@ -738,6 +738,26 @@ end
 T.threshold = cell2table(rows, 'VariableNames', {'freq_mhz', 'threshold_db', 'land_itm_km', 'land_p452_km', ...
     'land_p2001_km', 'sea_itm_km', 'sea_p452_km', 'sea_p2001_km'});
 writetable(T.threshold, fullfile(out, 'table_distance_to_threshold.csv'));
+% Real-terrain radials: the last distance where the 50 % loss is still
+% below each threshold (beyond it, the loss stays above the threshold)
+rows = {};
+Dr = R.E8.radial.D_km;
+mdl = ["itm", "p452", "p2001"];
+for f = 1:numel(F)
+    for t = 1:numel(R.E8.thr)
+        for j = 1:numel(R.E8.radial.az)
+            v = zeros(1, 3);
+            for m = 1:3
+                L = squeeze(R.E8.radial.(mdl(m))(j, :, f, 2));
+                k = find(L < R.E8.thr(t), 1, 'last');
+                if isempty(k), v(m) = 0; else, v(m) = Dr(k); end
+            end
+            rows(end + 1, :) = {F(f), R.E8.thr(t), R.E8.radial.az(j), v(1), v(2), v(3)}; %#ok<AGROW>
+        end
+    end
+end
+T.radial = cell2table(rows, 'VariableNames', {'freq_mhz', 'threshold_db', 'azimuth_deg', 'itm_km', 'p452_km', 'p2001_km'});
+writetable(T.radial, fullfile(out, 'table_radial_distance_to_threshold.csv'));
 % ITM horizon-angle flags (0x0080, 0x0100) on real terrain
 fl = R.E7.itm_flags(1, :);
 T.horizon_flags = table(nnz(bitand(fl, uint32(128)) | bitand(fl, uint32(256))), numel(fl), ...
