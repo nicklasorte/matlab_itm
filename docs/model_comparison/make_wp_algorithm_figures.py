@@ -325,23 +325,23 @@ def s47_smooth_earth_terms():
 def s48_gap_waterfall():
     """Where the diffraction gap comes from: the mean ITM minus P.2001, term by term."""
     C = rd("term_gap_components.csv").set_index("component")
-    steps = [("Two horizon edges\nagainst one\nBullington edge", "edges"), ("ITM smooth-earth\nterm", "smooth"),
-             ("Clutter term against\nempirical add-on", "addon"), ("ITM line\nextension", "extension"),
-             ("Gases and\nother P.2001", "other")]
+    steps = [("Two edges\nvs one", "edges"), ("ITM smooth-\nearth term", "smooth"),
+             ("Clutter vs\nadd-on", "addon"), ("ITM line\nextension", "extension"),
+             ("Gases,\nother", "other")]
     vals = [C.loc[k, "mean_db"] for _, k in steps]
     total = C.loc["total", "mean_db"]
     fig, ax = new(h=3.2); clean(ax)
     cum = 0
     for i, ((lab, _), v) in enumerate(zip(steps, vals)):
         ax.bar(i, v, bottom=cum, color=PU if v >= 0 else LG2, width=0.62, edgecolor="white")
-        ax.text(i, cum + v + (0.8 if v >= 0 else -0.8), f"{v:+.0f}", ha="center", va="bottom" if v >= 0 else "top", fontsize=9,
+        ax.text(i, cum + v + (0.8 if v >= 0 else -0.8), f"{v:+.0f}" if abs(v) >= 1 else f"{v:+.1f}", ha="center", va="bottom" if v >= 0 else "top", fontsize=9,
                 color=DB, fontweight="semibold")
         if i < len(steps) - 1:
             ax.plot([i + 0.31, i + 0.69], [cum + v] * 2, color=GR, lw=0.8)
         cum += v
     ax.bar(len(steps), total, color=DB, width=0.62)
     ax.text(len(steps), total + 0.8, f"{total:.0f} dB", ha="center", va="bottom", fontsize=9, color=DB, fontweight="semibold")
-    ax.set_xticks(range(len(steps) + 1), [l for l, _ in steps] + ["ITM minus\nP.2001"], fontsize=7.8)
+    ax.set_xticks(range(len(steps) + 1), [l for l, _ in steps] + ["ITM minus\nP.2001"], fontsize=8)
     ax.set_ylabel("Mean contribution (dB)")
     ax.axhline(0, color=DB, lw=0.6)
     save(fig, "s48_gap_waterfall")
@@ -356,9 +356,9 @@ def s49_empirical_terms():
     ax.scatter(D.d_km, D.p2001_empirical_db, s=24, color=DB, edgecolor="white", lw=0.4, zorder=3)
     ax.axhline(15, color=LG2, lw=0.8, ls=(0, (3, 2)))
     ax.text(D.d_km.max(), 15.3, "ITM cap, 15 dB", color=GR, fontsize=7.5, ha="right", va="bottom")
-    ax.set_ylim(0, 18); ax.set_xlabel("Path length (km)"); ax.set_ylabel("Empirical add-on (dB)")
-    ax.text(12, 13.2, "ITM clutter term A_fo", color=LB, fontsize=8.5, fontweight="semibold")
-    ax.text(12, 8.6, "P.2001 (1 − e^(−J/6))(10 + 0.02 d)", color=DB, fontsize=8.5, fontweight="semibold")
+    ax.set_ylim(0, 18); ax.set_xlabel("Path length (km)"); ax.set_ylabel("Add-on (dB)")
+    ax.text(80, 16.6, "ITM clutter term A_fo", color=LB, fontsize=8.5, fontweight="semibold")
+    ax.text(70, 7.6, "P.2001 (1 − e^(−J/6))(10 + 0.02 d)", color=DB, fontsize=8.5, fontweight="semibold")
     save(fig, "s49_empirical_terms")
 
 
@@ -405,7 +405,7 @@ def s51_monte_carlo():
         ax.plot(q.time_pct, d, color=PU if hi else LG2, lw=2.2 if hi else 1.2, zorder=3 if hi else 2)
         if hi:
             i = d.abs().idxmax()
-            ax.text(q.time_pct[i], d[i] - 0.4, n, color=PU, fontsize=8, ha="center", va="top", fontweight="semibold")
+            ax.text(1.5, d[i] + 0.3, n, color=PU, fontsize=8, ha="center", va="center", fontweight="semibold")
     ax.axhline(0, color=DB, lw=0.6)
     xlog(ax, 0.01, 99, [0.01, 0.1, 1, 10, 50, 99])
     ax.set_xlabel("Time percentage (%), log scale")
