@@ -46,7 +46,7 @@ end
 if offline
     % Also keeps the ITU maps from downloading (itm_maps reads this variable)
     old = getenv('MATLAB_ITM_OFFLINE');
-    restore = onCleanup(@() setenv('MATLAB_ITM_OFFLINE', old)); %#ok<NASGU>
+    restore = onCleanup(@() setenv('MATLAB_ITM_OFFLINE', old));
     setenv('MATLAB_ITM_OFFLINE', '1');
 end
 

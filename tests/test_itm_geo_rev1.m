@@ -138,8 +138,8 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             setenv('MATLAB_ITM_TERRAIN_DIR', char(tc.tmp_dir));
             setenv('MATLAB_ITM_OFFLINE', '');
             args = {"38.9", "-77.0", "30", "38.95", "-76.95", "10", "2700"};
-            tc.verifyError(@() evalc('itm_cli_rev1(args{:}, "50", "--offline")'), 'itm:terrain:TileMissing');
-            tc.verifyError(@() evalc('itm_cli_rev1(args{:}, "--offline")'), 'itm:terrain:TileMissing');
+            tc.verifyError(@() itm_cli_rev1(args{:}, "50", "--offline"), 'itm:terrain:TileMissing');
+            tc.verifyError(@() itm_cli_rev1(args{:}, "--offline"), 'itm:terrain:TileMissing');
             tc.verifyEqual(getenv('MATLAB_ITM_OFFLINE'), '');
             tc.verifyError(@() itm_cli_rev1(args{:}, "--fast"), 'itm:cli:BadArgument');
         end
