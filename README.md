@@ -17,8 +17,6 @@ modes, warning flags, and intermediate values.
 - MATLAB R2025b (the release this is tested on) with Mapping Toolbox.
 - Internet access the first time you compute a path, to download terrain
   tiles. After that, paths in the same area run from a local cache.
-- Access to this repository. It's private because it contains ITU digital
-  maps that ITU doesn't allow anyone to redistribute; ask the owner to add you.
 
 ### Download and check the install
 
