@@ -21,11 +21,13 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %        Both tools use the providers' file names, so a tile downloaded by
 %        either is reused by the other and not stored twice. Set
 %        MATLAB_ITM_SHARE_P2001_CACHE=0 to skip this.
-%     3. A <file>.404 marker here or a <file>.missing marker there: no tile.
-%     4. For Copernicus, the bucket's tileList.txt (cached once): absent
+%     3. Windows: the earlier default cache, %LOCALAPPDATA%\matlab_itm\terrain
+%        (before the default moved to C:\matlab_itm), read in place.
+%     4. A <file>.404 marker here or a <file>.missing marker there: no tile.
+%     5. For Copernicus, the bucket's tileList.txt (cached once): absent
 %        means ocean, without a request, so a network or proxy error is
 %        never mistaken for open water.
-%     5. Download with websave to a temporary file, validated as a raster,
+%     6. Download with websave to a temporary file, validated as a raster,
 %        then renamed into place atomically (first writer wins), so several
 %        processes can share one cache folder.
 %
@@ -58,6 +60,11 @@ end
 shared = shared_p2001_path(p2001_sub, name);
 if shared ~= "" && isfile(shared)
     file = shared;
+    return
+end
+legacy = legacy_path(source, name, terrain_dir);
+if legacy ~= ""
+    file = legacy;
     return
 end
 if isfile(file + ".404") || (shared ~= "" && isfile(shared + ".missing"))
@@ -141,6 +148,18 @@ if strcmp(source, 'copernicus90')
     res = '30'; bucket = 'copernicus-dem-90m'; p2001_sub = 'cop90';
 else
     res = '10'; bucket = 'copernicus-dem-30m'; p2001_sub = 'cop30';
+end
+end
+
+function p = legacy_path(source, name, terrain_dir)
+% Tile in the earlier Windows default cache (%LOCALAPPDATA%\matlab_itm\terrain),
+% read in place so moving the default doesn't download it again; "" if none
+p = "";
+root = itm_legacy_cache_dir();
+if isempty(root), return, end
+cand = string(fullfile(root, 'terrain', source, name));
+if ~strcmpi(fullfile(root, 'terrain'), terrain_dir) && isfile(cand)
+    p = cand;
 end
 end
 

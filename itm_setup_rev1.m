@@ -17,7 +17,8 @@ function summary = itm_setup_rev1(options)
 %
 %   Name-value options:
 %     cache_dir  Cache root for this MATLAB session (sets MATLAB_ITM_CACHE).
-%                Default: ~/.matlab_itm (Windows: %LOCALAPPDATA%\matlab_itm)
+%                Default: ~/.matlab_itm (Windows: C:\matlab_itm, or
+%                %LOCALAPPDATA%\matlab_itm if C:\matlab_itm isn't writable)
 %     region     [lat_min lat_max lon_min lon_max] in degrees; default none
 %     source     "auto" (default), "usgs3dep", "usgs3dep13" (~370 MB per tile),
 %                "copernicus", or "copernicus90"

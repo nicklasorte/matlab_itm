@@ -295,7 +295,7 @@ d = getenv('MATLAB_ITM_TERRAIN_DIR');
 if isempty(d)
     c = getenv('MATLAB_ITM_CACHE');
     if isempty(c)
-        if ispc, c = fullfile(getenv('LOCALAPPDATA'), 'matlab_itm'); else, c = fullfile(getenv('HOME'), '.matlab_itm'); end
+        if ispc, c = 'C:\matlab_itm'; else, c = fullfile(getenv('HOME'), '.matlab_itm'); end
     end
     d = fullfile(c, 'terrain');
 end

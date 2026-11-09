@@ -261,8 +261,11 @@ tiles are large, so it's never part of `"auto"`.
 Tiles download the first time a path needs them and are reused afterward:
 
 - **Cache folder.** `<cache>/terrain`, where `<cache>` is the
-  `MATLAB_ITM_CACHE` environment variable, else `%LOCALAPPDATA%\matlab_itm`
-  on Windows, else `~/.matlab_itm`. `MATLAB_ITM_TERRAIN_DIR` or the
+  `MATLAB_ITM_CACHE` environment variable, else `C:\matlab_itm` on Windows
+  (or `%LOCALAPPDATA%\matlab_itm`, with a warning, if `C:\matlab_itm` can't be
+  created or written), else `~/.matlab_itm`. On Windows, tiles already in
+  the earlier default, `%LOCALAPPDATA%\matlab_itm\terrain`, are read in place
+  rather than downloaded again. `MATLAB_ITM_TERRAIN_DIR` or the
   `terrain_dir` option overrides the terrain folder alone.
 - **Shared with itu_p2001.** Both tools use the providers' file names, so
   a tile already in the itu_p2001 cache (`ITU_P2001_CACHE`, else
@@ -511,9 +514,12 @@ Mapping Toolbox. To compile these functions into your own app, add the
 - **Same release, same platform.** The target needs the MATLAB Runtime for
   the release used to build (R2025b). Build on Windows for Windows targets.
   The installer option downloads the right Runtime.
-- **Writable cache.** The app writes terrain tiles to
-  `%LOCALAPPDATA%\matlab_itm` (Windows) or `~/.matlab_itm`. On a locked-down
-  machine, set `MATLAB_ITM_CACHE` to a writable folder.
+- **Writable cache.** The app writes terrain tiles to `C:\matlab_itm\terrain`
+  on Windows or `~/.matlab_itm/terrain` elsewhere. Creating a folder at the
+  root of C: needs no administrator rights on a standard Windows install; if
+  a locked-down PC blocks it, the app falls back to
+  `%LOCALAPPDATA%\matlab_itm` and warns. Set `MATLAB_ITM_CACHE` to choose
+  any other writable folder.
 - **Network.** The app needs HTTPS access to `prd-tnm.s3.amazonaws.com`
   (USGS) and `copernicus-dem-30m.s3.amazonaws.com` /
   `copernicus-dem-90m.s3.amazonaws.com`. The ITU maps are inside the app.
