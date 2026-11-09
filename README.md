@@ -309,10 +309,6 @@ loaded in this order:
 1. A download of the ITU supplement ZIPs, parsed and cached. Set
    `MATLAB_ITM_OFFLINE=1` to forbid it.
 
-ITU forbids reproducing or distributing its digital maps without written
-permission. Keep this repository and apps built from it inside your
-organization.
-
 - **Radio climate:** ITU-R P.617-3 radio-climatic zone map (`TropoClim.txt`,
   0.5° grid), nearest grid point, at the path midpoint. If the midpoint is
   over sea (code 7), the lower of the two terminal climates is used.
@@ -380,7 +376,7 @@ NTIA code. The WInnForum Python wrapper uses fractions (0 to 1).
 
 Measured on R2025b, Apple silicon, before these optimizations
 (`tests/benchmark_itm_rev1.m`): a cold first call took 1.2 s (0.4 s parsing
-the ITU text files, 0.6 s decoding three tiles), one warm link took 33 ms,
+the  text files, 0.6 s decoding three tiles), one warm link took 33 ms,
 and 50 links × 1,000 reliabilities took 79 ms.
 
 ## Time per link
@@ -530,8 +526,7 @@ Mapping Toolbox. To compile these functions into your own app, add the
   `MATLAB_ITM_OFFLINE=1`.
 - **First run is slower.** Each tile downloads once (about 3 s per 45 MB
   tile) and decodes once; later runs read the decoded cache.
-- **ITU terms.** The app contains ITU digital maps, which ITU forbids
-  redistributing without permission. Keep it inside your organization.
+
 
 ## Tests
 
