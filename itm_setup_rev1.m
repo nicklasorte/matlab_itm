@@ -9,6 +9,8 @@ function summary = itm_setup_rev1(options)
 %   machine without internet (copy the cache folder there and set
 %   MATLAB_ITM_CACHE). Downloads are atomic, so several machines can fill
 %   one shared folder at once.
+%   MATLAB_ITM_OFFLINE=1 also blocks this function's downloads, so leave
+%   it unset on the connected machine that fills the cache.
 %
 %   With source "auto" (default), each tile is taken from USGS 3DEP; where
 %   3DEP has no tile or has gaps (borders, coasts), the Copernicus GLO-30

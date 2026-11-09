@@ -114,6 +114,36 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
                 download=false), 'itm:terrain:TileMissing');
         end
 
+        function offline_variable_stops_terrain_downloads(tc)
+            % MATLAB_ITM_OFFLINE=1 turns downloads off even with download=true
+            old = getenv('ITU_P2001_CACHE'); old_off = getenv('MATLAB_ITM_OFFLINE');
+            tc.addTeardown(@() setenv('ITU_P2001_CACHE', old));
+            tc.addTeardown(@() setenv('MATLAB_ITM_OFFLINE', old_off));
+            setenv('ITU_P2001_CACHE', char(fullfile(tc.tmp_dir, 'no_p2001')));
+            setenv('MATLAB_ITM_OFFLINE', '1');
+            tc.verifyError(@() itm_terrain_elevation_rev1(38.9, -77.0, terrain_dir=tc.tmp_dir, ...
+                download=true), 'itm:terrain:TileMissing');
+            tc.verifyEmpty(dir(fullfile(tc.tmp_dir, 'usgs3dep', '*.tif')));
+        end
+
+        function cli_offline_flag(tc)
+            % --offline in the command-line tool: no download, a clear error,
+            % and the environment restored afterward
+            old = getenv('ITU_P2001_CACHE'); old_dir = getenv('MATLAB_ITM_TERRAIN_DIR');
+            old_off = getenv('MATLAB_ITM_OFFLINE');
+            tc.addTeardown(@() setenv('ITU_P2001_CACHE', old));
+            tc.addTeardown(@() setenv('MATLAB_ITM_TERRAIN_DIR', old_dir));
+            tc.addTeardown(@() setenv('MATLAB_ITM_OFFLINE', old_off));
+            setenv('ITU_P2001_CACHE', char(fullfile(tc.tmp_dir, 'no_p2001')));
+            setenv('MATLAB_ITM_TERRAIN_DIR', char(tc.tmp_dir));
+            setenv('MATLAB_ITM_OFFLINE', '');
+            args = {"38.9", "-77.0", "30", "38.95", "-76.95", "10", "2700"};
+            tc.verifyError(@() evalc('itm_cli_rev1(args{:}, "50", "--offline")'), 'itm:terrain:TileMissing');
+            tc.verifyError(@() evalc('itm_cli_rev1(args{:}, "--offline")'), 'itm:terrain:TileMissing');
+            tc.verifyEqual(getenv('MATLAB_ITM_OFFLINE'), '');
+            tc.verifyError(@() itm_cli_rev1(args{:}, "--fast"), 'itm:cli:BadArgument');
+        end
+
         function maps_folder_override(tc)
             % MATLAB_ITM_MAPS_DIR takes the ITU text files from another folder
             here = fileparts(fileparts(mfilename('fullpath')));

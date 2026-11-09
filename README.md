@@ -278,9 +278,11 @@ Tiles download the first time a path needs them and are reused afterward:
   tiles); set `MATLAB_ITM_TILE_CACHE_GB` to change it. The least recently
   used tile is dropped first.
 - **Offline servers.** Run `itm_setup_rev1(region=[...])` on a connected
-  machine, copy the cache folder, set `MATLAB_ITM_CACHE` to it, and call
-  with `download=false`. A missing tile then raises
-  `itm:terrain:TileMissing` rather than failing silently.
+  machine, copy the cache folder, and set `MATLAB_ITM_CACHE` to it. Then
+  set `MATLAB_ITM_OFFLINE=1` (it stops both terrain and ITU map downloads,
+  including in a compiled app), call with `download=false`, or pass
+  `--offline` to `itm_cli_rev1`. A missing tile then raises
+  `itm:terrain:TileMissing` rather than trying the network.
 - **Shared folders.** Downloads go to a temporary file and are renamed into
   place atomically (first writer wins), so several compiled servers can
   share one cache. The test suite checks this with two parallel workers.

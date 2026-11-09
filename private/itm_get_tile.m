@@ -31,6 +31,10 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %        then renamed into place atomically (first writer wins), so several
 %        processes can share one cache folder.
 %
+%   MATLAB_ITM_OFFLINE=1 turns downloads off whatever download says, so a
+%   compiled app on a machine without internet reports a missing tile
+%   (itm:terrain:TileMissing) instead of a network error.
+%
 %   Adapted from p2001_dem_tile_rev1 in nicklasorte/itu_p2001.
 
 % Resolved paths are remembered for the session, so repeated calls for a
@@ -46,6 +50,7 @@ if isKey(memo, key)
     file = memo(key);
     return
 end
+download = download && getenv('MATLAB_ITM_OFFLINE') ~= "1";
 file = resolve(source, tile_lat, tile_lon, terrain_dir, download);
 memo(key) = file;
 end
@@ -77,9 +82,10 @@ if startsWith(source, 'copernicus') && ~in_tile_list(source, name, terrain_dir, 
 end
 if ~download
     error('itm:terrain:TileMissing', ...
-        ['Terrain tile %s is not in %s and download is off. ' ...
-        'Run itm_setup_rev1 for this area or allow downloads. Source URL: %s'], ...
-        name, folder, url);
+        ['Terrain tile %s is not in %s and download is off%s. ' ...
+        'Run itm_setup_rev1 for this area on a connected machine and copy the cache, ' ...
+        'or allow downloads. Source URL: %s'], ...
+        name, folder, offline_reason(), url);
 end
 ensure_folder(folder);
 
@@ -151,6 +157,14 @@ else
 end
 end
 
+function s = offline_reason()
+% Explains why download is off when the environment variable set it
+s = '';
+if getenv('MATLAB_ITM_OFFLINE') == "1"
+    s = ' (MATLAB_ITM_OFFLINE is 1)';
+end
+end
+
 function p = legacy_path(source, name, terrain_dir)
 % Tile in the earlier Windows default cache (%LOCALAPPDATA%\matlab_itm\terrain),
 % read in place so moving the default doesn't download it again; "" if none
@@ -201,7 +215,7 @@ if ~isfield(lists, source)
     if ~isfile(list_file)
         if ~download
             error('itm:terrain:TileMissing', ...
-                '%s is not cached and download is off. Run itm_setup_rev1 first.', list_file);
+                '%s is not cached and download is off%s. Run itm_setup_rev1 first.', list_file, offline_reason());
         end
         ensure_folder(folder);
         [~, bucket] = copernicus_bucket(source);
