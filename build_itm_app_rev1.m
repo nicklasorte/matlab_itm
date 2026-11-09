@@ -11,7 +11,8 @@ function results = build_itm_app_rev1(options)
 %     tests/reference/  NTIA and C++ reference cases for the self-test
 %   ITU forbids redistributing its maps: keep the app inside your
 %   organization. Terrain tiles aren't packaged; the app downloads them to
-%   the cache on demand (C:\matlab_itm on Windows, ~/.matlab_itm elsewhere),
+%   the cache on demand (C:\propagation_cache\matlab_itm on Windows,
+%   ~/.matlab_itm elsewhere),
 %   or reads a cache filled by itm_setup_rev1
 %   (set MATLAB_ITM_CACHE and MATLAB_ITM_OFFLINE=1 on offline machines).
 %

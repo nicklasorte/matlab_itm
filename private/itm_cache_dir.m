@@ -2,15 +2,17 @@ function d = itm_cache_dir()
 %ITM_CACHE_DIR Root folder for cached ITU maps and terrain tiles.
 %   Order:
 %     1. The MATLAB_ITM_CACHE environment variable.
-%     2. Windows: C:\matlab_itm, created on first use. If it can't be
-%        created or written (a locked-down PC), %LOCALAPPDATA%\matlab_itm,
-%        with a one-time warning.
+%     2. Windows: C:\propagation_cache\matlab_itm, created on first use;
+%        itu_p2001 and matlab_itu_p452 use sibling folders of the same
+%        C:\propagation_cache. If it can't be created or written (a
+%        locked-down PC), %LOCALAPPDATA%\matlab_itm, with a one-time warning.
 %     3. Other platforms: ~/.matlab_itm.
 %   A fixed folder outside MATLAB keeps the cache writable from a compiled
 %   app and survives MATLAB and Runtime upgrades (prefdir is
 %   release-specific and tempdir is purged by the OS). Tiles already in the
-%   earlier Windows default, %LOCALAPPDATA%\matlab_itm, are still read in
-%   place (see itm_get_tile), so they aren't downloaded again.
+%   earlier Windows defaults, C:\matlab_itm and %LOCALAPPDATA%\matlab_itm,
+%   are still read in place (see itm_get_tile), so they aren't downloaded
+%   again.
 
 persistent resolved
 d = getenv('MATLAB_ITM_CACHE');

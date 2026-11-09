@@ -17,13 +17,14 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %   Lookup order for a tile:
 %     1. terrain_dir/<source>/<file> (this tool's cache)
 %     2. The itu_p2001 cache (ITU_P2001_CACHE, else ~/.itu_p2001, or on
-%        Windows C:\itu_p2001 and then its earlier default
-%        %LOCALAPPDATA%\itu_p2001), dem/<usgs1|usgs13|cop30|cop90>/<file>.
+%        Windows C:\propagation_cache\itu_p2001 and its earlier defaults
+%        C:\itu_p2001 and %LOCALAPPDATA%\itu_p2001),
+%        dem/<usgs1|usgs13|cop30|cop90>/<file>.
 %        Both tools use the providers' file names, so a tile downloaded by
 %        either is reused by the other and not stored twice. Set
 %        MATLAB_ITM_SHARE_P2001_CACHE=0 to skip this.
-%     3. Windows: the earlier default cache, %LOCALAPPDATA%\matlab_itm\terrain
-%        (before the default moved to C:\matlab_itm), read in place.
+%     3. Windows: this tool's earlier default caches, C:\matlab_itm\terrain
+%        and %LOCALAPPDATA%\matlab_itm\terrain, read in place.
 %     4. A <file>.404 marker here or a <file>.missing marker there: no tile.
 %     5. For Copernicus, the bucket's tileList.txt (cached once): absent
 %        means ocean, without a request, so a network or proxy error is
@@ -167,21 +168,25 @@ end
 end
 
 function p = legacy_path(source, name, terrain_dir)
-% Tile in the earlier Windows default cache (%LOCALAPPDATA%\matlab_itm\terrain),
-% read in place so moving the default doesn't download it again; "" if none
+% Tile in an earlier Windows default cache (C:\matlab_itm or
+% %LOCALAPPDATA%\matlab_itm), read in place so moving the default doesn't
+% download it again; "" if none
 p = "";
-root = itm_legacy_cache_dir();
-if isempty(root), return, end
-cand = string(fullfile(root, 'terrain', source, name));
-if ~strcmpi(fullfile(root, 'terrain'), terrain_dir) && isfile(cand)
-    p = cand;
+roots = itm_old_cache_dirs();
+for k = 1:numel(roots)
+    cand = string(fullfile(roots{k}, 'terrain', source, name));
+    if ~strcmpi(fullfile(roots{k}, 'terrain'), terrain_dir) && isfile(cand)
+        p = cand;
+        return
+    end
 end
 end
 
 function p = shared_p2001_path(sub, name)
 % Tile path in the itu_p2001 cache, or "" when sharing is off. On Windows
-% without ITU_P2001_CACHE, itu_p2001 caches in C:\itu_p2001 and earlier
-% used %LOCALAPPDATA%\itu_p2001; a tile in either is found.
+% without ITU_P2001_CACHE, itu_p2001 caches in C:\propagation_cache\itu_p2001;
+% its earlier defaults, C:\itu_p2001 and %LOCALAPPDATA%\itu_p2001, are
+% searched too.
 p = "";
 if getenv('MATLAB_ITM_SHARE_P2001_CACHE') == "0"
     return
@@ -192,11 +197,16 @@ if ~isempty(root)
     return
 end
 if ispc
-    p = string(fullfile('C:\itu_p2001', 'dem', sub, name));
-    if ~isfile(p) && ~isempty(getenv('LOCALAPPDATA'))
-        old = string(fullfile(getenv('LOCALAPPDATA'), 'itu_p2001', 'dem', sub, name));
-        if isfile(old) || isfile(old + ".missing")
-            p = old;
+    roots = {fullfile('C:\propagation_cache', 'itu_p2001'), 'C:\itu_p2001'};
+    if ~isempty(getenv('LOCALAPPDATA'))
+        roots{end + 1} = fullfile(getenv('LOCALAPPDATA'), 'itu_p2001');
+    end
+    p = string(fullfile(roots{1}, 'dem', sub, name));
+    for k = 1:numel(roots)
+        cand = string(fullfile(roots{k}, 'dem', sub, name));
+        if isfile(cand) || isfile(cand + ".missing")
+            p = cand;
+            return
         end
     end
 elseif ~isempty(getenv('HOME'))

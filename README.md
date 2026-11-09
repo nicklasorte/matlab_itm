@@ -259,16 +259,19 @@ tiles are large, so it's never part of `"auto"`.
 Tiles download the first time a path needs them and are reused afterward:
 
 - **Cache folder.** `<cache>/terrain`, where `<cache>` is the
-  `MATLAB_ITM_CACHE` environment variable, else `C:\matlab_itm` on Windows
-  (or `%LOCALAPPDATA%\matlab_itm`, with a warning, if `C:\matlab_itm` can't be
-  created or written), else `~/.matlab_itm`. On Windows, tiles already in
-  the earlier default, `%LOCALAPPDATA%\matlab_itm\terrain`, are read in place
-  rather than downloaded again. `MATLAB_ITM_TERRAIN_DIR` or the
+  `MATLAB_ITM_CACHE` environment variable, else
+  `C:\propagation_cache\matlab_itm` on Windows (or `%LOCALAPPDATA%\matlab_itm`,
+  with a warning, if that can't be created or written), else
+  `~/.matlab_itm`. On Windows, matlab_itm, itu_p2001, and matlab_itu_p452
+  share `C:\propagation_cache`, each in its own subfolder. Tiles already in
+  the earlier defaults, `C:\matlab_itm\terrain` and
+  `%LOCALAPPDATA%\matlab_itm\terrain`, are read in place rather than
+  downloaded again. `MATLAB_ITM_TERRAIN_DIR` or the
   `terrain_dir` option overrides the terrain folder alone.
 - **Shared with itu_p2001.** Both tools use the providers' file names, so
   a tile already in the itu_p2001 cache (`ITU_P2001_CACHE`, else
-  `~/.itu_p2001/dem/...`, or on Windows `C:\itu_p2001\dem\...` and the
-  earlier `%LOCALAPPDATA%\itu_p2001\dem\...`) is read in place, not downloaded again. Set
+  `~/.itu_p2001/dem/...`, or on Windows `C:\propagation_cache\itu_p2001\dem\...`
+  and its earlier defaults) is read in place, not downloaded again. Set
   `MATLAB_ITM_SHARE_P2001_CACHE=0` to turn this off.
 - **Decoded tiles on disk.** Decoding a GeoTIFF takes about 170 ms. The
   decoded grid is saved beside it (`.zcache`, about 52 MB per tile), so a new
@@ -511,8 +514,9 @@ Mapping Toolbox. To compile these functions into your own app, add the
 - **Same release, same platform.** The target needs the MATLAB Runtime for
   the release used to build (R2025b). Build on Windows for Windows targets.
   The installer option downloads the right Runtime.
-- **Writable cache.** The app writes terrain tiles to `C:\matlab_itm\terrain`
-  on Windows or `~/.matlab_itm/terrain` elsewhere. Creating a folder at the
+- **Writable cache.** The app writes terrain tiles to
+  `C:\propagation_cache\matlab_itm\terrain` on Windows or
+  `~/.matlab_itm/terrain` elsewhere. Creating a folder at the
   root of C: needs no administrator rights on a standard Windows install; if
   a locked-down PC blocks it, the app falls back to
   `%LOCALAPPDATA%\matlab_itm` and warns. Set `MATLAB_ITM_CACHE` to choose
