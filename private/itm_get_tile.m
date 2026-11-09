@@ -16,7 +16,8 @@ function file = itm_get_tile(source, tile_lat, tile_lon, terrain_dir, download)
 %
 %   Lookup order for a tile:
 %     1. terrain_dir/<source>/<file> (this tool's cache)
-%     2. The itu_p2001 cache (ITU_P2001_CACHE, else ~/.itu_p2001 or
+%     2. The itu_p2001 cache (ITU_P2001_CACHE, else ~/.itu_p2001, or on
+%        Windows C:\itu_p2001 and then its earlier default
 %        %LOCALAPPDATA%\itu_p2001), dem/<usgs1|usgs13|cop30|cop90>/<file>.
 %        Both tools use the providers' file names, so a tile downloaded by
 %        either is reused by the other and not stored twice. Set
@@ -178,24 +179,29 @@ end
 end
 
 function p = shared_p2001_path(sub, name)
-% Tile path in the itu_p2001 cache, or "" when sharing is off
+% Tile path in the itu_p2001 cache, or "" when sharing is off. On Windows
+% without ITU_P2001_CACHE, itu_p2001 caches in C:\itu_p2001 and earlier
+% used %LOCALAPPDATA%\itu_p2001; a tile in either is found.
 p = "";
 if getenv('MATLAB_ITM_SHARE_P2001_CACHE') == "0"
     return
 end
 root = getenv('ITU_P2001_CACHE');
-if isempty(root)
-    if ispc
-        base = getenv('LOCALAPPDATA'); leaf = 'itu_p2001';
-    else
-        base = getenv('HOME'); leaf = '.itu_p2001';
-    end
-    if isempty(base)
-        return
-    end
-    root = fullfile(base, leaf);
+if ~isempty(root)
+    p = string(fullfile(root, 'dem', sub, name));
+    return
 end
-p = string(fullfile(root, 'dem', sub, name));
+if ispc
+    p = string(fullfile('C:\itu_p2001', 'dem', sub, name));
+    if ~isfile(p) && ~isempty(getenv('LOCALAPPDATA'))
+        old = string(fullfile(getenv('LOCALAPPDATA'), 'itu_p2001', 'dem', sub, name));
+        if isfile(old) || isfile(old + ".missing")
+            p = old;
+        end
+    end
+elseif ~isempty(getenv('HOME'))
+    p = string(fullfile(getenv('HOME'), '.itu_p2001', 'dem', sub, name));
+end
 end
 
 function tf = in_tile_list(source, name, terrain_dir, download)

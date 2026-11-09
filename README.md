@@ -267,7 +267,8 @@ Tiles download the first time a path needs them and are reused afterward:
   `terrain_dir` option overrides the terrain folder alone.
 - **Shared with itu_p2001.** Both tools use the providers' file names, so
   a tile already in the itu_p2001 cache (`ITU_P2001_CACHE`, else
-  `~/.itu_p2001/dem/...`) is read in place, not downloaded again. Set
+  `~/.itu_p2001/dem/...`, or on Windows `C:\itu_p2001\dem\...` and the
+  earlier `%LOCALAPPDATA%\itu_p2001\dem\...`) is read in place, not downloaded again. Set
   `MATLAB_ITM_SHARE_P2001_CACHE=0` to turn this off.
 - **Decoded tiles on disk.** Decoding a GeoTIFF takes about 170 ms. The
   decoded grid is saved beside it (`.zcache`, about 52 MB per tile), so a new
