@@ -144,6 +144,14 @@ classdef test_itm_geo_rev1 < matlab.unittest.TestCase
             tc.verifyError(@() itm_cli_rev1(args{:}, "--fast"), 'itm:cli:BadArgument');
         end
 
+        function cli_matches_pathloss(tc)
+            % The command-line tool, given text as a compiled app passes it,
+            % returns exactly what itm_pathloss_rev1 returns
+            L1 = itm_cli_rev1("38.8895", "-77.0353", "30", "39.0458", "-76.6413", "10", "2700", "1,50,99");
+            L2 = itm_pathloss_rev1([38.8895 -77.0353 30], [39.0458 -76.6413 10], 2700, [1 50 99]);
+            tc.verifyEqual(L1, L2);
+        end
+
         function maps_folder_override(tc)
             % MATLAB_ITM_MAPS_DIR takes the ITU text files from another folder
             here = fileparts(fileparts(mfilename('fullpath')));

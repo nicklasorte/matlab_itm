@@ -34,6 +34,7 @@ checks = { ...
     "NTIA published example and table",       @() check_ntia_example(ref); ...
     "NTIA p2p.csv cases",                     @() check_ntia_csv(ref); ...
     "740 cases vs NTIA C++ ITM v1.4",         @() check_cpp(ref); ...
+    "41 branch cases vs NTIA C++ ITM v1.4",   @() check_branch(ref); ...
     "Reliability vector equals scalar calls", @() check_vector(ref); ...
     "Climate and N0 vs WInnForum (309 points)", @() check_itu(ref); ...
     "Input errors raise ITM identifiers",     @() check_errors(); ...
@@ -128,6 +129,33 @@ must(dA <= 1e-9, "Max loss difference %.3g dB exceeds 1e-9 dB.", dA);
 must(isequal(M, E(:, 16)), "%d propagation modes differ.", nnz(M ~= E(:, 16)));
 must(isequal(W, E(:, 3)), "%d warning flags differ.", nnz(W ~= E(:, 3)));
 d = sprintf("max difference %.2g dB; modes and warnings identical", dA);
+end
+
+function d = check_branch(ref)
+% Out-of-domain branches, including the NaN reference attenuation and the
+% C++ error returns
+C = readmatrix(fullfile(ref, 'branch_cases.csv'));
+E = readmatrix(fullfile(ref, 'branch_expected.csv'));
+P = read_profiles(fullfile(ref, 'branch_pfls.csv'));
+dA = 0; n_err = 0;
+for k = 1:size(C, 1)
+    if E(k, 2) >= 1000
+        try
+            run_case(C(k, :), P);
+            must(false, "Case %d should raise ITM error %d.", k - 1, E(k, 2));
+        catch err
+            must(startsWith(err.identifier, "itm:") && err.identifier ~= "itm:selftest:Failed", ...
+                "Case %d raised %s.", k - 1, err.identifier);
+        end
+        n_err = n_err + 1;
+        continue
+    end
+    [A, info] = run_case(C(k, :), P);
+    dA = max(dA, abs(A - E(k, 4)));
+    must(info.mode == E(k, 16) && double(info.warnings) == E(k, 3), "Case %d: mode or warnings differ.", k - 1);
+end
+must(dA <= 1e-9, "Max loss difference %.3g dB exceeds 1e-9 dB.", dA);
+d = sprintf("max difference %.2g dB; %d error returns raised", dA, n_err);
 end
 
 function d = check_vector(ref)
