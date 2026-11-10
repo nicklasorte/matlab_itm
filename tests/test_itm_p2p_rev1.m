@@ -9,7 +9,8 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
     %      tests/reference/generator (see the README there).
     %   4. 41 branch cases that reach the C++ branches the randomized cases
     %      miss, including the C++ error returns (tests/reference/branch_*).
-    %   5. Vectorization, output shape, monotonicity, and error handling.
+    %   5. 74 edge cases at the exact input limits (tests/reference/edge_*).
+    %   6. Vectorization, output shape, monotonicity, and error handling.
     %
     %   Run: runtests('tests/test_itm_p2p_rev1.m')
 
@@ -90,25 +91,36 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             % line-of-sight fallbacks, the smooth-earth height-function
             % limits, the troposcatter asymmetry clamp, np = 1 profiles, and
             % the C++ error returns. See generator/README.md.
+            compare_reference(tc, 'branch');
+        end
+
+        function matches_cpp_edge_cases(tc)
+            % 74 cases at the exact input limits: heights, frequency, N_0,
+            % and percentages at and just past their limits, every climate
+            % and mdvar, epsilon = 1, extreme sigma, a 10 m path, a 2100 km
+            % sea path, a horizon tie, np = 1, and an obstacle next to the
+            % receiver. See generator/gen_edge.py.
+            compare_reference(tc, 'edge');
+        end
+
+        function undefined_reference_is_flagged(tc)
+            % Branch case 22: vertical polarization at 20 MHz over very
+            % conductive ground makes the smooth-earth term NaN. The C++
+            % sets A_ref to 0; MATLAB matches it and flags the result.
             C = readmatrix(fullfile(tc.ref_dir, 'branch_cases.csv'));
-            E = readmatrix(fullfile(tc.ref_dir, 'branch_expected.csv'));
             P = read_profiles(fullfile(tc.ref_dir, 'branch_pfls.csv'));
-            ids = containers.Map([1000 1001 1013 1021 1022], {'itm:InvalidTxHeight', 'itm:InvalidRxHeight', ...
-                'itm:GroundImpedance', 'itm:SurfaceRefractivitySmall', 'itm:SurfaceRefractivityLarge'});
-            ok = E(:, 2) < 1000;
-            for k = find(~ok)'
-                tc.verifyError(@() run_case(C(k, :), P), ids(E(k, 2)), sprintf('Case %d', k - 1));
-            end
-            for k = find(ok)'
-                [A, info] = run_case(C(k, :), P);
-                iv = [info.A_ref_db, info.A_fs_db, info.d_km, info.delta_h_m, info.d_hzn_m, ...
-                    info.h_e_m, info.theta_hzn_rad, info.N_s];
-                msg = sprintf('Case %d', k - 1);
-                tc.verifyEqual(A, E(k, 4), 'RelTol', 1e-12, 'AbsTol', 1e-9, msg);
-                tc.verifyEqual(info.mode, E(k, 16), msg);
-                tc.verifyEqual(double(info.warnings), E(k, 3), msg);
-                tc.verifyEqual(iv, E(k, 5:15), 'RelTol', 1e-9, 'AbsTol', 1e-9, msg);
-            end
+            c = C(23, :);
+            [~, info] = run_case(c, P);
+            tc.verifyTrue(info.A_ref_undefined);
+            tc.verifyEqual(info.A_ref_db, 0);
+            tc.verifyTrue(any(contains(info.warning_messages, 'Reference attenuation is undefined')));
+            tc.verifyEqual(bitand(info.warnings, uint32(65536)), uint32(0));   % info.warnings stays the C++ value
+            run = @() itm_p2p_rev1(c(1), c(2), P{c(13) + 1}, c(5), c(10), 'confidence', c(12), ...
+                'location', c(11), 'climate', c(3), 'N_0', c(4), 'polarization', c(6), 'epsilon', c(7), ...
+                'sigma', c(8), 'mdvar', c(9), 'validity', 'warn');
+            tc.verifyWarning(run, 'itm:validity:Caution');
+            [~, info] = run_case(C(1, :), P);   % an ordinary case
+            tc.verifyFalse(info.A_ref_undefined);
         end
 
         function reliability_vector_equals_scalar(tc)
@@ -229,6 +241,32 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             tc.verifyTrue(any(contains(info.warning_messages, 'Path distance is small')));
         end
     end
+end
+
+function compare_reference(tc, prefix)
+% Compares itm_p2p_rev1 with C++ results in tests/reference/<prefix>_*.csv.
+% Cases where the C++ returns an error code must raise the matching error.
+d = tc.ref_dir;
+C = readmatrix(fullfile(d, [prefix '_cases.csv']));
+E = readmatrix(fullfile(d, [prefix '_expected.csv']));
+P = read_profiles(fullfile(d, [prefix '_pfls.csv']));
+ids = containers.Map([1000 1001 1008 1009 1013 1021 1022], {'itm:InvalidTxHeight', 'itm:InvalidRxHeight', ...
+    'itm:InvalidRefractivity', 'itm:InvalidFrequency', 'itm:GroundImpedance', ...
+    'itm:SurfaceRefractivitySmall', 'itm:SurfaceRefractivityLarge'});
+for k = 1:size(C, 1)
+    msg = sprintf('%s case %d', prefix, k - 1);
+    if E(k, 2) >= 1000
+        tc.verifyError(@() run_case(C(k, :), P), ids(E(k, 2)), msg);
+        continue
+    end
+    [A, info] = run_case(C(k, :), P);
+    iv = [info.A_ref_db, info.A_fs_db, info.d_km, info.delta_h_m, info.d_hzn_m, ...
+        info.h_e_m, info.theta_hzn_rad, info.N_s];
+    tc.verifyEqual(A, E(k, 4), 'RelTol', 1e-12, 'AbsTol', 1e-9, msg);
+    tc.verifyEqual(info.mode, E(k, 16), msg);
+    tc.verifyEqual(double(info.warnings), E(k, 3), msg);
+    tc.verifyEqual(iv, E(k, 5:15), 'RelTol', 1e-9, 'AbsTol', 1e-9, msg);
+end
 end
 
 function [A, info] = run_case(c, profiles)

@@ -62,6 +62,9 @@ end
 
 [V_db, extreme] = variability(z, h_e_m, delta_h_m, f_mhz, d_m, A_ref_db, climate, mdvar);
 wbits = bitor(uint32(warnings), uint32(any(extreme(:))) * uint32(8192));
+if lines.A_ref_undefined
+    wbits = bitor(wbits, uint32(65536));   % MATLAB-only flag; not in info.warnings
+end
 if numel(V_db) ~= prod(out_size)
     % Scalar deviates (for example single-message mode, which ignores
     % time) give one value for every requested percentage
@@ -93,6 +96,7 @@ if want_info
         'mode_code', mode_code, ...
         'warnings', reshape(w, out_size), ...
         'warning_messages', {itm_warning_text(wbits)}, ...
+        'A_ref_undefined', lines.A_ref_undefined, ...
         'lines', lines);
 end
 end
@@ -402,7 +406,8 @@ lines = struct('a_e_m', a_e, 'd_sML_m', d_sML, 'd_ML_m', d_ML, 'theta_los_rad', 
     'd_3_m', d_3, 'd_4_m', d_4, 'A_3_db', A_3, 'A_4_db', A_4, 'M_d', M_d, 'A_d0_db', A_d0, ...
     'd_0_m', nan_, 'd_1_m', nan_, 'A_0_db', nan_, 'A_1_db', nan_, 'A_sML_db', nan_, ...
     'kHat_1', nan_, 'kHat_2', nan_, 'A_o_db', nan_, ...
-    'd_5_m', nan_, 'd_6_m', nan_, 'A_5_db', nan_, 'A_6_db', nan_, 'M_s', nan_, 'A_s0_db', nan_, 'd_x_m', nan_);
+    'd_5_m', nan_, 'd_6_m', nan_, 'A_5_db', nan_, 'A_6_db', nan_, 'M_s', nan_, 'A_s0_db', nan_, 'd_x_m', nan_, ...
+    'A_ref_undefined', false);
 
 d_min = abs(h_e_m(1) - h_e_m(2)) / 200e-3;
 if d_m < d_min,   warnings = bitor(warnings, 32); end
@@ -481,6 +486,9 @@ else
         propmode = 2;
     end
 end
+% A NaN here (an out-of-domain smooth-earth term) becomes 0 in the C++
+% MAX macro, as it does in c_max; the flag lets the caller say so
+lines.A_ref_undefined = isnan(A_ref_db);
 A_ref_db = c_max(A_ref_db, 0.0);
 end
 

@@ -61,8 +61,17 @@ function [A_db, info] = itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability, op
 %     A_db   Basic transmission loss (dB), size of reliability .* confidence
 %     info   Struct of ITM intermediate values: A_fs_db, A_ref_db, d_km,
 %            delta_h_m, d_hzn_m, h_e_m, theta_hzn_rad, elevation_deg, N_s, mode,
-%            mode_name, warnings (bitmask per output element, uint32) and
-%            warning_messages (cell array of unique warnings)
+%            mode_name, warnings (bitmask per output element, uint32),
+%            warning_messages (cell array of unique warnings), and
+%            A_ref_undefined
+%            A_ref_undefined is true when the reference attenuation can't
+%            be computed. It happens with vertical polarization over sea
+%            or fresh water below about 550 MHz on some paths, where the
+%            smooth-earth diffraction term leaves its domain (B_0 < 0).
+%            The NTIA C++ then sets the reference attenuation to 0, so the
+%            loss is free space plus variability; this function returns
+%            the same value and, unless validity is "off", warns
+%            (itm:validity:Caution).
 %            elevation_deg is [TX, RX]: the elevation angle (degrees,
 %            positive up) of the path at each terminal, toward the other
 %            antenna on a line-of-sight path or toward the terrain horizon

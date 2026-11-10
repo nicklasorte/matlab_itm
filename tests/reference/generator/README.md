@@ -83,3 +83,21 @@ cases:
   passes a start strictly before the end.
 - Error 1016 (effective earth radius): N_s from 150 to 400 N-units gives
   7,140 km to 11,260 km, which is inside the 4,000 km to 13,333 km check.
+
+## Edge cases
+
+`tests/reference/edge_cases.csv`, `edge_pfls.csv`, and `edge_expected.csv`
+hold 74 cases at the exact input limits, written by `gen_edge.py`: terminal
+heights of 0.5 m, 1 m, 1000 m, and 3000 m and just outside 0.5 m and 3000 m;
+frequencies of 20, 40, 10000, and 20000 MHz and just outside 20 and 20000
+MHz; N_0 of 250 and 400 and just outside; time, location, and situation of
+0.01 % and 99.99 %; all 7 climates and all 16 `mdvar` values; `epsilon` = 1
+with each polarization; `sigma` of 1e-12 S/m and 1e4 S/m; and six special
+profiles (a 10 m path, a 1 km path, a 2100 km sea path, two equal peaks
+that tie for the horizon, np = 1, and an obstacle one point from the
+receiver), each at three height and frequency settings.
+
+```bash
+python3 gen_edge.py
+./ref_driver edge_cases.csv edge_pfls.csv > edge_expected.csv
+```
