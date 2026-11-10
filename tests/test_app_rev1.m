@@ -12,14 +12,14 @@ classdef test_app_rev1 < matlab.unittest.TestCase
         function selftest_offline_passes(tc)
             [ok, T] = itm_selftest_rev1(network=false);
             tc.verifyTrue(ok, strjoin(T.name(T.status == "FAIL") + ": " + T.detail(T.status == "FAIL"), newline));
-            tc.verifyEqual(nnz(T.status == "PASS"), 7);
+            tc.verifyEqual(nnz(T.status == "PASS"), 8);
             tc.verifyEqual(nnz(T.status == "SKIP"), 3);
         end
 
         function selftest_progress_called_per_check(tc)
             rows = {};
             itm_selftest_rev1(network=false, progress=@(r) store(r));
-            tc.verifyNumElements(rows, 10);
+            tc.verifyNumElements(rows, 11);
             function store(r)
                 rows{end + 1} = r;
             end
@@ -32,7 +32,7 @@ classdef test_app_rev1 < matlab.unittest.TestCase
             passed = app.run();
             tc.verifyTrue(passed);
             tc.verifyTrue(startsWith(app.status.Value{1}, 'PASSED'));
-            tc.verifySize(app.table.Data, [10 4]);
+            tc.verifySize(app.table.Data, [11 4]);
             tc.verifyEqual(app.button.Enable, matlab.lang.OnOffSwitchState.on);
         end
     end

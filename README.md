@@ -8,7 +8,10 @@ Compiler for the free MATLAB Runtime.
 The core is a line-by-line port of the C++ reference implementation at
 [NTIA/itm](https://github.com/NTIA/itm) (commit `183ad95`). It matches that
 code to within 4 × 10⁻¹³ dB on 740 test cases, with identical propagation
-modes, warning flags, and intermediate values.
+modes, warning flags, and intermediate values. A further 115 reference cases
+reach every reachable C++ branch and the input limits. On 120,000 fuzzed
+cases the loss agrees to 1.2 × 10⁻¹³ relative, and every C++ error return
+raises the matching error (see [docs/MODEL_REVIEW.md](docs/MODEL_REVIEW.md)).
 
 ## Get started
 
@@ -179,6 +182,13 @@ outside 40 to 10000 MHz, terminal heights outside 1 to 1000 m, paths over
 1000 km, and percentages far in a tail (below about 0.1 % or above 99.9 %).
 NTIA's horizon-geometry flags are common on real terrain, so they're kept in
 `info.warnings` without a MATLAB warning.
+
+On some paths with vertical polarization over sea or fresh water, below
+about 550 MHz, ITM's smooth-earth diffraction term leaves its domain and
+the reference attenuation can't be computed. The NTIA C++ then sets it to 0,
+so the loss is free space plus variability. This port returns the same
+value, sets `info.A_ref_undefined`, and adds the condition to
+`itm:validity:Caution`.
 
 To compute outside the range anyway, pass `validity="warn"` (errors for
 distance become warnings) or `validity="off"` (no checks beyond NTIA's hard
@@ -550,8 +560,8 @@ app with MATLAB Compiler and take 1 to 2 minutes.
 
 | Test file | What it checks |
 | --- | --- |
-| `test_itm_p2p_rev1.m` | NTIA's published example and reliability-by-confidence table; NTIA `p2p.csv` cases; 740 randomized cases against the NTIA C++ (loss to 10⁻⁹ dB; modes, warnings, and intermediate values); vector vs scalar calls; output shapes; monotonic loss vs reliability; free-space check; every error identifier; warning flags. |
-| `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; maps folder override; setup; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; 3DEP profile; Copernicus fallback, GLO-90, and ocean; uncovered-land error; reuse of the itu_p2001 cache; batched profiles; end-to-end loss; two workers downloading into one folder. |
+| `test_itm_p2p_rev1.m` | NTIA's published example and reliability-by-confidence table; NTIA `p2p.csv` cases; 740 randomized cases, 41 branch cases, and 74 edge cases against the NTIA C++ (loss to 10⁻⁹ dB; modes, warnings, and intermediate values; C++ error returns raise the matching error); the undefined-reference flag; vector vs scalar calls; output shapes; monotonic loss vs reliability; free-space check; every error identifier; warning flags. |
+| `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; maps folder override; setup; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; the command-line tool matches `itm_pathloss_rev1`; 3DEP profile; Copernicus fallback, GLO-90, and ocean; uncovered-land error; reuse of the itu_p2001 cache; batched profiles; end-to-end loss; two workers downloading into one folder. |
 | `test_limits_rev1.m` | Paths shorter than 1 km and longer than 2000 km fail; the error names the length, or the links in a batch; `validity="warn"` and `"off"`; frequency, height, and reliability limits; paths across the North Pole and near the South Pole, with and without terrain. |
 | `test_mechanism_rev1.m` | The SEADLib drop-in matches `itm_pathloss_rev1` with the endpoint climate rule; mode codes; one-link shape; loud and `NaN` failure modes. |
 | `test_robustness_rev1.m` | `parfor` equals serial; two processes writing the decoded-tile cache; a truncated cache file is detected and rebuilt; the antimeridian (Fiji); high latitude (Tromsø); points on tile edges and corners; a link's loss doesn't depend on the batch. |

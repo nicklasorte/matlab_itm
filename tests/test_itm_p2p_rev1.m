@@ -230,6 +230,12 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             tc.verifyError(@() f(30, 10, pfl, 2700, 50, 'mdvar', 4), 'itm:InvalidMdvar');
             tc.verifyError(@() f(30, 10, pfl(1:end - 1), 2700, 50), 'itm:InvalidProfile');
             tc.verifyError(@() f(30, 10, [0; 100; 5], 2700, 50), 'itm:InvalidProfile');
+            bad = pfl; bad(5) = NaN;
+            tc.verifyError(@() f(30, 10, bad, 2700, 50), 'itm:InvalidProfile');          % non-finite height
+            bad = pfl; bad(1) = pfl(1) - 0.5;
+            tc.verifyError(@() f(30, 10, bad, 2700, 50), 'itm:InvalidProfile');          % non-integer np
+            bad = pfl; bad(2) = 0;
+            tc.verifyError(@() f(30, 10, bad, 2700, 50), 'itm:InvalidProfile');          % zero spacing
         end
 
         function warnings_reported(tc)
