@@ -357,7 +357,8 @@ fit_y2 = sum_y + scaled_sum_y * (np - mid_shifted_end);
 end
 
 function v = fdim(x, y)
-% C fdim: positive difference
+% Positive difference. Gives 0 for NaN, like the C++ DIM macro; the
+% std::fdim calls in QuickPfl and LinearLeastSquaresFit only see finite values.
 v = max(x - y, 0);
 end
 
@@ -375,7 +376,7 @@ a_e = 1 / gamma_e;
 d_hzn_s = sqrt(2.0 * h_e_m * a_e);
 d_sML = d_hzn_s(1) + d_hzn_s(2);
 d_ML = d_hzn_m(1) + d_hzn_m(2);
-theta_los = -max(theta_hzn(1) + theta_hzn(2), -d_ML / a_e);
+theta_los = -c_max(theta_hzn(1) + theta_hzn(2), -d_ML / a_e);
 
 if abs(theta_hzn(1)) > 200e-3, warnings = bitor(warnings, 128); end
 if abs(theta_hzn(2)) > 200e-3, warnings = bitor(warnings, 256); end
@@ -390,7 +391,7 @@ if N_s < 250, warnings = bitor(warnings, 16384); end
 if a_e < 4000000 || a_e > 13333333, itm_error(1016); end
 if real(Z_g) <= abs(imag(Z_g)), itm_error(1013); end
 
-d_3 = max(d_sML, d_ML + 5.0 * (a_e^2 / f_mhz)^(1.0 / 3.0));
+d_3 = c_max(d_sML, d_ML + 5.0 * (a_e^2 / f_mhz)^(1.0 / 3.0));
 d_4 = d_3 + 10.0 * (a_e^2 / f_mhz)^(1.0 / 3.0);
 A_3 = diffraction_loss(d_3, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz);
 A_4 = diffraction_loss(d_4, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz);
@@ -414,10 +415,10 @@ if d_m < d_sML
     A_sML = d_sML * M_d + A_d0;
     d_0 = 0.04 * f_mhz * h_e_m(1) * h_e_m(2);
     if A_d0 >= 0.0
-        d_0 = min(d_0, 0.5 * d_ML);
+        d_0 = c_min(d_0, 0.5 * d_ML);
         d_1 = d_0 + 0.25 * (d_ML - d_0);
     else
-        d_1 = max(-A_d0 / M_d, 0.25 * d_ML);
+        d_1 = c_max(-A_d0 / M_d, 0.25 * d_ML);
     end
     A_1 = line_of_sight_loss(d_1, h_e_m, Z_g, delta_h_m, M_d, A_d0, d_sML, f_mhz);
     flag = false;
@@ -426,7 +427,7 @@ if d_m < d_sML
     if d_0 < d_1
         A_0 = line_of_sight_loss(d_0, h_e_m, Z_g, delta_h_m, M_d, A_d0, d_sML, f_mhz);
         q = log(d_sML / d_0);
-        kHat_2 = max(0.0, ((d_sML - d_0) * (A_1 - A_0) - (d_1 - d_0) * (A_sML - A_0)) / ...
+        kHat_2 = c_max(0.0, ((d_sML - d_0) * (A_1 - A_0) - (d_1 - d_0) * (A_sML - A_0)) / ...
             ((d_sML - d_0) * log(d_1 / d_0) - (d_1 - d_0) * q));
         flag = A_d0 > 0.0 || kHat_2 > 0.0;
         if flag
@@ -462,7 +463,7 @@ else
     A_5 = troposcatter_loss(d_5, theta_hzn, d_hzn_m, h_e_m, a_e, N_s, f_mhz, theta_los, h0);
     if A_5 < 1000.0
         M_s = (A_6 - A_5) / 200e3;
-        d_x = max(max(d_sML, d_ML + 1.088 * (a_e^2 / f_mhz)^(1.0 / 3.0) * log(f_mhz)), ...
+        d_x = c_max(c_max(d_sML, d_ML + 1.088 * (a_e^2 / f_mhz)^(1.0 / 3.0) * log(f_mhz)), ...
             (A_5 - A_d0 - M_s * d_5) / (M_d - M_s));
         A_s0 = (M_d - M_s) * d_x + A_d0;
     else
@@ -480,7 +481,7 @@ else
         propmode = 2;
     end
 end
-A_ref_db = max(A_ref_db, 0.0);
+A_ref_db = c_max(A_ref_db, 0.0);
 end
 
 function A_d = diffraction_loss(d_m, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz)
@@ -488,15 +489,15 @@ A_k = knife_edge_diffraction(d_m, f_mhz, a_e, theta_los, d_hzn_m);
 A_se = smooth_earth_diffraction(d_m, f_mhz, a_e, theta_los, d_hzn_m, h_e_m, Z_g);
 delta_h_dsML = terrain_roughness(d_sML, delta_h_m);
 sigma_h_d = sigma_h_function(delta_h_dsML);
-A_fo = min(15.0, 5 * log10(1.0 + 1e-5 * h_m(1) * h_m(2) * f_mhz * sigma_h_d));
+A_fo = c_min(15.0, 5 * log10(1.0 + 1e-5 * h_m(1) * h_m(2) * f_mhz * sigma_h_d));
 delta_h_d = terrain_roughness(d_m, delta_h_m);
 q = h_m(1) * h_m(2);
 qk = h_e_m(1) * h_e_m(2) - q;
 q = q + 10.0;                                   % point-to-point mode
 term1 = sqrt(1.0 + qk / q);
 d_ML = d_hzn_m(1) + d_hzn_m(2);
-q = (term1 + (-theta_los * a_e + d_ML) / d_m) * min(delta_h_d * f_mhz / 47.7, 6283.2);
-w = 25.1 / (25.1 + sqrt(q));
+q = (term1 + (-theta_los * a_e + d_ML) / d_m) * c_min(delta_h_d * f_mhz / 47.7, 6283.2);
+w = 25.1 / (25.1 + c_sqrt(q));
 A_d = w * A_se + (1.0 - w) * A_k + A_fo;
 end
 
@@ -511,7 +512,7 @@ end
 
 function A = fresnel_integral(v2)
 if v2 < 5.76
-    A = 6.02 + 9.11 * sqrt(v2) - 1.27 * v2;
+    A = 6.02 + 9.11 * c_sqrt(v2) - 1.27 * v2;
 else
     A = 12.953 + 10 * log10(v2);
 end
@@ -526,7 +527,7 @@ a_m = [(d_m - d_ML) / (d_m / a_e - theta_los), ...
     0.5 * d_hzn_m(1)^2 / h_e_m(1), ...
     0.5 * d_hzn_m(2)^2 / h_e_m(2)];
 d_km = [(a_m(1) * theta_nlos) / 1000.0, d_hzn_m(1) / 1000.0, d_hzn_m(2) / 1000.0];
-C_0 = ((4.0 / 3.0) * a_0 ./ a_m).^THIRD;
+C_0 = c_pow((4.0 / 3.0) * a_0 ./ a_m, THIRD);
 K = 0.017778 * C_0 * f_mhz^(-THIRD) / abs(Z_g);
 B_0 = 1.607 - K;
 x_km = zeros(1, 3);
@@ -535,7 +536,7 @@ x_km(3) = B_0(3) * C_0(3)^2 * f_mhz^THIRD * d_km(3);
 x_km(1) = B_0(1) * C_0(1)^2 * f_mhz^THIRD * d_km(1) + x_km(2) + x_km(3);
 F_x_1 = height_function(x_km(2), K(2));
 F_x_2 = height_function(x_km(3), K(3));
-G_x = 0.05751 * x_km(1) - 10.0 * log10(x_km(1));
+G_x = 0.05751 * x_km(1) - 10.0 * c_log10(x_km(1));
 A_se = G_x - F_x_1 - F_x_2 - 20;
 end
 
@@ -564,7 +565,7 @@ delta_h_d = terrain_roughness(d_m, delta_h_m);
 sigma_h_d = sigma_h_function(delta_h_d);
 wn = f_mhz / 47.7;
 sin_psi = (h_e_m(1) + h_e_m(2)) / sqrt(d_m^2 + (h_e_m(1) + h_e_m(2))^2);
-R_e = (sin_psi - Z_g) / (sin_psi + Z_g) * exp(-min(10.0, wn * sigma_h_d * sin_psi));
+R_e = (sin_psi - Z_g) / (sin_psi + Z_g) * exp(-c_min(10.0, wn * sigma_h_d * sin_psi));
 q = real(R_e)^2 + imag(R_e)^2;
 if q < 0.25 || q < sin_psi
     R_e = R_e * sqrt(sin_psi / q);
@@ -576,7 +577,7 @@ end
 rr = complex(cos(delta_phi), -sin(delta_phi)) + R_e;
 A_t = -10 * log10(real(rr)^2 + imag(rr)^2);
 A_d = M_d * d_m + A_d0;
-w = 1 / (1 + f_mhz * delta_h_m / max(10e3, d_sML));
+w = 1 / (1 + f_mhz * delta_h_m / c_max(10e3, d_sML));
 A_los = w * A_t + (1 - w) * A_d;
 end
 
@@ -599,19 +600,19 @@ else
         return
     end
     s = (d_m - ad) / (d_m + ad);
-    q = min(max(0.1, rr / s), 10.0);
-    s = max(0.1, s);
+    q = c_min(c_max(0.1, rr / s), 10.0);
+    s = c_max(0.1, s);
     h_0_m = (d_m - ad) * (d_m + ad) * theta * 0.25 / d_m;
     Z_0 = 1.7556e3;
     Z_1 = 8.0e3;
     eta_s = (h_0_m / Z_0) * (1.0 + (0.031 - N_s * 2.32e-3 + N_s^2 * 5.67e-6) * ...
-        exp(-(min(1.7, h_0_m / Z_1))^6));
+        exp(-(c_min(1.7, h_0_m / Z_1))^6));
     H_00 = (h0_function(r_1, eta_s) + h0_function(r_2, eta_s)) / 2;
-    Delta_H_0 = min(H_00, 6.0 * (0.6 - log10(max(eta_s, 1.0))) * log10(s) * log10(q));
+    Delta_H_0 = c_min(H_00, 6.0 * (0.6 - c_log10(c_max(eta_s, 1.0))) * c_log10(s) * c_log10(q));
     H_0 = H_00 + Delta_H_0;
-    H_0 = max(H_0, 0.0);
+    H_0 = c_max(H_0, 0.0);
     if eta_s < 1.0
-        H_0 = eta_s * H_0 + (1.0 - eta_s) * 10 * log10(((1.0 + sqrt(2) / r_1) * (1.0 + sqrt(2) / r_2))^2 * ...
+        H_0 = eta_s * H_0 + (1.0 - eta_s) * 10 * c_log10(((1.0 + sqrt(2) / r_1) * (1.0 + sqrt(2) / r_2))^2 * ...
             (r_1 + r_2) / (r_1 + r_2 + 2 * sqrt(2)));
     end
     if H_0 > 15.0 && h0 >= 0.0
@@ -622,7 +623,7 @@ h0 = H_0;
 th = d_m / a_e - theta_los;
 D_0 = 40e3;
 H = 47.7;
-A_scat = f_function(th * d_m) + 10 * log10(wn * H * th^4) - 0.1 * (N_s - 301.0) * exp(-th * d_m / D_0) + H_0;
+A_scat = f_function(th * d_m) + 10 * c_log10(wn * H * th^4) - 0.1 * (N_s - 301.0) * exp(-th * d_m / D_0) + H_0;
 end
 
 function F_0 = f_function(td)
@@ -636,11 +637,11 @@ elseif td <= 70e3
 else
     i = 3;
 end
-F_0 = a(i) + b(i) * td + c(i) * log10(td);
+F_0 = a(i) + b(i) * td + c(i) * c_log10(td);
 end
 
 function result = h0_function(r, eta_s)
-eta_s = min(max(eta_s, 1), 5);
+eta_s = c_min(c_max(eta_s, 1), 5);
 i = fix(eta_s);
 q = eta_s - i;
 result = h0_curve(i, r);
@@ -795,4 +796,36 @@ end
 
 function v = curve(c1, c2, x1, x2, x3, d_e)
 v = (c1 + c2 / (1.0 + ((d_e - x2) / x3)^2)) * ((d_e / x1)^2) / (1.0 + ((d_e / x1)^2));
+end
+
+%% ------------------------------------------------------------------------
+%  C arithmetic. The NTIA C++ gives NaN where MATLAB would give a complex
+%  number (sqrt, log10, or a fractional power of a negative number), and
+%  its MAX and MIN macros keep a NaN in the second argument. These helpers
+%  reproduce both, so out-of-domain inputs give the same answer as the C++.
+%  ------------------------------------------------------------------------
+function y = c_max(a, b)
+% C macro MAX(a, b): a > b ? a : b
+if a > b, y = a; else, y = b; end
+end
+
+function y = c_min(a, b)
+% C macro MIN(a, b): a < b ? a : b
+if a < b, y = a; else, y = b; end
+end
+
+function y = c_sqrt(x)
+y = sqrt(abs(x));
+y(x < 0) = NaN;
+end
+
+function y = c_log10(x)
+y = log10(abs(x));
+y(x < 0) = NaN;
+end
+
+function y = c_pow(x, p)
+% C pow(x, p) for non-integer p
+y = abs(x) .^ p;
+y(x < 0) = NaN;
 end
