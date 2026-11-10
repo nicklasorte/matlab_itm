@@ -6,6 +6,10 @@ NTIA/ITS C++ ITM v1.4 ([NTIA/itm](https://github.com/NTIA/itm), commit
 
 ## Regenerate
 
+Build on x86-64, or add `-ffp-contract=off`. On aarch64, g++ fuses
+multiply-adds by default, which changes the last bits and, in rare cases,
+a result by up to 0.013 dB (see `docs/MODEL_REVIEW.md`, finding 4).
+
 1. Clone the NTIA code and make it build outside Windows:
 
    ```bash
