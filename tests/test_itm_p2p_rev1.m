@@ -7,7 +7,9 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
     %      propagation modes) with expected values from the NTIA C++ ITM
     %      v1.4 built from https://github.com/NTIA/itm. Regenerate with
     %      tests/reference/generator (see the README there).
-    %   4. Vectorization, output shape, monotonicity, and error handling.
+    %   4. 41 branch cases that reach the C++ branches the randomized cases
+    %      miss, including the C++ error returns (tests/reference/branch_*).
+    %   5. Vectorization, output shape, monotonicity, and error handling.
     %
     %   Run: runtests('tests/test_itm_p2p_rev1.m')
 
@@ -79,6 +81,34 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             tc.verifyEqual(M, E(:, 16), 'Propagation mode vs C++');
             tc.verifyEqual(W, E(:, 3), 'Warning flags vs C++');
             tc.verifyEqual(IV, E(:, 5:15), 'RelTol', 1e-9, 'AbsTol', 1e-9, 'Intermediate values vs C++');
+        end
+
+        function matches_cpp_branch_cases(tc)
+            % 41 cases that reach the C++ branches the randomized cases miss:
+            % delta_h with fewer than two points, the line-of-sight horizon
+            % rescale, paths over 1000 km and 2000 km, the zero-slope
+            % line-of-sight fallbacks, the smooth-earth height-function
+            % limits, the troposcatter asymmetry clamp, np = 1 profiles, and
+            % the C++ error returns. See generator/README.md.
+            C = readmatrix(fullfile(tc.ref_dir, 'branch_cases.csv'));
+            E = readmatrix(fullfile(tc.ref_dir, 'branch_expected.csv'));
+            P = read_profiles(fullfile(tc.ref_dir, 'branch_pfls.csv'));
+            ids = containers.Map([1000 1001 1013 1021 1022], {'itm:InvalidTxHeight', 'itm:InvalidRxHeight', ...
+                'itm:GroundImpedance', 'itm:SurfaceRefractivitySmall', 'itm:SurfaceRefractivityLarge'});
+            ok = E(:, 2) < 1000;
+            for k = find(~ok)'
+                tc.verifyError(@() run_case(C(k, :), P), ids(E(k, 2)), sprintf('Case %d', k - 1));
+            end
+            for k = find(ok)'
+                [A, info] = run_case(C(k, :), P);
+                iv = [info.A_ref_db, info.A_fs_db, info.d_km, info.delta_h_m, info.d_hzn_m, ...
+                    info.h_e_m, info.theta_hzn_rad, info.N_s];
+                msg = sprintf('Case %d', k - 1);
+                tc.verifyEqual(A, E(k, 4), 'RelTol', 1e-12, 'AbsTol', 1e-9, msg);
+                tc.verifyEqual(info.mode, E(k, 16), msg);
+                tc.verifyEqual(double(info.warnings), E(k, 3), msg);
+                tc.verifyEqual(iv, E(k, 5:15), 'RelTol', 1e-9, 'AbsTol', 1e-9, msg);
+            end
         end
 
         function reliability_vector_equals_scalar(tc)

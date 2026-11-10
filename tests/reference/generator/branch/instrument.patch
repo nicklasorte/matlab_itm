@@ -1,0 +1,110 @@
+diff -ru /home/claude/ntia_v14/src/ComputeDeltaH.cpp src/ComputeDeltaH.cpp
+--- /home/claude/ntia_v14/src/ComputeDeltaH.cpp	2026-11-10 07:09:04.362737896 -0500
++++ src/ComputeDeltaH.cpp	2026-11-10 07:13:22.423635607 -0500
+@@ -25,7 +25,7 @@
+ 
+     // if there are less than 2 terrain points, return delta_h = 0
+     if (x_end - x_start < 2.0)
+-        return 0;
++        return (g_hits |= 1L<<0), 0;
+ 
+     int p10 = (int)(0.1 * (x_end - x_start + 8.0));
+     p10 = MIN(MAX(4, p10), 25);                 // 10% index
+@@ -49,6 +49,7 @@
+             i++;
+         }
+ 
++        if (x_start > 0.0) g_hits |= 1L<<1;
+         s[j + 2] = pfl[i + 3] + (pfl[i + 3] - pfl[i + 2]) * x_start;
+ 
+         x_start += x_end;
+diff -ru /home/claude/ntia_v14/src/LinearLeastSquaresFit.cpp src/LinearLeastSquaresFit.cpp
+--- /home/claude/ntia_v14/src/LinearLeastSquaresFit.cpp	2026-11-10 07:09:04.363306172 -0500
++++ src/LinearLeastSquaresFit.cpp	2026-11-10 07:11:44.116290208 -0500
+@@ -23,6 +23,7 @@
+ 
+     if (i_end <= i_start)
+     {
++        g_hits |= 1L<<2;
+         i_start = (int)fdim(i_start, 1.0);
+         i_end = np - (int)fdim(np, i_end + 1.0);
+     }
+diff -ru /home/claude/ntia_v14/src/LongleyRice.cpp src/LongleyRice.cpp
+--- /home/claude/ntia_v14/src/LongleyRice.cpp	2026-11-10 07:09:04.363330478 -0500
++++ src/LongleyRice.cpp	2026-11-10 07:13:22.424102965 -0500
+@@ -100,9 +100,9 @@
+         *warnings |= WARN__PATH_DISTANCE_TOO_SMALL_1;
+     if (d__meter < 1e3)
+         *warnings |= WARN__PATH_DISTANCE_TOO_SMALL_2;
+-    if (d__meter > 1000e3)
++    if (d__meter > 1000e3 && (g_hits |= 1L<<4))
+         *warnings |= WARN__PATH_DISTANCE_TOO_BIG_1;
+-    if (d__meter > 2000e3)
++    if (d__meter > 2000e3 && (g_hits |= 1L<<5))
+         *warnings |= WARN__PATH_DISTANCE_TOO_BIG_2;
+ 
+     // if the path distance is less than the maximum smooth earth line of sight distance...
+@@ -151,7 +151,7 @@
+                     kHat_1__db_per_meter = 0.0;
+                     kHat_2__db_per_meter = DIM(A_sML__db, A_0__db) / q;
+ 
+-                    if (kHat_2__db_per_meter == 0.0)
++                    if (kHat_2__db_per_meter == 0.0 && (g_hits |= 1L<<6))
+                         kHat_1__db_per_meter = M_d;
+                 }
+             }
+@@ -162,7 +162,7 @@
+             kHat_1__db_per_meter = DIM(A_sML__db, A_1__db) / (d_sML__meter - d_1__meter);
+             kHat_2__db_per_meter = 0.0;
+ 
+-            if (kHat_1__db_per_meter == 0.0)
++            if (kHat_1__db_per_meter == 0.0 && (g_hits |= 1L<<7))
+                 kHat_1__db_per_meter = M_d;
+         }
+ 
+diff -ru /home/claude/ntia_v14/src/QuickPfl.cpp src/QuickPfl.cpp
+--- /home/claude/ntia_v14/src/QuickPfl.cpp	2026-11-10 07:09:04.363450578 -0500
++++ src/QuickPfl.cpp	2026-11-10 07:11:44.116499181 -0500
+@@ -55,6 +55,7 @@
+         double combined_horizons__meter = d_hzn__meter[0] + d_hzn__meter[1];
+         if (combined_horizons__meter <= *d__meter)
+         {
++            g_hits |= 1L<<3;
+             q = pow(*d__meter / combined_horizons__meter, 2);
+ 
+             for (int i = 0; i < 2; i++)
+diff -ru /home/claude/ntia_v14/src/SmoothEarthDiffraction.cpp src/SmoothEarthDiffraction.cpp
+--- /home/claude/ntia_v14/src/SmoothEarthDiffraction.cpp	2026-11-10 07:09:04.363553064 -0500
++++ src/SmoothEarthDiffraction.cpp	2026-11-10 07:11:44.117218235 -0500
+@@ -91,10 +91,12 @@
+     {
+         w = -log(K);
+ 
++        if (K < 1e-5) g_hits |= 1L<<8;
+         if (K < 1e-5 || x__km * pow(w, 3) > 5495.0)
+         {
+             result = -117.0;
+ 
++            if (x__km <= 1.0) g_hits |= 1L<<9;
+             if (x__km > 1.0)
+                 result = 17.372 * log(x__km) + result;
+         }
+diff -ru /home/claude/ntia_v14/src/TroposcatterLoss.cpp src/TroposcatterLoss.cpp
+--- /home/claude/ntia_v14/src/TroposcatterLoss.cpp	2026-11-10 07:09:04.363662516 -0500
++++ src/TroposcatterLoss.cpp	2026-11-10 07:11:44.117327778 -0500
+@@ -85,6 +85,7 @@
+ 
+         // "In all of this, we truncate the values of s and q at 0.1 and 10" [Algorithm, page 16]
+         double q = MIN(MAX(0.1, rr / s), 10.0);             // TN101, Eqn 9.5
++        if (s < 0.1) g_hits |= 1L<<10;
+         s = MAX(0.1, s);                                    // TN101, Eqn 9.5
+ 
+         double h_0__meter = (d__meter - ad) * (d__meter + ad) * theta * 0.25 / d__meter;   // height of cross-over, [Algorithm, 4.66] [TN101v1, 9.3b]
+--- /home/claude/ntia_v14/include/itm.h	2026-11-10 07:09:04.365645513 -0500
++++ include/itm.h	2026-11-10 07:11:44.114539867 -0500
+@@ -103,3 +103,5 @@
+     double epsilon, double sigma, int mdvar, long *warnings);
+ DLLEXPORT double Variability(double time, double location, double situation, double h_e__meter[2], double delta_h__meter,
+     double f__mhz, double d__meter, double A_ref__db, int climate, int mdvar, long *warnings);
++
++extern long g_hits;
