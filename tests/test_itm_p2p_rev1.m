@@ -230,8 +230,10 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             tc.verifyError(@() f(30, 10, pfl, 2700, 50, 'mdvar', 4), 'itm:InvalidMdvar');
             tc.verifyError(@() f(30, 10, pfl(1:end - 1), 2700, 50), 'itm:InvalidProfile');
             tc.verifyError(@() f(30, 10, [0; 100; 5], 2700, 50), 'itm:InvalidProfile');
-            bad = pfl; bad(5) = NaN;
-            tc.verifyError(@() f(30, 10, bad, 2700, 50), 'itm:InvalidProfile');          % non-finite height
+            bad = pfl; bad(5) = NaN;                                                     % non-finite height:
+            tc.verifyError(@() f(30, 10, bad, 2700, 50), 'MATLAB:validators:mustBeFinite');   % arguments block
+            tc.verifyError(@() itm_pathloss_rev1([38.9 -77 30], [38.95 -76.95 10], 2700, 50, pfl=bad, ...
+                climate=5, N_0=301), 'itm:InvalidProfile');                                % core check
             bad = pfl; bad(1) = pfl(1) - 0.5;
             tc.verifyError(@() f(30, 10, bad, 2700, 50), 'itm:InvalidProfile');          % non-integer np
             bad = pfl; bad(2) = 0;
