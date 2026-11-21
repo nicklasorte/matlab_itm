@@ -35,6 +35,7 @@ checks = { ...
     "NTIA p2p.csv cases",                     @() check_ntia_csv(ref); ...
     "740 cases vs NTIA C++ ITM v1.4",         @() check_cpp(ref); ...
     "41 branch cases vs NTIA C++ ITM v1.4",   @() check_branch(ref); ...
+    "2,143 area-mode cases vs NTIA C++ ITM v1.4", @() check_area(ref); ...
     "Reliability vector equals scalar calls", @() check_vector(ref); ...
     "Climate and N0 vs WInnForum (309 points)", @() check_itu(ref); ...
     "Input errors raise ITM identifiers",     @() check_errors(); ...
@@ -156,6 +157,35 @@ for k = 1:size(C, 1)
 end
 must(dA <= 1e-9, "Max loss difference %.3g dB exceeds 1e-9 dB.", dA);
 d = sprintf("max difference %.2g dB; %d error returns raised", dA, n_err);
+end
+
+function d = check_area(ref)
+% Area mode (itm_area_rev1) against ITM_AREA_TLS_Ex, including its error returns
+C = readmatrix(fullfile(ref, 'area_cases.csv'));
+E = readmatrix(fullfile(ref, 'area_expected.csv'));
+dA = 0; n_err = 0;
+for k = 1:size(C, 1)
+    c = C(k, :);
+    run = @() itm_area_rev1(c(1), c(2), c(5), c(6), c(9), c(14), 'confidence', c(16), 'location', c(15), ...
+        'tx_siting', c(3), 'rx_siting', c(4), 'climate', c(7), 'N_0', c(8), 'polarization', c(10), ...
+        'epsilon', c(11), 'sigma', c(12), 'mdvar', c(13), 'validity', 'off');
+    if E(k, 2) >= 1000
+        try
+            run();
+            must(false, "Area case %d should raise ITM error %d.", k - 1, E(k, 2));
+        catch err
+            must(startsWith(err.identifier, "itm:") && err.identifier ~= "itm:selftest:Failed", ...
+                "Area case %d raised %s.", k - 1, err.identifier);
+        end
+        n_err = n_err + 1;
+        continue
+    end
+    [A, info] = run();
+    dA = max(dA, abs(A - E(k, 4)) / max(1, abs(E(k, 4))));
+    must(info.mode == E(k, 16) && double(info.warnings) == E(k, 3), "Area case %d: mode or warnings differ.", k - 1);
+end
+must(dA <= 1e-9, "Max relative loss difference %.3g exceeds 1e-9.", dA);
+d = sprintf("max relative difference %.2g; %d error returns raised", dA, n_err);
 end
 
 function d = check_vector(ref)

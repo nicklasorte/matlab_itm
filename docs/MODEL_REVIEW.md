@@ -322,6 +322,44 @@ Windows and Linux.
    rather than on every push.
 6. Run the suite once on Windows to cover the `C:\propagation_cache` paths.
 
+## Addendum: area mode (November 21, 2026)
+
+After the review, `itm_area_rev1` added ITM area mode: a port of NTIA
+`ITM_AREA_TLS_Ex` (and `ITM_AREA_CR_Ex`) and `InitializeArea`. Area mode
+shares `itm_p2p_core.m` with point-to-point mode. A struct in place of the
+profile selects `InitializeArea` for the horizon geometry, sets N_s = N_0,
+and leaves out the point-to-point constant (`q + 10`) in `DiffractionLoss`;
+these are the only differences in the C++ as well.
+
+It was verified the same way as point-to-point mode:
+
+- **Reference cases.** 2,143 cases against the NTIA C++, in
+  `tests/reference/area_*`: 2,000 randomized cases, 31 that reach rare
+  branches (found by fuzzing 200,000 wider cases through an instrumented
+  build), and 112 at the input limits, including one case for each C++
+  error return (1000 to 1002, 1008 to 1014, and the area-mode errors 1017
+  to 1020). Every case matches: loss within 1.6 × 10⁻¹⁶ relative, mode,
+  warning flags, all 11 intermediate values, and the error identifier.
+- **Unreachable branches.** In area mode N_s = N_0, which is range-checked,
+  so the N_s and effective-radius errors and warnings can't occur. The
+  horizon distance never exceeds the smooth-earth distance, area-mode
+  horizons stay under about 260 km (so the troposcatter asymmetry clamp
+  can't fire), and the troposcatter frame keeps q <= 1 before its clamp
+  at 10.
+- **Coverage.** The point-to-point and area tests together execute 599 of
+  613 statements (97.7 %) in `itm_p2p_core.m`.
+- **No change to point-to-point mode.** All 73 tests pass, and the
+  120,000-case comparison on `main` after the merge gives the same result as
+  in this review: 118,469 matches, 1,529 matching error returns, and the
+  two mode-label ties of finding 5.
+- **Self-test.** The deployable self-test runs the 2,143 area-mode cases.
+
+Two defaults differ from `itm_p2p_rev1`, as documented: `mdvar` is 3, so
+that the `location` option has an effect (at 50 % location, `mdvar` 3 and
+13 agree to within 10⁻⁵ dB), and both terminals are randomly sited. Like
+the climate and `mdvar` inputs, the siting inputs must be integers; the
+C++ would truncate 1.5 to 1.
+
 ## Reproducing this review
 
 - Branch cases: `tests/reference/generator/README.md`, section "Branch
