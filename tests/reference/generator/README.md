@@ -10,7 +10,7 @@ NTIA/ITS C++ ITM v1.4 ([NTIA/itm](https://github.com/NTIA/itm), commit
 NTIA/itm and checks every stored file in `tests/reference`: the generators
 must reproduce the stored inputs byte for byte (`rand_*`, `edge_*`, and the
 2,000 randomized area rows), and the C++ outputs for every stored input
-must match the `*_expected.csv` files to 1e-9 relative (`compare_expected.py`).
+must match the `*_expected.csv` files to 1e-9 relative (`compare_expected.py`). It needs Python with numpy 2.5.3 (the version that wrote `rand_*`).
 The GitHub Actions workflow `.github/workflows/cpp-reference.yml` runs it on
 x86-64 against the v1.4 tag and the reviewed head (`183ad95`) whenever
 `tests/reference` changes, and every Monday against NTIA's latest code as

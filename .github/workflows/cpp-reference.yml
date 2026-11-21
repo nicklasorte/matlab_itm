@@ -35,6 +35,11 @@ jobs:
             ref: 183ad95bd813a8be11009df396e1c631356864b2
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install numpy (pinned; gen_cases.py draws from numpy's generator)
+        run: python -m pip install --quiet "numpy==2.5.3"
       - uses: actions/checkout@v4
         with:
           repository: NTIA/itm
@@ -52,6 +57,11 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install numpy (pinned; gen_cases.py draws from numpy's generator)
+        run: python -m pip install --quiet "numpy==2.5.3"
       - uses: actions/checkout@v4
         with:
           repository: NTIA/itm
