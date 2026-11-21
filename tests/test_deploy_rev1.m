@@ -30,6 +30,7 @@ classdef test_deploy_rev1 < matlab.unittest.TestCase
             tc.verifyEqual(status, 0, "Compiled app failed:" + newline + text);
             tc.verifyTrue(contains(text, "PASSED"), text);
             tc.verifyTrue(contains(text, "740 cases"), "Reference cases missing from the app:" + newline + text);
+            tc.verifyTrue(contains(text, "area-mode cases"), "Area mode missing from the app:" + newline + text);
 
             % With network: terrain downloads into an empty cache work from
             % the compiled app
