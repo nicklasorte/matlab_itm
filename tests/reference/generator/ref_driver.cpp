@@ -32,7 +32,7 @@ int main(int argc, char** argv)
         std::vector<double> c = split(line);
         const std::vector<double>& p = pfls[(int)c[12]];
         double A = 0; long w = 0; IntermediateValues iv = {};
-        int rtn = ITM_P2P_TLS_Ex(c[0], c[1], p.data(), (int)c[2], c[3], c[4], (int)c[5], c[6], c[7], (int)c[8],
+        int rtn = ITM_P2P_TLS_Ex(c[0], c[1], const_cast<double *>(p.data()), (int)c[2], c[3], c[4], (int)c[5], c[6], c[7], (int)c[8],
                                  c[9], c[10], c[11], &A, &w, &iv);
         printf("%d,%d,%ld,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%d\n",
                k, rtn, w, A, iv.A_ref__db, iv.A_fs__db, iv.d__km, iv.delta_h__meter, iv.d_hzn__meter[0], iv.d_hzn__meter[1],

@@ -1,0 +1,60 @@
+# Rebuilds the NTIA C++ ITM and checks every stored reference file against it:
+# the case generators must reproduce the stored inputs, and the C++ outputs
+# must match the stored *_expected.csv files to 1e-9 relative. No MATLAB
+# license needed. See tests/reference/generator/check_cpp_reference.sh.
+name: C++ reference check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tests/reference/**"
+      - ".github/workflows/cpp-reference.yml"
+  pull_request:
+    paths:
+      - "tests/reference/**"
+      - ".github/workflows/cpp-reference.yml"
+  schedule:
+    - cron: "17 11 * * 1"        # Mondays: also tests NTIA's latest code
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned:
+    name: NTIA ${{ matrix.label }}
+    runs-on: ubuntu-24.04        # x86-64; aarch64 builds move the last bits
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: v1.4 tag
+            ref: 668e4ab0b31a7ea1e949e4824272955d63e7c731
+          - label: reviewed head
+            ref: 183ad95bd813a8be11009df396e1c631356864b2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: NTIA/itm
+          path: ntia
+          fetch-depth: 0
+      - name: Check out the NTIA commit
+        run: git -C ntia checkout --quiet ${{ matrix.ref }}
+      - name: Check the reference files
+        run: tests/reference/generator/check_cpp_reference.sh ntia "$RUNNER_TEMP/work"
+
+  upstream:
+    name: NTIA latest (informational)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: NTIA/itm
+          path: ntia
+      - name: Check the reference files against NTIA's latest code
+        run: tests/reference/generator/check_cpp_reference.sh ntia "$RUNNER_TEMP/work"

@@ -312,7 +312,8 @@ Windows and Linux.
 3. For maritime links with vertical polarization below about 550 MHz, check
    `info.A_ref_undefined` in study outputs.
 4. Add implausible terrain heights to `itm:validity:Caution` (finding 3). Done after the review.
-5. Set up continuous integration in two parts. A GitHub Actions job without
+5. Set up continuous integration in two parts. (The first part is done:
+   `.github/workflows/cpp-reference.yml`.) A GitHub Actions job without
    MATLAB can rebuild the NTIA C++ on x86 and regenerate
    `tests/reference/*_expected.csv`, failing if any value moves by more than
    10⁻⁹. A second job runs the MATLAB suite: on GitHub-hosted runners with

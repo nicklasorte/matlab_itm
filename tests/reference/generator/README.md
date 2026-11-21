@@ -4,6 +4,19 @@ The expected values in `tests/reference/rand_expected.csv` come from the
 NTIA/ITS C++ ITM v1.4 ([NTIA/itm](https://github.com/NTIA/itm), commit
 `183ad95`), compiled on Linux.
 
+## Continuous check
+
+`check_cpp_reference.sh NTIA_DIR` rebuilds the NTIA C++ from a clone of
+NTIA/itm and checks every stored file in `tests/reference`: the generators
+must reproduce the stored inputs byte for byte (`rand_*`, `edge_*`, and the
+2,000 randomized area rows), and the C++ outputs for every stored input
+must match the `*_expected.csv` files to 1e-9 relative (`compare_expected.py`).
+The GitHub Actions workflow `.github/workflows/cpp-reference.yml` runs it on
+x86-64 against the v1.4 tag and the reviewed head (`183ad95`) whenever
+`tests/reference` changes, and every Monday against NTIA's latest code as
+well (that job is informational and can't fail the run). It needs no MATLAB
+license.
+
 ## Regenerate
 
 Build on x86-64, or add `-ffp-contract=off`. On aarch64, g++ fuses
