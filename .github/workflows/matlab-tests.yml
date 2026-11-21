@@ -1,0 +1,60 @@
+# Runs the MATLAB test suite on the self-hosted runner on Nick's Mac
+# (labels: self-hosted, macOS, matlab), which has MATLAB R2025b and its
+# license. Each test file runs in its own MATLAB process; a combined run once
+# ran out of memory. The compile test (test_deploy_rev1, about 2 minutes)
+# runs nightly and on demand. The runner must be online: the Mac awake, logged
+# in, with the runner service started (~/actions-runner/matlab_itm).
+name: MATLAB tests
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  schedule:
+    - cron: "43 7 * * *"          # nightly, 2:43 AM Eastern: adds the compile test
+  workflow_dispatch:
+    inputs:
+      compile:
+        description: Also run the compile test (test_deploy_rev1)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: matlab-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: [self-hosted, macOS, matlab]
+    timeout-minutes: 60
+    env:
+      MATLAB: /Applications/MATLAB_R2025b.app/bin/matlab
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run each test file
+        env:
+          COMPILE: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.compile) }}
+        run: |
+          files="test_itm_p2p_rev1 test_itm_area_rev1 test_itm_geo_rev1 test_limits_rev1 test_mechanism_rev1 test_robustness_rev1 test_app_rev1"
+          if [ "$COMPILE" = "true" ]; then files="$files test_deploy_rev1"; fi
+          fail=0
+          for t in $files; do
+            pool=""
+            case "$t" in *geo*|*robustness*) pool="parpool(2);";; esac
+            echo "::group::$t"
+            if "$MATLAB" -batch "cd('$GITHUB_WORKSPACE'); addpath('$GITHUB_WORKSPACE'); $pool r = runtests('tests/$t.m'); disp(table(r)); fprintf('SUMMARY $t passed %d failed %d incomplete %d\n', nnz([r.Passed]), nnz([r.Failed]), nnz([r.Incomplete])); assertSuccess(r);"; then
+              echo "::endgroup::"
+            else
+              echo "::endgroup::"; echo "::error::$t failed"; fail=1
+            fi
+          done
+          exit $fail

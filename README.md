@@ -588,6 +588,16 @@ suite = testsuite('tests');
 run(suite.selectIf(~HasTag('Network') & ~HasTag('Parallel') & ~HasTag('Compile')))
 ```
 
+Two GitHub Actions workflows run the checks automatically:
+
+- `MATLAB tests` (`.github/workflows/matlab-tests.yml`) runs every test file
+  on pushes to `main` and on pull requests, on a self-hosted runner on the
+  Mac that has the MATLAB license, and adds the compile test nightly. The
+  run waits until that runner is online: the Mac awake and logged in.
+- `C++ reference check` (`.github/workflows/cpp-reference.yml`) rebuilds the
+  NTIA C++ on GitHub's servers and checks every file in `tests/reference`;
+  see `tests/reference/generator/README.md`.
+
 Tests tagged `Parallel` need a pool (`parpool(2)`); without one, they're
 reported as incomplete rather than failed. Tests tagged `Compile` build the
 app with MATLAB Compiler and take 1 to 2 minutes.
