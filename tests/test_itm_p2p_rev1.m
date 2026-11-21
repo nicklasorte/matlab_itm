@@ -123,6 +123,27 @@ classdef test_itm_p2p_rev1 < matlab.unittest.TestCase
             tc.verifyFalse(info.A_ref_undefined);
         end
 
+        function implausible_terrain_cautioned(tc)
+            % ITM doesn't check terrain heights; the port warns on heights
+            % no real terrain has, without changing the result
+            pfl = [100; 500; 200 * ones(101, 1)];
+            bad = pfl; bad(60) = 12000;                    % a 12 km "peak"
+            run = @(p, v) itm_p2p_rev1(30, 10, p, 2700, 50, validity=v);
+            tc.verifyWarning(@() run(bad, "error"), 'itm:validity:Caution');
+            [A_off, info] = itm_p2p_rev1(30, 10, bad, 2700, 50, validity="off");
+            tc.verifyTrue(any(contains(info.warning_messages, 'below -500 m or above 9000 m')));
+            tc.verifyEqual(bitand(info.warnings, uint32(131072)), uint32(0));   % C++ bitmask unchanged
+            lastwarn('');
+            warning('off', 'itm:validity:Caution'); c = onCleanup(@() warning('on', 'itm:validity:Caution'));
+            tc.verifyEqual(run(bad, "error"), A_off);       % same loss either way
+            low = pfl; low(3:end) = -430;                   % Dead Sea shore: no caution
+            [~, info] = itm_p2p_rev1(30, 10, low, 2700, 50, validity="off");
+            tc.verifyFalse(any(contains(info.warning_messages, 'below -500 m')));
+            sea = pfl; sea(40:60) = -501;                   % bathymetry: caution
+            [~, info] = itm_p2p_rev1(30, 10, sea, 2700, 50, validity="off");
+            tc.verifyTrue(any(contains(info.warning_messages, 'below -500 m')));
+        end
+
         function reliability_vector_equals_scalar(tc)
             % Sweep rows share inputs except time; one vector call must
             % equal both the scalar calls and the C++ results.

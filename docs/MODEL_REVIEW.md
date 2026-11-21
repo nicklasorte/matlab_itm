@@ -42,7 +42,7 @@ test.
 | --- | --- | --- | --- |
 | 1 | High | Out-of-domain smooth-earth term: the port errored or returned a wrong loss where the C++ returns a finite one | Fixed (`9fb7261`) |
 | 2 | Medium | Upstream C++ behavior on those paths: the reference attenuation is silently set to 0 | Flagged (`0200c5a`); report to NTIA recommended |
-| 3 | Low | ITM accepts physically impossible terrain and returns thousands of dB with warnings only | Open; recommendation below |
+| 3 | Low | ITM accepts physically impossible terrain and returns thousands of dB with warnings only | Cautioned (heights outside -500 m to 9,000 m raise `itm:validity:Caution`) |
 | 4 | Low | C++ reference values depend on the compiler (fused multiply-add) by up to 0.013 dB | Documented; reference values stay x86 |
 | 5 | Low | Propagation-mode label can differ at an exact d = d_sML tie (2 of 120,000 cases); the loss is identical | No action |
 | 6 | Info | Ground constants, polarization, `mdvar`, and confidence defaults come from the WInnForum CBRS reference, not NTIA guidance | Documented in the README |
@@ -311,7 +311,7 @@ Windows and Linux.
    `tests/reference/branch_cases.csv`.
 3. For maritime links with vertical polarization below about 550 MHz, check
    `info.A_ref_undefined` in study outputs.
-4. Add implausible terrain heights to `itm:validity:Caution` (finding 3).
+4. Add implausible terrain heights to `itm:validity:Caution` (finding 3). Done after the review.
 5. Set up continuous integration in two parts. A GitHub Actions job without
    MATLAB can rebuild the NTIA C++ on x86 and regenerate
    `tests/reference/*_expected.csv`, failing if any value moves by more than

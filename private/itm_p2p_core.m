@@ -86,6 +86,9 @@ wbits = bitor(uint32(warnings), uint32(any(extreme(:))) * uint32(8192));
 if lines.A_ref_undefined
     wbits = bitor(wbits, uint32(65536));   % MATLAB-only flag; not in info.warnings
 end
+if ~area && any(pfl(3:end) < -500 | pfl(3:end) > 9000)
+    wbits = bitor(wbits, uint32(131072));  % MATLAB-only: no such terrain on Earth
+end
 if numel(V_db) ~= prod(out_size)
     % Scalar deviates (for example single-message mode, which ignores
     % time) give one value for every requested percentage

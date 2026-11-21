@@ -10,8 +10,9 @@ function itm_validity(wbits, d_km, mode)
 %              raises itm:validity:Distance. The NTIA flags for inputs
 %              near their limits (terminal height, frequency, distance,
 %              a percentage far in a tail, low surface refractivity) and
-%              the MATLAB-only flag for an undefined reference attenuation
-%              (0x10000) raise
+%              the MATLAB-only flags for an undefined reference attenuation
+%              (0x10000) and terrain heights outside -500 m to 9000 m
+%              (0x20000) raise
 %              one MATLAB warning, itm:validity:Caution, that names the
 %              conditions and the links they apply to. The horizon
 %              geometry flags (0x0080 to 0x1000) are common on real
@@ -51,11 +52,11 @@ if ~any(wbits)
     return
 end
 % One warning for the whole call: each condition with the links it hit
-bits = uint32([2 .^ (0:14), 65536]);
+bits = uint32([2 .^ (0:14), 65536, 131072]);
 lines = strings(0, 1);
-for b = bits(any(bitand(wbits, bits) ~= 0, 1)) % at most 14 conditions
+for b = bits(any(bitand(wbits, bits) ~= 0, 1)) % at most 15 conditions
     hit = find(bitand(wbits, b) ~= 0);
-    lines(end + 1) = "  " + string(itm_warning_text(b)) + local_which(hit, n); %#ok<AGROW> 14 at most
+    lines(end + 1) = "  " + string(itm_warning_text(b)) + local_which(hit, n); %#ok<AGROW> 15 at most
 end
 warning("itm:validity:Caution", "ITM result needs care:\n%s\nSee info.warnings, or set validity=""off"" to silence.", ...
     strjoin(lines, newline));

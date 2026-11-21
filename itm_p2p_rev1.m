@@ -72,6 +72,11 @@ function [A_db, info] = itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability, op
 %            loss is free space plus variability; this function returns
 %            the same value and, unless validity is "off", warns
 %            (itm:validity:Caution).
+%            Terrain heights below -500 m or above 9000 m (no such terrain
+%            exists; often a units or no-data error) also raise
+%            itm:validity:Caution, and are named in warning_messages.
+%            ITM itself doesn't check terrain heights and can return
+%            thousands of dB on such profiles.
 %            elevation_deg is [TX, RX]: the elevation angle (degrees,
 %            positive up) of the path at each terminal, toward the other
 %            antenna on a line-of-sight path or toward the terrain horizon

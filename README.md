@@ -217,6 +217,12 @@ so the loss is free space plus variability. This port returns the same
 value, sets `info.A_ref_undefined`, and adds the condition to
 `itm:validity:Caution`.
 
+ITM doesn't check terrain heights, and on a profile with heights no real
+terrain has it can return thousands of dB with only warning flags. When a
+profile has heights below -500 m or above 9000 m, usually a units or
+no-data error, the port adds that condition to `itm:validity:Caution`. The
+loss is unchanged.
+
 To compute outside the range anyway, pass `validity="warn"` (errors for
 distance become warnings) or `validity="off"` (no checks beyond NTIA's hard
 limits, the C++ behavior). In a batch, an error names the failing link, for
