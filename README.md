@@ -1,8 +1,8 @@
 # matlab_itm
 
 A MATLAB port of the NTIA/ITS Irregular Terrain Model (ITM, Longley-Rice)
-version 1.4, point-to-point mode, with automatic terrain, radio climate, and
-refractivity. It runs in MATLAB R2025b and in apps compiled with MATLAB
+version 1.4, point-to-point mode with automatic terrain, radio climate, and
+refractivity, and area mode. It runs in MATLAB R2025b and in apps compiled with MATLAB
 Compiler for the free MATLAB Runtime.
 
 The core is a line-by-line port of the C++ reference implementation at
@@ -133,6 +133,33 @@ single-horizon diffraction, 6 single-horizon troposcatter, 9 double-horizon
 diffraction, 10 double-horizon troposcatter. `info.mode` holds the ITM v1.4
 mode (1 line of sight, 2 diffraction, 3 troposcatter).
 
+### Area mode
+
+Area mode predicts loss without a terrain profile. It estimates the horizon
+geometry from the path distance, the terrain irregularity parameter Δh (the
+interdecile range of terrain heights, in meters), and how carefully each
+terminal is sited, so it needs no terrain data and runs offline. Use it for
+loss-versus-distance curves and coverage estimates when the exact path isn't
+known.
+
+```matlab
+d = (1:200)';                                    % 1 to 200 km
+L = itm_area_rev1(30, 10, d, 90, 2700, [10 50 90], tx_siting=1);
+plot(d, L), xlabel('Distance (km)'), ylabel('Basic transmission loss (dB)')
+```
+
+Typical Δh values (NTIA Report 82-100): 0 m for water or very smooth
+plains, 30 m for smooth plains, 90 m for average terrain, 200 m for hills,
+500 m for mountains, and 700 m for rugged mountains. Siting is 0 random
+(the default), 1 careful, or 2 very careful; careful siting raises the
+effective height on rough terrain.
+
+`itm_area_rev1` is a port of NTIA `ITM_AREA_TLS_Ex` and `InitializeArea`
+and shares the point-to-point core. Two defaults differ from
+`itm_p2p_rev1`: `mdvar` is 3 (broadcast, keeping location variability, so
+the `location` option has an effect), and both terminals are randomly
+sited. At `location = 50`, `mdvar` 3 and 13 agree to within 10⁻⁵ dB.
+
 ### Run MathWorks' Longley-Rice on the same terrain
 
 `itm_matlab_lr_rev1` runs MATLAB's `propagationModel("longley-rice")`
@@ -205,6 +232,7 @@ example `Link 2: ITM error 1001: RX terminal height must be 0.5 to 3000 m.`
 | `itm_matlab_terrain_rev1(region=[...])` | Registers USGS 1" terrain (as DTED) with MATLAB's terrain models, once per area. |
 | `itm_dted_tiles_rev1(tile_lat, tile_lon)` | Writes USGS 1" tiles as DTED level 2. |
 | `itm_p2p_rev1(h_tx_m, h_rx_m, pfl, f_mhz, reliability)` | ITM core for a terrain profile you supply. Equivalent to NTIA `ITM_P2P_CR` (and `ITM_P2P_TLS` with the `location` option). |
+| `itm_area_rev1(h_tx_m, h_rx_m, d_km, delta_h_m, f_mhz, reliability)` | ITM area mode: no terrain profile, a vector of distances. Equivalent to NTIA `ITM_AREA_CR` (and `ITM_AREA_TLS` with the `location` option). |
 | `itm_terrain_profile_rev1(lat1, lon1, lat2, lon2)` | ITM PFL profile(s) along the WGS84 geodesic. |
 | `itm_terrain_elevation_rev1(lat, lon)` | Terrain elevation at points, from cached DEM tiles. |
 | `itm_radio_climate_rev1(lat, lon)` | ITU-R P.617 radio climate code (1–7). |
@@ -560,6 +588,7 @@ app with MATLAB Compiler and take 1 to 2 minutes.
 
 | Test file | What it checks |
 | --- | --- |
+| `test_itm_area_rev1.m` | Area mode: 2,143 cases against the NTIA C++ `ITM_AREA_TLS_Ex` (2,000 randomized, 31 for rare branches, 112 at the input limits, including every error return; loss to 10⁻⁹ dB, modes, warnings, intermediate values); vector distances; siting; the `mdvar` default; validity; point-to-point unchanged. |
 | `test_itm_p2p_rev1.m` | NTIA's published example and reliability-by-confidence table; NTIA `p2p.csv` cases; 740 randomized cases, 41 branch cases, and 74 edge cases against the NTIA C++ (loss to 10⁻⁹ dB; modes, warnings, and intermediate values; C++ error returns raise the matching error); the undefined-reference flag; vector vs scalar calls; output shapes; monotonic loss vs reliability; free-space check; every error identifier; warning flags. |
 | `test_itm_geo_rev1.m` | Climate and refractivity vs WInnForum; maps folder override; setup; vectorized lookups; wrapper vs core; N-link vs single-link calls; offline errors; the command-line tool matches `itm_pathloss_rev1`; 3DEP profile; Copernicus fallback, GLO-90, and ocean; uncovered-land error; reuse of the itu_p2001 cache; batched profiles; end-to-end loss; two workers downloading into one folder. |
 | `test_limits_rev1.m` | Paths shorter than 1 km and longer than 2000 km fail; the error names the length, or the links in a batch; `validity="warn"` and `"off"`; frequency, height, and reliability limits; paths across the North Pole and near the South Pole, with and without terrain. |

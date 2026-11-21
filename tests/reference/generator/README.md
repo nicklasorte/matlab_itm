@@ -105,3 +105,36 @@ receiver), each at three height and frequency settings.
 python3 gen_edge.py
 ./ref_driver edge_cases.csv edge_pfls.csv > edge_expected.csv
 ```
+
+## Area mode
+
+`tests/reference/area_cases.csv` and `area_expected.csv` hold 2,143 cases for
+`itm_area_rev1`, computed by `area/area_driver.cpp` (NTIA
+`ITM_AREA_TLS_Ex`, v1.4). Rows 1 to 2000 are randomized
+(`area/gen_area.py 20261121 2000 area`). The next 31 reach rare branches;
+`area/select_area.py` takes up to four for each from 200,000 wider cases
+(`gen_area.py` seeds 1 to 4, 50,000 each, `wide`), run through an
+instrumented build (`area/instrument_area.patch`, which also carries the
+point-to-point bits): the `InitializeArea` exponent limit of 20 and Δh below
+1e-3, the zero line-of-sight slopes, the height-function x <= 1 km branch,
+the troposcatter q clamp at 0.1, the horizon-distance warnings 0x0200 and
+0x0400, and diffraction mode. The last 112 are at the input limits, from
+`select_area.py`: K < 1e-5 (sigma of 1e3 and 1e4 S/m at 20 MHz, horizontal),
+heights of 0.5 m to 3000 m with each siting (including either side of the
+5 m siting threshold), Δh around 1e-3 m and up to 10 km, distances of 1 m
+to 3000 km, every climate and `mdvar`, tail percentages, and one case for
+each C++ error return (1000 to 1002, 1008 to 1014, 1017 to 1020).
+
+Area-mode branches that can't be reached: N_s below 250 or out of range and
+the effective-radius error (N_s = N_0, which is checked), horizon distance
+over 3 times the smooth-earth distance (area mode never exceeds it), the
+troposcatter asymmetry clamp (area-mode horizons stay under about 260 km),
+and the troposcatter q clamp at 10 (the frame puts the shorter effective
+height over the taller, so q <= 1 before the clamp).
+
+```bash
+g++ -O2 -o area_driver area/area_driver.cpp src/*.cpp -Iinclude
+python3 area/gen_area.py 20261121 2000 area
+python3 area/select_area.py        # needs the wide fuzz outputs; see the script
+./area_driver area_all_cases.csv > area_expected.csv
+```
