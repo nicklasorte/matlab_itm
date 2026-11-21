@@ -1,0 +1,67 @@
+--- /home/claude/ntia_v14/src/InitializeArea.cpp	2026-11-10 07:09:04.363044395 -0500
++++ src/InitializeArea.cpp	2026-11-21 08:19:47.679510728 -0500
+@@ -40,6 +40,8 @@
+                 B = B * sin(0.1 * PI * h__meter[i]);
+ 
+             // [Algorithm, Eqn 3.2]
++            if (2.0 * h__meter[i] / MAX(1e-3, delta_h__meter) > 20.0) g_hits |= 1L<<12; else g_hits |= 1L<<17;
++            if (delta_h__meter < 1e-3) g_hits |= 1L<<13;
+             h_e__meter[i] = h__meter[i] + (1.0 + B) * exp(-MIN(20.0, 2.0 * h__meter[i] / MAX(1e-3, delta_h__meter)));
+         }
+ 
+--- /home/claude/ntia_v14/src/TroposcatterLoss.cpp	2026-11-10 07:09:04.363662516 -0500
++++ src/TroposcatterLoss.cpp	2026-11-21 08:19:47.680191721 -0500
+@@ -85,6 +85,9 @@
+ 
+         // "In all of this, we truncate the values of s and q at 0.1 and 10" [Algorithm, page 16]
+         double q = MIN(MAX(0.1, rr / s), 10.0);             // TN101, Eqn 9.5
++        if (s < 0.1) g_hits |= 1L<<10;
++        if (rr / s < 0.1) g_hits |= 1L<<14;
++        if (rr / s > 10.0) g_hits |= 1L<<15;
+         s = MAX(0.1, s);                                    // TN101, Eqn 9.5
+ 
+         double h_0__meter = (d__meter - ad) * (d__meter + ad) * theta * 0.25 / d__meter;   // height of cross-over, [Algorithm, 4.66] [TN101v1, 9.3b]
+--- /home/claude/ntia_v14/src/LongleyRice.cpp	2026-11-10 07:09:04.363330478 -0500
++++ src/LongleyRice.cpp	2026-11-21 08:19:47.751613052 -0500
+@@ -100,9 +100,9 @@
+         *warnings |= WARN__PATH_DISTANCE_TOO_SMALL_1;
+     if (d__meter < 1e3)
+         *warnings |= WARN__PATH_DISTANCE_TOO_SMALL_2;
+-    if (d__meter > 1000e3)
++    if (d__meter > 1000e3 && (g_hits |= 1L<<4))
+         *warnings |= WARN__PATH_DISTANCE_TOO_BIG_1;
+-    if (d__meter > 2000e3)
++    if (d__meter > 2000e3 && (g_hits |= 1L<<5))
+         *warnings |= WARN__PATH_DISTANCE_TOO_BIG_2;
+ 
+     // if the path distance is less than the maximum smooth earth line of sight distance...
+@@ -149,9 +149,10 @@
+                 if (kHat_1__db_per_meter < 0.0)
+                 {
+                     kHat_1__db_per_meter = 0.0;
+-                    kHat_2__db_per_meter = DIM(A_sML__db, A_0__db) / q;
++                    if (!(A_sML__db > A_0__db)) g_hits |= 1L<<16;
++            kHat_2__db_per_meter = DIM(A_sML__db, A_0__db) / q;
+ 
+-                    if (kHat_2__db_per_meter == 0.0)
++                    if (kHat_2__db_per_meter == 0.0 && (g_hits |= 1L<<6))
+                         kHat_1__db_per_meter = M_d;
+                 }
+             }
+@@ -162,7 +163,7 @@
+             kHat_1__db_per_meter = DIM(A_sML__db, A_1__db) / (d_sML__meter - d_1__meter);
+             kHat_2__db_per_meter = 0.0;
+ 
+-            if (kHat_1__db_per_meter == 0.0)
++            if (kHat_1__db_per_meter == 0.0 && (g_hits |= 1L<<7))
+                 kHat_1__db_per_meter = M_d;
+         }
+ 
+@@ -219,6 +220,7 @@
+     }
+ 
+     // Don't allow a negative loss
++    if (*A_ref__db != *A_ref__db) g_hits |= 1L<<11;
+     *A_ref__db = MAX(*A_ref__db, 0.0);
+ 
+     return SUCCESS;

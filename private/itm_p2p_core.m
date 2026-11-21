@@ -19,10 +19,20 @@ function [A_db, info, wbits, elev_deg, mode_code] = itm_p2p_core(h_tx_m, h_rx_m,
 %   point_to_pointMDH, also used by SEADLib ITMp2pAryRels): 0 line of
 %   sight, 4 single horizon, 8 double horizon, plus 1 when diffraction
 %   dominates and 2 when troposcatter dominates (5, 6, 9, 10).
+%
+%   Area mode (ITM_AREA_TLS_Ex, itm_area.cpp): pass a struct in place of
+%   pfl, with fields d_km (path distance), delta_h_m (terrain irregularity
+%   parameter), and siting ([TX RX], 0 random, 1 careful, 2 very careful).
+%   InitializeArea then replaces the terrain-profile analysis, N_s = N_0,
+%   and DiffractionLoss leaves out its point-to-point constant. Called by
+%   itm_area_rev1.
 
 info = [];
-pfl = pfl(:);
-validate_profile(pfl);
+area = isstruct(pfl);
+if ~area
+    pfl = pfl(:);
+    validate_profile(pfl);
+end
 
 % CR mode maps reliability to time and confidence to situation
 % (ITM_P2P_CR calls ITM_P2P_TLS with time = reliability, location = 50,
@@ -34,21 +44,32 @@ if nargin < 15 || isempty(z)
 end
 out_size = z.size;
 
-% Terrain-averaged system height over the middle 80 percent of the path
-np = fix(pfl(1));
-p10 = fix(0.1 * np);
-h_acc = cumsum(pfl((p10:np - p10) + 3));     % sequential, like the C++ loop
-h_sys_m = h_acc(end) / (np - 2 * p10 + 1);
+if area
+    % itm_area.cpp: checked after ValidateInputs; system elevation 0
+    [d_m, delta_h_m, siting] = validate_area(pfl);
+    h_sys_m = 0.0;
+else
+    % Terrain-averaged system height over the middle 80 percent of the path
+    np = fix(pfl(1));
+    p10 = fix(0.1 * np);
+    h_acc = cumsum(pfl((p10:np - p10) + 3));     % sequential, like the C++ loop
+    h_sys_m = h_acc(end) / (np - 2 * p10 + 1);
+end
 
 [Z_g, gamma_e, N_s] = initialize_point_to_point(f_mhz, h_sys_m, N_0, ...
     polarization, epsilon, sigma);
 
 h_m = [h_tx_m, h_rx_m];
-[theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m, theta_geo] = quick_pfl(pfl, gamma_e, h_m);
+if area
+    [theta_hzn, d_hzn_m, h_e_m] = initialize_area(siting, gamma_e, delta_h_m, h_m);
+    theta_geo = theta_hzn;                       % no profile: the estimated horizon angles
+else
+    [theta_hzn, d_hzn_m, h_e_m, delta_h_m, d_m, theta_geo] = quick_pfl(pfl, gamma_e, h_m);
+end
 elev_deg = rad2deg(theta_geo);
 
 [A_ref_db, warnings, propmode, lines] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
-    gamma_e, N_s, delta_h_m, h_m, d_m, warnings);
+    gamma_e, N_s, delta_h_m, h_m, d_m, warnings, area);
 
 A_fs_db = free_space_loss(d_m, f_mhz);
 
@@ -182,6 +203,10 @@ switch code
     case 1013, id = 'GroundImpedance';       msg = 'Imaginary part of the ground impedance exceeds the real part.';
     case 1014, id = 'InvalidMdvar';          msg = 'Mode of variability must be 0-3, 10-13, 20-23, or 30-33.';
     case 1016, id = 'EffectiveEarth';        msg = 'Internally computed effective earth radius is out of range.';
+    case 1017, id = 'InvalidDistance';       msg = 'Path distance d_km must be > 0.';
+    case 1018, id = 'InvalidDeltaH';         msg = 'Terrain irregularity delta_h_m must be >= 0.';
+    case 1019, id = 'InvalidTxSiting';       msg = 'TX siting criteria must be 0 (random), 1 (careful), or 2 (very careful).';
+    case 1020, id = 'InvalidRxSiting';       msg = 'RX siting criteria must be 0 (random), 1 (careful), or 2 (very careful).';
     case 1021, id = 'SurfaceRefractivitySmall'; msg = 'Internally computed surface refractivity is below 150 N-units.';
     case 1022, id = 'SurfaceRefractivityLarge'; msg = 'Internally computed surface refractivity is above 400 N-units.';
     otherwise, id = 'Unknown';               msg = 'Unknown ITM error.';
@@ -189,8 +214,27 @@ end
 error(['itm:' id], 'ITM error %d: %s', code, msg);
 end
 
+function [d_m, delta_h_m, siting] = validate_area(a)
+% Area-mode checks in ITM_AREA_TLS_Ex, in the same order
+if ~(a.d_km > 0)
+    itm_error(1017);
+end
+if ~(a.delta_h_m >= 0)
+    itm_error(1018);
+end
+siting = a.siting;
+if ~any(siting(1) == [0 1 2])
+    itm_error(1019);
+end
+if ~any(siting(2) == [0 1 2])
+    itm_error(1020);
+end
+d_m = a.d_km * 1000;
+delta_h_m = a.delta_h_m;
+end
+
 %% ------------------------------------------------------------------------
-%  Initialization (InitializePointToPoint.cpp)
+%  Initialization (InitializePointToPoint.cpp, InitializeArea.cpp)
 %  ------------------------------------------------------------------------
 function [Z_g, gamma_e, N_s] = initialize_point_to_point(f_mhz, h_sys_m, N_0, pol, epsilon, sigma)
 gamma_a = 157e-9;
@@ -204,6 +248,30 @@ ep_r = complex(epsilon, 18000 * sigma / f_mhz);
 Z_g = sqrt(ep_r - 1.0);
 if pol == 1
     Z_g = Z_g / ep_r;
+end
+end
+
+function [theta_hzn, d_hzn_m, h_e_m] = initialize_area(siting, gamma_e, delta_h_m, h_m)
+% InitializeArea.cpp: effective heights, horizon distances, and horizon
+% angles estimated from delta_h and the siting criteria [Algorithm, Eqns 3.2-3.4]
+h_e_m = zeros(1, 2); d_hzn_m = zeros(1, 2); theta_hzn = zeros(1, 2);
+for i = 1:2
+    if siting(i) == 0
+        h_e_m(i) = h_m(i);
+    else
+        if siting(i) == 1
+            B = 4.0;
+        else
+            B = 9.0;
+        end
+        if h_m(i) < 5.0
+            B = B * sin(0.1 * pi * h_m(i));
+        end
+        h_e_m(i) = h_m(i) + (1.0 + B) * exp(-c_min(20.0, 2.0 * h_m(i) / c_max(1e-3, delta_h_m)));
+    end
+    d_Ls = sqrt(2.0 * h_e_m(i) / gamma_e);
+    d_hzn_m(i) = d_Ls * exp(-0.07 * sqrt(delta_h_m / c_max(h_e_m(i), 5)));
+    theta_hzn(i) = (0.65 * delta_h_m * (d_Ls / d_hzn_m(i) - 1.0) - 2.0 * h_e_m(i)) / d_Ls;
 end
 end
 
@@ -370,7 +438,8 @@ end
 %  Reference attenuation (LongleyRice.cpp)
 %  ------------------------------------------------------------------------
 function [A_ref_db, warnings, propmode, lines] = longley_rice(theta_hzn, f_mhz, Z_g, d_hzn_m, h_e_m, ...
-    gamma_e, N_s, delta_h_m, h_m, d_m, warnings)
+    gamma_e, N_s, delta_h_m, h_m, d_m, warnings, area)
+% area: true in area mode (DiffractionLoss leaves out its q + 10).
 % lines: the reference-attenuation construction, for diagnostics (info.lines):
 % the diffraction line through (d_3, A_3) and (d_4, A_4), the line-of-sight
 % fit through (d_0, A_0), (d_1, A_1), and (d_sML, A_sML), and the scatter
@@ -397,8 +466,8 @@ if real(Z_g) <= abs(imag(Z_g)), itm_error(1013); end
 
 d_3 = c_max(d_sML, d_ML + 5.0 * (a_e^2 / f_mhz)^(1.0 / 3.0));
 d_4 = d_3 + 10.0 * (a_e^2 / f_mhz)^(1.0 / 3.0);
-A_3 = diffraction_loss(d_3, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz);
-A_4 = diffraction_loss(d_4, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz);
+A_3 = diffraction_loss(d_3, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz, area);
+A_4 = diffraction_loss(d_4, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz, area);
 M_d = (A_4 - A_3) / (d_4 - d_3);
 A_d0 = A_3 - M_d * d_3;
 nan_ = NaN;
@@ -492,7 +561,7 @@ lines.A_ref_undefined = isnan(A_ref_db);
 A_ref_db = c_max(A_ref_db, 0.0);
 end
 
-function A_d = diffraction_loss(d_m, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz)
+function A_d = diffraction_loss(d_m, d_hzn_m, h_e_m, Z_g, a_e, delta_h_m, h_m, theta_los, d_sML, f_mhz, area)
 A_k = knife_edge_diffraction(d_m, f_mhz, a_e, theta_los, d_hzn_m);
 A_se = smooth_earth_diffraction(d_m, f_mhz, a_e, theta_los, d_hzn_m, h_e_m, Z_g);
 delta_h_dsML = terrain_roughness(d_sML, delta_h_m);
@@ -501,7 +570,9 @@ A_fo = c_min(15.0, 5 * log10(1.0 + 1e-5 * h_m(1) * h_m(2) * f_mhz * sigma_h_d));
 delta_h_d = terrain_roughness(d_m, delta_h_m);
 q = h_m(1) * h_m(2);
 qk = h_e_m(1) * h_e_m(2) - q;
-q = q + 10.0;                                   % point-to-point mode
+if ~area
+    q = q + 10.0;                               % point-to-point mode only
+end
 term1 = sqrt(1.0 + qk / q);
 d_ML = d_hzn_m(1) + d_hzn_m(2);
 q = (term1 + (-theta_los * a_e + d_ML) / d_m) * c_min(delta_h_d * f_mhz / 47.7, 6283.2);
